@@ -3774,7 +3774,7 @@ client.on('messageDelete', async (msg) => {
 
 
 
-
+// TESTE GITHUB AGORA
 
   
 
