@@ -1,0 +1,103 @@
+{
+  "leaderboard": {
+    "660311795327828008": {
+      "acertos": 4,
+      "erros": 3,
+      "interacoes": 7,
+      "lastAt": 1775270298152
+    },
+    "1293226423888253020": {
+      "acertos": 1,
+      "erros": 1,
+      "interacoes": 2,
+      "lastAt": 1775270542074
+    },
+    "1404518971474055392": {
+      "acertos": 4,
+      "erros": 0,
+      "interacoes": 4,
+      "lastAt": 1775270503651
+    },
+    "1326039562077732956": {
+      "acertos": 4,
+      "erros": 0,
+      "interacoes": 4,
+      "lastAt": 1775270529415
+    }
+  },
+  "activeQuizMessages": [
+    {
+      "id": "1489816072843558923",
+      "qid": 86,
+      "createdAt": 1775270232371
+    }
+  ],
+  "stickyRankingMsgIdAcertos": "1489811295073992925",
+  "stickyRankingMsgIdInteracoes": "1489811298140295330",
+  "participantsByMsg": {
+    "1489816072843558923": {
+      "660311795327828008": true,
+      "1293226423888253020": true,
+      "1404518971474055392": true,
+      "1326039562077732956": true
+    }
+  },
+  "lastScheduleDayKey": "2026-04-04",
+  "__todaySchedule": [
+    1775300967272,
+    1775305194544,
+    1775308701816,
+    1775312449088,
+    1775316916360,
+    1775320363632,
+    1775324050904,
+    1775328818176,
+    1775332685448,
+    1775336192720
+  ],
+  "rt": {
+    "active": null,
+    "attempts": {},
+    "__todayScheduleFast": [],
+    "lastScheduleDayKeyFast": "2026-04-04",
+    "nextFastAt": 0
+  },
+  "lastWeek": {
+    "leaderboard": {},
+    "top3Acertos": [],
+    "top3Interacoes": [],
+    "weekEndedAt": null
+  },
+  "currentValidMessageId": "1489816072843558923",
+  "currentSatisfied": true,
+  "activity": {
+    "counter": 0,
+    "threshold": 30
+  },
+  "deletionQueue": [],
+  "dayStats": {
+    "2026-04-03": {
+      "fast": 0,
+      "daily": 0
+    }
+  },
+  "weeklyClosed": false,
+  "weeklyEndedKey": null,
+  "weeklyParticipants": {},
+  "dayPlan": {
+    "dayKey": "2026-04-03",
+    "dailyTimes": [],
+    "fastTimes": []
+  },
+  "lastPublicSummaryWeekKey": null,
+  "dmOutbox": [],
+  "__postLock": {
+    "busy": false,
+    "until": 0
+  },
+  "pendingDaily": {},
+  "userLastMode": {},
+  "dailyFirstInteractionAt": {},
+  "lastQuestionAt": 1775269093515,
+  "stickyRankingMsgIdFooter": "1489811300585574581"
+}
