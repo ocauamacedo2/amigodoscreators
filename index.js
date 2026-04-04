@@ -1779,7 +1779,13 @@ if (typeof fetch === 'undefined') {
   stickyRankingMsgIdInteracoes: null,
   participantsByMsg: {},
   lastScheduleDayKey: null,
-  __todaySchedule: []
+  __todaySchedule: [],
+
+  // mensagem atual do quiz no canal creators
+  currentQuizChannelMessageId: null,
+
+  // última mensagem pública de feedback (parabéns / incorreta / encerrado)
+  lastPublicFeedbackMessageId: null
 };
 
 
@@ -1828,6 +1834,12 @@ SC_QUIZ_STATE.__todaySchedule = SC_QUIZ_STATE.__todaySchedule || [];
 // ========= ESTADO/PERSISTÊNCIA ========= (logo depois do SC_QUIZ_STATE ser criado)
 SC_QUIZ_STATE.currentValidMessageId = SC_QUIZ_STATE.currentValidMessageId || null; // msg “oficial” (daily OU fast)
 SC_QUIZ_STATE.currentSatisfied      = SC_QUIZ_STATE.currentSatisfied ?? true;     // true = pode postar outro
+
+// mensagem atual do quiz no canal creators
+SC_QUIZ_STATE.currentQuizChannelMessageId = SC_QUIZ_STATE.currentQuizChannelMessageId || null;
+
+// última mensagem pública de feedback
+SC_QUIZ_STATE.lastPublicFeedbackMessageId = SC_QUIZ_STATE.lastPublicFeedbackMessageId || null;
 
   SC_QUIZ_STATE.activity = SC_QUIZ_STATE.activity || {};
 SC_QUIZ_STATE.activity.counter = SC_QUIZ_STATE.activity.counter || 0;
@@ -2981,6 +2993,35 @@ if (SC_QUIZ_STATE.stickyRankingMsgIdInteracoes) {
         await ch.send({ embeds: [embed] });
       } catch (_) {}
     }
+
+    async function scq_clearPreviousQuizMessages(channel) {
+      try {
+        if (!channel) return;
+
+        // apaga a pergunta anterior
+        if (SC_QUIZ_STATE.currentQuizChannelMessageId) {
+          const oldQuizMsg = await channel.messages.fetch(SC_QUIZ_STATE.currentQuizChannelMessageId).catch(() => null);
+          if (oldQuizMsg) {
+            await oldQuizMsg.delete().catch(() => {});
+          }
+          SC_QUIZ_STATE.currentQuizChannelMessageId = null;
+        }
+
+        // apaga o último feedback público (parabéns / incorreta / encerrado)
+        if (SC_QUIZ_STATE.lastPublicFeedbackMessageId) {
+          const oldFeedbackMsg = await channel.messages.fetch(SC_QUIZ_STATE.lastPublicFeedbackMessageId).catch(() => null);
+          if (oldFeedbackMsg) {
+            await oldFeedbackMsg.delete().catch(() => {});
+          }
+          SC_QUIZ_STATE.lastPublicFeedbackMessageId = null;
+        }
+
+        scq_save();
+      } catch (e) {
+        console.error('[SC_QUIZ] erro ao limpar mensagens anteriores do canal:', e);
+      }
+    }
+
        // ✅ Função global: posta o QUIZ DIÁRIO no canal Creators
  async function scq_postDailyQuiz(override = false) {
   if (!override && scq_hasActiveQuiz()) {
@@ -2991,6 +3032,9 @@ if (SC_QUIZ_STATE.stickyRankingMsgIdInteracoes) {
 
   const channel = await client.channels.fetch(SC_QUIZ_CREATORS_CHANNEL_ID).catch(() => null);
   if (!channel) return;
+
+  // limpa a pergunta anterior e o último feedback público antes de postar a próxima
+  await scq_clearPreviousQuizMessages(channel);
 
   const q = scq_getRandomQuestion();
   if (!q) return;
@@ -3016,6 +3060,9 @@ if (SC_QUIZ_STATE.stickyRankingMsgIdInteracoes) {
     embeds: [embed],
     allowedMentions: { roles: SC_MENTION_ROLES }
   });
+
+  // guarda a mensagem atual postada no canal
+  SC_QUIZ_STATE.currentQuizChannelMessageId = msg.id;
 
   // marca como “válido” e bloqueia novos até interação
   SC_QUIZ_STATE.currentValidMessageId = msg.id;
@@ -3051,6 +3098,9 @@ function sc_rt_getRandomQuestion() {
 
 // 🔧 Helper único para iniciar uma rodada de relâmpago (fora de qualquer função)
 async function sc_rt_beginRound(channel, embed, q, { announceOnTimeout = false } = {}) {
+  // limpa a pergunta anterior e o último feedback público antes de postar a próxima
+  await scq_clearPreviousQuizMessages(channel);
+
   const msg = await channel.send({
     content: `<@&${SC_MENTION_ROLES[0]}> <@&${SC_MENTION_ROLES[1]}>`,
     embeds: [embed],
@@ -3060,6 +3110,9 @@ async function sc_rt_beginRound(channel, embed, q, { announceOnTimeout = false }
   // garante a estrutura no estado
   SC_QUIZ_STATE.rt = SC_QUIZ_STATE.rt || {};
   SC_QUIZ_STATE.rt.attempts = SC_QUIZ_STATE.rt.attempts || {};
+
+  // guarda a mensagem atual postada no canal
+  SC_QUIZ_STATE.currentQuizChannelMessageId = msg.id;
 
   // ✅ objeto correto
   SC_QUIZ_STATE.rt.active = {
@@ -3090,13 +3143,16 @@ async function sc_rt_beginRound(channel, embed, q, { announceOnTimeout = false }
     scq_save();
 
     if (announceOnTimeout) {
-      await channel.send({
+      const timeoutMsg = await channel.send({
         embeds: [scq_buildEmbed({
           title: '⏰ Relâmpago encerrado',
           description: `Ninguém acertou a tempo. Gabarito: **${q.resposta}**`,
           image: GIF_QUIIZ_URL
         })]
       });
+
+      SC_QUIZ_STATE.lastPublicFeedbackMessageId = timeoutMsg.id;
+      scq_save();
     }
 
     await scq_log(scq_buildEmbed({
@@ -3291,7 +3347,7 @@ if (SC_QUIZ_STATE.currentValidMessageId === act.messageId) {
 
   if (!acertou) {
     scq_updateLeaderboard(message.author.id, 0, 1);
-    await message.channel.send({
+    const feedbackMsg = await message.channel.send({
       content: `<@${message.author.id}>`,
       embeds: [scq_buildEmbed({
         title: '❌ Resposta incorreta',
@@ -3301,6 +3357,9 @@ if (SC_QUIZ_STATE.currentValidMessageId === act.messageId) {
       })],
       allowedMentions: { users: [message.author.id] }
     });
+
+    SC_QUIZ_STATE.lastPublicFeedbackMessageId = feedbackMsg.id;
+    scq_save();
     try {
       const dm = await message.author.createDM();
       await dm.send({
@@ -3327,7 +3386,7 @@ if (SC_QUIZ_STATE.currentValidMessageId === act.messageId) {
   scq_updateLeaderboard(message.author.id, 1, 0);
   scq_save();
 
-  await message.channel.send({
+  const feedbackMsg = await message.channel.send({
     content: `<@${message.author.id}>`,
     embeds: [scq_buildEmbed({
       title: '🏁 Parabéns! Resposta correta',
@@ -3337,6 +3396,9 @@ if (SC_QUIZ_STATE.currentValidMessageId === act.messageId) {
     })],
     allowedMentions: { users: [message.author.id] }
   });
+
+  SC_QUIZ_STATE.lastPublicFeedbackMessageId = feedbackMsg.id;
+  scq_save();
 
   try {
     const dm = await message.author.createDM();
@@ -3418,7 +3480,7 @@ scq_save();
       footer: `qid=${qMain.id}`
     }));
 
-    await message.channel.send({
+    const feedbackMsg = await message.channel.send({
       content: `<@${quizUser.id}>`,
       embeds: [scq_buildEmbed({
         title: right ? '🎉 Parabéns! Resposta correta' : '❌ Resposta incorreta',
@@ -3430,6 +3492,9 @@ scq_save();
       })],
       allowedMentions: { users: [quizUser.id] }
     });
+
+    SC_QUIZ_STATE.lastPublicFeedbackMessageId = feedbackMsg.id;
+    scq_save();
 
     // 7) DM com +3 perguntas
     let dm;
@@ -3677,14 +3742,18 @@ client.once('ready', async () => {
 // ✅ fora do ready
 client.on('messageDelete', async (msg) => {
   try {
-    // se apagaram a mensagem “válida”, libera novos
+    // se apagaram a mensagem “válida”, não libera automaticamente a fila
     if (SC_QUIZ_STATE.currentValidMessageId === msg.id) {
-  // não libera a fila no delete; mantém bloqueado
-  // (comenta/retira as linhas abaixo)
-  // SC_QUIZ_STATE.currentValidMessageId = null;
-  // SC_QUIZ_STATE.currentSatisfied = true;
-  scq_save();
-}
+      scq_save();
+    }
+
+    if (SC_QUIZ_STATE.currentQuizChannelMessageId === msg.id) {
+      SC_QUIZ_STATE.currentQuizChannelMessageId = null;
+    }
+
+    if (SC_QUIZ_STATE.lastPublicFeedbackMessageId === msg.id) {
+      SC_QUIZ_STATE.lastPublicFeedbackMessageId = null;
+    }
 
     // relâmpago
     if (SC_QUIZ_STATE.rt?.active && msg.id === SC_QUIZ_STATE.rt.active.messageId) {
