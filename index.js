@@ -3772,7 +3772,7 @@ client.on('messageDelete', async (msg) => {
   } catch {}
 });
 
-
+//teste
 
 
 
