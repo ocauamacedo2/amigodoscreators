@@ -1849,7 +1849,7 @@ SC_QUIZ_STATE.rt.attempts = SC_QUIZ_STATE.rt.attempts || {};
 
 })();
 
-
+///teste 
     // ======= BANCO DE PERGUNTAS =======
     // Formato: { id, categoria, texto, opcoes: ['A) ...','B) ...',...], resposta: 'A' }
     // Você pode adicionar MUITO mais. Já deixei um pack grande e variado.
