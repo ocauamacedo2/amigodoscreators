@@ -4775,7 +4775,7 @@ if (message.channelId === SC_QUIZ_CREATORS_CHANNEL_ID) {
 });
 
 
-
+//teste
   } catch (err) {
     console.error("[SC_QUIZ] Falha geral:", err);
   }
