@@ -4,6 +4,7 @@
 
 import fs from 'node:fs';
 import { fetch } from 'undici';
+import { SC_QUIZ_BANK } from './questions.js';
 
 export async function setupQuiz(client) {
   try {
@@ -26,7 +27,7 @@ export async function setupQuiz(client) {
     const SC_QUIZ_MIN_GAP_MINUTES     = 25;
     const SC_QUIZ_DM_TIMEOUT_MS       = 3 * 60 * 1000;
     const SC_QUIZ_EXTRA_DM_QUESTIONS  = 3;
-    const SC_QUIZ_DATA_PATH           = './sc_quiz_data.json';
+    const SC_QUIZ_DATA_PATH           = './sc_quiz_data.json'; // Caminho relativo à execução (raiz)
     const SC_QUIZ_POINTS_RIGHT        = 1;
     const SC_QUIZ_POINTS_WRONG        = 0;
 
@@ -99,48 +100,6 @@ export async function setupQuiz(client) {
       SC_QUIZ_STATE.rt.lastScheduleDayKeyFast = (typeof SC_QUIZ_STATE.rt.lastScheduleDayKeyFast === 'string' || SC_QUIZ_STATE.rt.lastScheduleDayKeyFast === null) ? SC_QUIZ_STATE.rt.lastScheduleDayKeyFast : null;
       SC_QUIZ_STATE.rt.active = SC_QUIZ_STATE.rt.active || null;
       SC_QUIZ_STATE.rt.attempts = SC_QUIZ_STATE.rt.attempts || {};
-    })();
-
-    const SC_QUIZ_BANK = (() => {
-      let idc = 1;
-      const Q = [];
-      const L = ['A', 'B', 'C', 'D'];
-      const shuffle = (arr) => {
-        const a = arr.slice();
-        for (let i = a.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [a[i], a[j]] = [a[j], a[i]];
-        }
-        return a;
-      };
-      let nextLetterIdx = 0;
-      const rotateLetter = () => {
-        const t = nextLetterIdx;
-        nextLetterIdx = (nextLetterIdx + 1) % 4;
-        return t;
-      };
-      const compact = (s) => {
-        let out = String(s || '').trim().replace(/\s+/g, ' ');
-        if (out.length > 84) out = out.slice(0, 81) + '...';
-        return out;
-      };
-      function addS(categoria, texto, choices, correctIndex) {
-        const idx = [0, 1, 2, 3];
-        const perm = shuffle(idx);
-        const targetLetterIdx = rotateLetter();
-        const posCorrect = perm.indexOf(correctIndex);
-        if (posCorrect !== targetLetterIdx) {
-          [perm[posCorrect], perm[targetLetterIdx]] = [perm[targetLetterIdx], perm[posCorrect]];
-        }
-        const opcoes = perm.map((i, k) => `${L[k]}) ${compact(choices[i])}`);
-        const resposta = L[targetLetterIdx];
-        Q.push({ id: idc++, categoria, texto, opcoes, resposta });
-      }
-
-      // ... (Restante do Banco de Perguntas omitido para brevidade, mas deve ser mantido na versão final)
-      // [Adicione aqui todas as chamadas addS que estavam no seu código original]
-
-      return Q;
     })();
 
     globalThis.SC_QUIZ_BANK = globalThis.SC_QUIZ_BANK ?? SC_QUIZ_BANK;
