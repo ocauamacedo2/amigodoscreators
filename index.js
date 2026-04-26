@@ -1702,8 +1702,6 @@ client.on(Events.VoiceStateUpdate, async (oldS, newS) => {
     }
   });
 })();
-////QUizz diarios
-
 // ===============================
 // SANTA CREATORS — QUIZ DIÁRIO 📚
 // ===============================
@@ -1729,7 +1727,7 @@ client.on(Events.VoiceStateUpdate, async (oldS, newS) => {
 
    // ========== CONFIG ==========
 const SC_QUIZ_CREATORS_CHANNEL_ID = '1381597720007151698';   // onde aparece a pergunta diária
-const SC_QUIZ_RANKING_CHANNEL_ID  = '1415387000416243722';   // ranking público
+const SC_QUIZ_RANKING_CHANNEL_ID  = '1495330319715532880';   // ranking público
 const SC_QUIZ_LOGS_CHANNEL_ID     = '1415390219779313808';   // logs internos
 const SC_MENTION_ROLES = ['1262978759922028575','1352275728476930099'];
 
@@ -1771,7 +1769,7 @@ if (typeof fetch === 'undefined') {
 }
 
     // ========= ESTADO/PERSISTÊNCIA =========
-   let SC_QUIZ_STATE = {
+let SC_QUIZ_STATE = {
   leaderboard: {},
   activeQuizMessages: [],
   // ↓ agora temos DOIS stickies separados
@@ -1779,7 +1777,8 @@ if (typeof fetch === 'undefined') {
   stickyRankingMsgIdInteracoes: null,
   participantsByMsg: {},
   lastScheduleDayKey: null,
-  __todaySchedule: []
+  __todaySchedule: [],
+  creatorsCleanupMessageIds: []
 };
 
 
@@ -1819,11 +1818,12 @@ SC_QUIZ_STATE.rt = SC_QUIZ_STATE.rt || {
 
 // 🔧 Garante que os campos existem mesmo se o JSON antigo não tiver todos
 (function scq_normalizeState() {
-  SC_QUIZ_STATE = SC_QUIZ_STATE || {};
+SC_QUIZ_STATE = SC_QUIZ_STATE || {};
 SC_QUIZ_STATE.leaderboard = SC_QUIZ_STATE.leaderboard || {};
 SC_QUIZ_STATE.activeQuizMessages = SC_QUIZ_STATE.activeQuizMessages || [];
 SC_QUIZ_STATE.participantsByMsg = SC_QUIZ_STATE.participantsByMsg || {};
 SC_QUIZ_STATE.__todaySchedule = SC_QUIZ_STATE.__todaySchedule || [];
+SC_QUIZ_STATE.creatorsCleanupMessageIds = SC_QUIZ_STATE.creatorsCleanupMessageIds || [];
 
 // ========= ESTADO/PERSISTÊNCIA ========= (logo depois do SC_QUIZ_STATE ser criado)
 SC_QUIZ_STATE.currentValidMessageId = SC_QUIZ_STATE.currentValidMessageId || null; // msg “oficial” (daily OU fast)
@@ -1849,7 +1849,7 @@ SC_QUIZ_STATE.rt.attempts = SC_QUIZ_STATE.rt.attempts || {};
 
 })();
 
-///teste 
+
     // ======= BANCO DE PERGUNTAS =======
     // Formato: { id, categoria, texto, opcoes: ['A) ...','B) ...',...], resposta: 'A' }
     // Você pode adicionar MUITO mais. Já deixei um pack grande e variado.
@@ -1902,750 +1902,1486 @@ SC_QUIZ_STATE.rt.attempts = SC_QUIZ_STATE.rt.attempts || {};
       resposta
     });
   }
-
-  // =========================
-  // REGRAS GERAIS / CONDUTA
-  // =========================
-  addS('Conduta', 'O que a SantaCreators espera de quem faz parte da equipe?', [
-    'Só presença em call',
-    'Respeito, postura e consciência',
-    'Apenas saber usar comandos',
-    'Somente foco em ganhar pontos'
-  ], 1);
-
-  addS('Conduta', 'A entrevista serve principalmente para:', [
-    'Só preencher formulário',
-    'Liberar cargo automático',
-    'Ver se a pessoa veste a camisa de verdade',
-    'Escolher a cidade favorita'
-  ], 2);
-
-  addS('Conduta', 'Problemas da empresa devem ser resolvidos como?', [
-    'Por DM com qualquer pessoa',
-    'Nos canais corretos e com organização',
-    'Somente em conversa fora do RP',
-    'No privado com membros comuns'
-  ], 1);
-
-  addS('Conduta', 'A hierarquia dentro da SantaCreators é vista como:', [
-    'Decoração sem função real',
-    'Estrutura com função e responsabilidade',
-    'Algo opcional para quem quiser',
-    'Somente um detalhe visual'
-  ], 1);
-
-  addS('Conduta', 'Cada membro possui um canal privado com seu nome para:', [
-    'Criar tretas em sigilo',
-    'Resolver tudo sem liderança',
-    'Tirar dúvidas e pedir ajuda com segurança',
-    'Falar apenas de assuntos pessoais'
-  ], 2);
-
-  addS('Conduta', 'Qual destas atitudes pode gerar expulsão mesmo se foi "brincadeira"?', [
-    'Zoar roupa de evento',
-    'Chegar atrasado uma vez',
-    'Falar pouco na call',
-    'Racismo, homofobia ou transfobia'
-  ], 3);
-
-  addS('Conduta', 'Se você decidir sair da SantaCreators, o procedimento correto é:', [
-    'Remover o set sozinho no painel',
-    'Pedir demissão em game para a equipe',
-    'Mandar DM e sumir',
-    'Sair do Discord sem avisar'
-  ], 1);
-
-  addS('Conduta', 'A idade mínima permitida para participar da SantaCreators é:', [
-    '13 anos',
-    '14 anos',
-    '15 anos',
-    '16 anos'
-  ], 2);
-
-  addS('Conduta', 'Familiares podem atuar juntos na equipe?', [
-    'Sim, sem restrição',
-    'Só se forem da mesma cidade',
-    'Só com cargo baixo',
-    'Não, por questões éticas e organizacionais'
-  ], 3);
-
-  addS('Conduta', 'Se houver vínculo familiar com alguém da equipe, o correto é:', [
-    'Esconder para evitar confusão',
-    'Avisar imediatamente a liderança responsável',
-    'Esperar alguém descobrir',
-    'Falar somente com membros comuns'
-  ], 1);
-
-  // =========================
-  // IMERSÃO / RP
-  // =========================
-  addS('Imersão', 'No meio do RP, falar "meu Discord caiu" é:', [
-    'Permitido se for rápido',
-    'Aceitável em evento',
-    'Quebra de imersão',
-    'Obrigatório para explicar bug'
-  ], 2);
-
-  addS('Imersão', 'Se ocorrer bug ou alguém estiver flutuando, o mais correto é:', [
-    'Quebrar o RP na hora',
-    'Usar uma justificativa criativa dentro da narrativa',
-    'Ignorar totalmente e sair',
-    'Falar em off no chat local'
-  ], 1);
-
-  addS('Imersão', 'Se estiver sem microfone no RP, uma substituição mais imersiva seria:', [
-    'Meu headset quebrou',
-    'Meu Discord travou',
-    'Minha garganta tá ruim',
-    'Meu push-to-talk sumiu'
-  ], 2);
-
-  addS('Imersão', 'Trocar de roupa na frente de outros players, sem contexto, é:', [
-    'Normal',
-    'Recomendado',
-    'Uma quebra de imersão',
-    'Obrigatório nas ruas'
-  ], 2);
-
-  addS('Imersão', 'Ao precisar sair da cidade/logar off perto de outros players, o melhor é:', [
-    'Deslogar no mesmo lugar sem falar nada',
-    'Sair de forma imersiva e em local adequado',
-    'Fechar o jogo no meio da conversa',
-    'Usar qualquer desculpa fora do RP'
-  ], 1);
-
-  addS('Imersão', 'Usar palavras do mundo exterior diretamente no RP deve ser:', [
-    'Incentivado',
-    'Usado só por líderes',
-    'Evitado',
-    'Usado em eventos especiais'
-  ], 2);
-
-  addS('Imersão', 'A frase "tô com os olhos abertos" é usada para substituir:', [
-    'Tô mutado',
-    'Tô em live',
-    'Tô sem áudio',
-    'Tô com lag'
-  ], 1);
-
-  addS('Imersão', 'Usar comandos do F8 para flutuar ou sentar no ar sem sentido no RP é:', [
-    'Aceitável se for engraçado',
-    'Uma conduta a ser evitada',
-    'Obrigatório em eventos',
-    'Parte do padrão da empresa'
-  ], 1);
-
-  // =========================
-  // UNIFORME / PRÉDIO / VEÍCULOS
-  // =========================
-  addS('Uniforme', 'Dentro do prédio da SantaCreators, o uso obrigatório é de:', [
-    'Qualquer roupa neutra',
-    'Somente boné',
-    'Jaqueta da SantaCreators',
-    'Roupa civil sem identificação'
-  ], 2);
-
-  addS('Uniforme', 'Nas proximidades do prédio, o membro deve usar:', [
-    'Ao menos uma peça da SantaCreators',
-    'Apenas calça preta',
-    'Somente acessório discreto',
-    'Qualquer roupa desde que esteja armado'
-  ], 0);
-
-  addS('Uniforme', 'Para usar as garagens da empresa, é necessário:', [
-    'Somente ter cargo',
-    'Estar com ao menos uma peça da SantaCreators',
-    'Estar com jaqueta e boné juntos',
-    'Pedir autorização por DM'
-  ], 1);
-
-  addS('Uniforme', 'Se a pessoa entrar no prédio sem a jaqueta, o correto é:', [
-    'Continuar normalmente',
-    'Sair da cidade',
-    'Ir a uma sala sozinho e vestir a peça',
-    'Trocar de cargo'
-  ], 2);
-
-  addS('Veículos', 'Usar veículos da SantaCreators para troca de tiro é:', [
-    'Permitido com print',
-    'Proibido',
-    'Permitido em qualquer horário',
-    'Recomendado em evento'
-  ], 1);
-
-  addS('Veículos', 'Usar veículos do prédio para assalto de pista é:', [
-    'Permitido se estiver em dupla',
-    'Permitido se for perto',
-    'Proibido',
-    'Permitido só para liderança'
-  ], 2);
-
-  addS('Veículos', 'Sequestro com veículo da empresa só é permitido quando:', [
-    'For improvisado e rápido',
-    'Houver RP organizado e dentro do horário permitido',
-    'Qualquer membro quiser fazer',
-    'Acontecer sem planejamento'
-  ], 1);
-
-  addS('Uniforme', 'Em ações ilegais fora da sede, o uso do uniforme é:', [
-    'Obrigatório para mostrar poder',
-    'Livre em qualquer situação',
-    'Proibido, devendo trocar de roupa antes',
-    'Permitido somente para gestores'
-  ], 2);
-
-  addS('Uniforme', 'Trocar de roupa na frente de outros players durante ação externa é:', [
-    'O ideal',
-    'Errado, devendo ser feito em local privado',
-    'Aceitável se for rápido',
-    'Exigido pela empresa'
-  ], 1);
-
-  // =========================
-  // BAÚS
-  // =========================
-  addS('Baús', 'O baú pessoal da SantaCreators é:', [
-    'Uso livre e exclusivo do membro',
-    'Compartilhado com toda a equipe',
-    'Reservado à coordenação',
-    'Somente para vendas'
-  ], 0);
-
-  addS('Baús', 'No baú geral, o uso correto é:', [
-    'Pegar para vender e lucrar sozinho',
-    'Usar com bom senso e pensar nos colegas',
-    'Levar tudo que precisar sem repor',
-    'Trocar os itens com outras facções'
-  ], 1);
-
-  addS('Baús', 'No baú geral, qual destas opções respeita a regra?', [
-    'Retirar em excesso para guardar',
-    'Pegar somente o necessário para consumo próprio',
-    'Distribuir para qualquer um de fora',
-    'Usar para comércio livre'
-  ], 1);
-
-  addS('Baús', 'O baú creators serve para:', [
-    'Consumo livre entre os membros',
-    'Guardar dinheiro pessoal',
-    'Doações e entregas, sem retirada',
-    'Vendas rápidas no RP'
-  ], 2);
-
-  addS('Baús', 'Retirar item do baú creators é:', [
-    'Permitido para qualquer cargo',
-    'Permitido se repor depois',
-    'Proibido',
-    'Permitido só em evento'
-  ], 2);
-
-  addS('Baús', 'No baú de vendas, a divisão correta é:', [
-    '100% painel',
-    '100% para quem vendeu',
-    '70% para você e 30% painel',
-    '50% para você e 50% para o painel'
-  ], 3);
-
-  addS('Baús', 'Se alguém usar o baú de vendas e não dividir corretamente, a punição prevista é:', [
-    'Somente aviso verbal',
-    'Ban imediato',
-    'Perda de um ponto',
-    'Nada acontece'
-  ], 1);
-
-  addS('Baús', 'O baú coordenação é voltado para:', [
-    'Organização interna de metas e entregas',
-    'Armas do baú geral',
-    'Itens pessoais de membros',
-    'Somente bebidas e kits'
-  ], 0);
-
-  addS('Baús', 'O baú responsável pode ser acessado por:', [
-    'Todos os creators',
-    'Somente a RESP',
-    'Apenas Social Médias',
-    'Qualquer membro em evento'
-  ], 1);
-
-  // =========================
-  // PODERES / ANTI-RP
-  // =========================
-  addS('Poderes', 'Os poderes da SantaCreators existem para:', [
-    'Benefício pessoal no RP',
-    'Ganhar vantagem em ação',
-    'Fins administrativos e empresariais',
-    'Facilitar fuga em confronto'
-  ], 2);
-
-  addS('Poderes', 'Usar comando para ir até um amigo no outro lado da cidade durante o RP é:', [
-    'Organização da empresa',
-    'Abuso de poder',
-    'Uso normal do cargo',
-    'Permitido se for rápido'
-  ], 1);
-
-  addS('Poderes', 'A regra de ouro sobre poderes é:', [
-    'Líder pode tudo',
-    'Se for amigo, pode ajudar',
-    'Só usar em evento',
-    'Se um player comum não pode, você também não pode'
-  ], 3);
-
-  addS('Poderes', 'Usar noclip sem necessidade, fora de demanda da empresa, é:', [
-    'Correto',
-    'Abuso de poder',
-    'Obrigatório para gestão',
-    'Permitido em qualquer patrulha'
-  ], 1);
-
-  addS('Poderes', 'Se morrer em uma ação de RP, o correto é:', [
-    'Usar /god e voltar na hora',
-    'Chamar médico ou ir para os bombeiros',
-    'Levantar sozinho e continuar',
-    'Usar poder para resetar a cena'
-  ], 1);
-
-  addS('Poderes', 'Se alguém cometer anti-rp contra você, o primeiro passo correto é:', [
-    'Punir na hora usando poderes',
-    'Clinar o jogo e voltar',
-    'Clipar tudo e pegar os passaportes',
-    'Trazer a pessoa por comando'
-  ], 2);
-
-  addS('Poderes', 'Em caso de anti-rp sofrido, você nunca deve:', [
-    'Enviar para seu responsável',
-    'Guardar provas',
-    'Usar seus poderes para resolver na hora',
-    'Relatar o caso'
-  ], 2);
-
-  addS('Poderes', 'Sem alinhamento e sem autorização, o uso de comando da gestão deve ser:', [
-    'Liberado para qualquer situação',
-    'Evitado',
-    'Usado apenas à noite',
-    'Feito só com print'
-  ], 1);
-
-  addS('Poderes', 'Na dúvida sobre usar um poder, a orientação correta é:', [
-    'Usar primeiro e explicar depois',
-    'Perguntar antes',
-    'Usar escondido',
-    'Esperar alguém reclamar'
-  ], 1);
-
-  // =========================
-  // CALL / ORGANIZAÇÃO / PONTO
-  // =========================
-  addS('Organização', 'Ficar em call na cidade é obrigatório para todos?', [
-    'Sim, sempre',
-    'Não',
-    'Só para creators',
-    'Só em domingo'
-  ], 1);
-
-  addS('Organização', 'Para quem busca entrosamento, aprendizado e evolução, a call é:', [
-    'Proibida',
-    'Irrelevante',
-    'Altamente recomendada',
-    'Substituída por mensagem'
-  ], 2);
-
-  addS('Organização', 'Responsáveis têm obrigação de:', [
-    'Ficar invisíveis',
-    'Ficar em call para ajudar a equipe',
-    'Evitar contato com a base',
-    'Resolver tudo apenas por texto'
-  ], 1);
-
-  addS('Organização', 'Alinhamentos na SantaCreators acontecem:', [
-    'Em call com o responsável',
-    'Somente por DM',
-    'Exclusivamente por e-mail',
-    'No privado com qualquer membro'
-  ], 0);
-
-  addS('Organização', 'Sempre que usar poderes, você deve:', [
-    'Ignorar se for pouca coisa',
-    'Registrar no final do dia no canal correto',
-    'Mandar print só no privado',
-    'Avisar apenas se der problema'
-  ], 1);
-
-  addS('Organização', 'O bate ponto da SantaCreators funciona em quais horários?', [
-    '08:00 às 12:00',
-    '14:00 às 18:00',
-    '17:00 às 23:00 e 01:00 às 04:00',
-    'Somente às 19:00'
-  ], 2);
-
-  addS('Organização', 'Atualmente, qual destes itens gera pontos no sistema?', [
-    'Registro de poderes utilizados',
-    'Entrar em call por 5 minutos',
-    'Mudar foto no Discord',
-    'Mandar emoji no chat'
-  ], 0);
-
-  addS('Organização', 'A regra sobre registros importantes é:', [
-    'Registrar duas vezes por garantia',
-    'Registrar só quando lembra',
-    'Registrar somente uma vez por dia, quando necessário',
-    'Nunca registrar no mesmo dia'
-  ], 2);
-
-  // =========================
-  // ADVERTÊNCIAS / PRESENÇA
-  // =========================
-  addS('Advertência', 'Qual destas situações pode gerar advertência nas proximidades da sede?', [
-    'Estar sem identificação da empresa',
-    'Entrar em call',
-    'Usar a garagem corretamente',
-    'Perguntar uma dúvida'
-  ], 0);
-
-  addS('Advertência', 'Qual destes exemplos representa quebra de imersão?', [
-    'Vou meditar um cado',
-    'Preciso mentalizar um portão abrindo do além',
-    'Minha mãe tá me chamando',
-    'Tive uma tontura forte'
-  ], 2);
-
-  addS('Advertência', 'Má conduta envolve:', [
-    'Somente atraso em evento',
-    'Falta de respeito e respostas debochadas',
-    'Usar roupa da empresa',
-    'Perguntar em alinhamento'
-  ], 1);
-
-  addS('Advertência', 'Para cargos Coord.+, Resp. Líder e Resp. Influ, os eventos das 19:00 são:', [
-    'Opcionais',
-    'Só recomendados',
-    'Obrigatórios',
-    'Facultativos em dias úteis'
-  ], 2);
-
-  addS('Advertência', 'Caso não possa comparecer ao evento das 19:00, é obrigatório:', [
-    'Avisar depois do evento',
-    'Registrar ausência até 18:30 com justificativa',
-    'Faltar e explicar no dia seguinte',
-    'Mandar DM para qualquer membro'
-  ], 1);
-
-  addS('Advertência', 'Falta sem presença e sem justificativa dentro do prazo gera:', [
-    'Somente um lembrete',
-    'ADV 1/3 e -5 pontos',
-    'Promoção suspensa por 1 hora',
-    'Nada, se for liderança'
-  ], 1);
-
-  addS('Advertência', 'Ao atingir 3/3 de ADV, acontece:', [
-    'Reset automático',
-    'Mudança de cidade',
-    'Reavaliação da permanência e da posição',
-    'Bônus de advertência'
-  ], 2);
-
-  // =========================
-  // HIERARQUIA / GI
-  // =========================
-  addS('Hierarquia', 'A gestaoinfluencer é:', [
-    'Um grupo separado da SantaCreators',
-    'O núcleo interno da própria SantaCreators',
-    'Uma facção paralela',
-    'Um cargo temporário fora da empresa'
-  ], 1);
-
-  addS('Hierarquia', 'O acesso à gestaoinfluencer acontece por:', [
-    'Pedido no privado',
-    'Formulário aberto',
-    'Convite baseado em evolução e confiança',
-    'Compra de vaga'
-  ], 2);
-
-  addS('Hierarquia', 'O nível 3 da estrutura oficial da SantaCreators é:', [
-    'Responsáveis',
-    'Coordenação',
-    'Creator',
-    'Gestão interna'
-  ], 2);
-
-  addS('Hierarquia', 'No nível 2 ficam funções como:', [
-    'Resp. Líder e Resp. Influ',
-    'Social Médias, Manager e Gestor',
-    'Somente Creator',
-    'Apenas membros externos'
-  ], 1);
-
-  addS('Hierarquia', 'O nível 1 da SantaCreators é formado por:', [
-    'Social Médias e Gestor',
-    'Creator e EQP.M',
-    'Os cargos responsáveis da liderança',
-    'Somente convidados externos'
-  ], 2);
-
-  addS('Hierarquia', 'O caminho normal até a gestaoinfluencer é:', [
-    'Entrar e pedir convite imediato',
-    'Participar, evoluir e ser convidado',
-    'Fazer teste e comprar cargo',
-    'Esperar sorteio interno'
-  ], 1);
-
-  // =========================
-  // SOCIAL MÉDIAS
-  // =========================
-  addS('Social Médias', 'A principal função da Social Médias é:', [
-    'Cuidar só do ZipZap',
-    'Organizar e estruturar os eventos da SantaCreators',
-    'Apenas aprovar líderes',
-    'Somente criar cargos no Discord'
-  ], 1);
-
-  addS('Social Médias', 'Os eventos da SantaCreators acontecem em quais dias?', [
-    'Somente sexta e sábado',
-    'Segunda a sábado',
-    'Terça a domingo',
-    'Todos os dias com domingo incluso'
-  ], 1);
-
-  addS('Social Médias', 'O horário padrão dos eventos é:', [
-    '18:00',
-    '19:00',
-    '20:00',
-    '21:00'
-  ], 1);
-
-  addS('Social Médias', 'O cronograma da semana deve ser organizado em qual dia?', [
-    'Segunda',
-    'Quarta',
-    'Domingo',
-    'Sábado após 22:00'
-  ], 2);
-
-  addS('Social Médias', 'Na montagem do cronograma, não pode repetir:', [
-    'O mesmo evento na mesma cidade e mesmo dia da semana anterior',
-    'Nenhum evento da semana passada',
-    'Nenhuma cidade usada antes',
-    'A mesma roupa da semana passada'
-  ], 0);
-
-  addS('Social Médias', 'A divulgação do evento deve ser feita no dia do evento entre:', [
-    '00:00 e 17:00',
-    '12:00 e 19:00',
-    '17:00 e 23:00',
-    'Somente às 18:59'
-  ], 0);
-
-  addS('Social Médias', 'Após o evento, a equipe deve registrar presença no canal de:', [
-    'Poderes em evento',
-    'Baú geral',
-    'Convite de líderes',
-    'Cadastro de uniforme'
-  ], 0);
-
-  addS('Social Médias', 'Na premiação, VIPs comerciais como Ouro e Platinum exigem autorização de:', [
-    'Qualquer manager',
-    'Macedo ou diretoria da cidade',
-    'Somente EQP.M',
-    'Qualquer creator antigo'
-  ], 1);
-
-  // =========================
-  // MANAGER
-  // =========================
-  addS('Manager', 'A missão da equipe Manager Creators é:', [
-    'Organizar baús e garagens',
-    'Garantir organizações presentes nos eventos',
-    'Criar roupas da empresa',
-    'Cuidar apenas da call'
-  ], 1);
-
-  addS('Manager', 'Os eventos com maior contingente para atuação dos Managers são:', [
-    'Segunda, terça e quarta',
-    'Quinta, sexta e sábado',
-    'Somente domingo',
-    'Somente quarta e sábado'
-  ], 1);
-
-  addS('Manager', 'O prazo para registrar organizações vai de:', [
-    'Segunda até sábado 19:00',
-    'Domingo 00:00 até quinta 16:00',
-    'Terça até sexta 12:00',
-    'Quinta até domingo 00:00'
-  ], 1);
-
-  addS('Manager', 'Para convidar uma organização, o contato deve ser feito com:', [
-    'Qualquer membro da facção',
-    'Somente membros novatos',
-    'Diretamente com um líder da organização',
-    'Apenas via mensagem automática'
-  ], 2);
-
-  addS('Manager', 'Registrar organização sem falar com o líder é:', [
-    'Aceitável se a base confirmar',
-    'Errado',
-    'Permitido com print de terceiros',
-    'Obrigatório em caso de pressa'
-  ], 1);
-
-  addS('Manager', 'Como Manager, você é staff?', [
-    'Sim, sempre',
-    'Não',
-    'Só em evento',
-    'Só em call'
-  ], 1);
-
-  addS('Manager', 'No RP, convidar organização dentro do NC é:', [
-    'Permitido se for rápido',
-    'Proibido',
-    'Obrigatório para segurança',
-    'Aceitável só com líder online'
-  ], 1);
-
-  addS('Manager', 'Cada organização registrada gera para o Manager:', [
-    'Advertência',
-    'Mudança de cargo',
-    'Pontos no sistema',
-    'Bloqueio de painel'
-  ], 2);
-
-  // =========================
-  // GESTOR
-  // =========================
-  addS('Gestor', 'A principal missão do Gestor Creators é:', [
-    'Punir membros da base',
-    'Formar e orientar quem está começando',
-    'Cuidar do financeiro dos eventos',
-    'Apenas acompanhar dashboards'
-  ], 1);
-
-  addS('Gestor', 'Para ser Gestor Creators, a pessoa deve ter vindo de:', [
-    'Qualquer área sem experiência',
-    'Somente Creator',
-    'Social Médias ou Manager Creators',
-    'Somente Resp Líder'
-  ], 2);
-
-  addS('Gestor', 'O Gestor ensina principalmente quem está em fase:', [
-    'Final da liderança',
-    'Inicial da equipe',
-    'Somente responsável',
-    'Externa à empresa'
-  ], 1);
-
-  addS('Gestor', 'Os feedbacks do Gestor devem ser:', [
-    'Genéricos e curtos',
-    'Só elogios',
-    'Detalhados, com qualidades, erros e evolução',
-    'Feitos só por emoji'
-  ], 2);
-
-  addS('Gestor', 'Sempre que ensinar algo a alguém da equipe, o Gestor deve:', [
-    'Guardar só para si',
-    'Registrar o ensinamento',
-    'Esperar o membro registrar',
-    'Avisar apenas em call'
-  ], 1);
-
-  addS('Gestor', 'Ao registrar alinhamento, deve ser informado:', [
-    'O nome do evento da semana',
-    'O ID Discord da pessoa alinhada',
-    'A cor do cargo atual',
-    'O número do painel'
-  ], 1);
-
-  addS('Gestor', 'Ser Gestor substitui a função anterior da pessoa?', [
-    'Sim, ela abandona a área antiga',
-    'Não, ela continua na função de origem também',
-    'Sim, mas só por um mês',
-    'Somente se vier da Social'
-  ], 1);
-
-  // =========================
-  // COORD
-  // =========================
-  addS('Coordenação', 'O Coord Creators é visto como:', [
-    'Somente alguém do financeiro',
-    'Braço direito da liderança e quem faz tudo funcionar',
-    'Membro restrito à call',
-    'Apenas moderador de chat'
-  ], 1);
-
-  addS('Coordenação', 'O Coord precisa dominar quais áreas?', [
-    'Somente Social Médias',
-    'Somente Manager',
-    'Social, Manager e Gestor',
-    'Apenas Resp Influ'
-  ], 2);
-
-  addS('Coordenação', 'Se faltar alguém em uma área da equipe, o Coord deve:', [
-    'Ignorar até alguém aparecer',
-    'Assumir temporariamente para nada quebrar',
-    'Cancelar o evento da semana',
-    'Mandar DM e sair'
-  ], 1);
-
-  addS('Coordenação', 'Além de executar funções, o Coord também deve:', [
-    'Coordenar e acompanhar as equipes',
-    'Evitar contato com a base',
-    'Fazer somente registros',
-    'Trabalhar só em domingo'
-  ], 0);
-
-  addS('Coordenação', 'O próximo passo natural de evolução do Coord Creators é:', [
-    'Creator',
-    'Resp Líder',
-    'EQP.M',
-    'Junior de cidade'
-  ], 1);
-
-  // =========================
-  // RESPONSÁVEIS
-  // =========================
-  addS('Responsáveis', 'O Resp Líder deve acompanhar principalmente se:', [
-    'A equipe está organizada e a coordenação está funcionando',
-    'Os baús estão cheios',
-    'Todo mundo está em live',
-    'Os membros usam só jaqueta longa'
-  ], 0);
-
-  addS('Responsáveis', 'Se houver membro iniciante presente, o Resp Líder deve:', [
-    'Fazer tudo sozinho',
-    'Ignorar a pessoa',
-    'Ensinar e orientar na hora',
-    'Mandar a pessoa sair'
-  ], 2);
-
-  addS('Responsáveis', 'O Resp Influ possui autoridade para aplicar:', [
-    'Somente elogios',
-    'Banimento do painel e do Discord com regra e evidência',
-    'Premiações VIP comerciais sem critério',
-    'Qualquer ação sem prova'
-  ], 1);
-
-  addS('Responsáveis', 'O Resp Creators é:', [
-    'Responsável máximo pela operação da equipe Creators',
-    'Somente líder de evento',
-    'A base da GI 5',
-    'Cargo temporário de teste'
-  ], 0);
-
-  addS('Responsáveis', 'Entre as responsabilidades do Resp Creators está:', [
-    'Apenas entrar em call',
-    'Aprovar premiações de eventos e supervisionar decisões importantes',
-    'Convidar toda organização sozinho',
-    'Só cuidar do baú pessoal'
-  ], 1);
-
-  addS('Responsáveis', 'Na hierarquia final da equipe, a ordem correta de subida é:', [
-    'Coord > Gestor > Manager > Social',
-    'Social/Manager > Gestor > Coord > Resp Líder > Resp Influ > Resp Creators',
-    'Creator > Resp Creators > Coord > Gestor',
-    'EQP.M > Creator > Coord > Social'
-  ], 1);
-
-  return Q;
+// =========================
+// REGRAS GERAIS / CONDUTA
+// =========================
+addS('Conduta', 'O que a SantaCreators espera de quem faz parte da equipe?', [
+  'Boa comunicação, presença e produtividade',
+  'Respeito, postura e consciência',
+  'Comprometimento, resultado e constância',
+  'Postura firme, criatividade e iniciativa'
+], 1);
+
+addS('Conduta', 'A entrevista serve principalmente para:', [
+  'Validar se a pessoa tem perfil e veste a camisa',
+  'Liberar cargo após aprovação técnica',
+  'Ver se a pessoa veste a camisa de verdade',
+  'Avaliar postura antes da integração final'
+], 2);
+
+addS('Conduta', 'Problemas da empresa devem ser resolvidos como?', [
+  'Nos canais corretos e com organização',
+  'Diretamente com quem estiver disponível',
+  'Com alinhamento interno e registro correto',
+  'Nos canais corretos e com liderança ciente'
+], 0);
+
+addS('Conduta', 'A hierarquia dentro da SantaCreators é vista como:', [
+  'Uma referência visual de cargos',
+  'Estrutura com função e responsabilidade',
+  'Uma divisão de áreas com autonomia',
+  'Uma organização formal de liderança'
+], 1);
+
+addS('Conduta', 'Cada membro possui um canal privado com seu nome para:', [
+  'Resolver questões internas com mais agilidade',
+  'Tirar dúvidas e pedir ajuda com segurança',
+  'Receber orientações e registrar necessidades',
+  'Tratar pendências com acompanhamento'
+], 1);
+
+addS('Conduta', 'Qual destas atitudes pode gerar expulsão mesmo se foi "brincadeira"?', [
+  'Debochar de regra interna em alinhamento',
+  'Ofender alguém com preconceito',
+  'Insistir em brincadeira pesada com membro',
+  'Racismo, homofobia ou transfobia'
+], 3);
+
+addS('Conduta', 'Se você decidir sair da SantaCreators, o procedimento correto é:', [
+  'Avisar seu responsável e aguardar orientação final',
+  'Pedir demissão em game para a equipe',
+  'Solicitar desligamento no setor responsável',
+  'Comunicar a liderança antes de remover qualquer coisa'
+], 1);
+
+addS('Conduta', 'A idade mínima permitida para participar da SantaCreators é:', [
+  '14 anos',
+  '15 anos',
+  '16 anos',
+  '15 anos completos ou quase completos'
+], 1);
+
+addS('Conduta', 'Familiares podem atuar juntos na equipe?', [
+  'Sim, desde que não estejam na mesma área',
+  'Não, por questões éticas e organizacionais',
+  'Somente em setores sem poder de decisão',
+  'Apenas se houver autorização prévia da liderança'
+], 1);
+
+addS('Conduta', 'Se houver vínculo familiar com alguém da equipe, o correto é:', [
+  'Informar no momento da entrada ou assim que possível',
+  'Avisar imediatamente a liderança responsável',
+  'Registrar com o responsável direto antes de atuar',
+  'Deixar isso alinhado com a gestão desde o início'
+], 1);
+
+// =========================
+// IMERSÃO / RP
+// =========================
+addS('Imersão', 'No meio do RP, falar "meu Discord caiu" é:', [
+  'Uma justificativa aceitável em situação urgente',
+  'Quebra de imersão',
+  'Uma quebra leve, mas tolerável',
+  'Algo evitável, mas compreensível'
+], 1);
+
+addS('Imersão', 'Se ocorrer bug ou alguém estiver flutuando, o mais correto é:', [
+  'Usar uma justificativa criativa dentro da narrativa',
+  'Evitar comentar e seguir o RP normalmente',
+  'Contornar a situação sem quebrar a cena',
+  'Improvisar algo coerente com o contexto'
+], 0);
+
+addS('Imersão', 'Se estiver sem microfone no RP, uma substituição mais imersiva seria:', [
+  'Minha voz falhou do nada',
+  'Minha garganta tá ruim',
+  'Hoje eu tô rouco pra caramba',
+  'Minha cabeça tá doendo pra falar'
+], 1);
+
+addS('Imersão', 'Trocar de roupa na frente de outros players, sem contexto, é:', [
+  'Uma quebra de imersão',
+  'Uma atitude evitável no RP',
+  'Algo incoerente com a cena',
+  'Um comportamento fora do ideal'
+], 0);
+
+addS('Imersão', 'Ao precisar sair da cidade/logar off perto de outros players, o melhor é:', [
+  'Encerrar a cena rapidamente e sair',
+  'Sair de forma imersiva e em local adequado',
+  'Buscar uma justificativa coerente e se retirar',
+  'Evitar desaparecer no meio da interação'
+], 1);
+
+addS('Imersão', 'Usar palavras do mundo exterior diretamente no RP deve ser:', [
+  'Controlado para não atrapalhar a cena',
+  'Evitado',
+  'Usado apenas quando não houver opção',
+  'Substituído por falas mais imersivas'
+], 1);
+
+addS('Imersão', 'A frase "tô com os olhos abertos" é usada para substituir:', [
+  'Tô sem áudio',
+  'Tô em live',
+  'Tô mutado',
+  'Tô só ouvindo'
+], 1);
+
+addS('Imersão', 'Usar comandos do F8 para flutuar ou sentar no ar sem sentido no RP é:', [
+  'Uma quebra desnecessária de imersão',
+  'Uma conduta a ser evitada',
+  'Um comportamento inadequado em cena',
+  'Algo que compromete a seriedade do RP'
+], 1);
+
+// =========================
+// UNIFORME / PRÉDIO / VEÍCULOS
+// =========================
+addS('Uniforme', 'Dentro do prédio da SantaCreators, o uso obrigatório é de:', [
+  'Ao menos uma peça visível da empresa',
+  'Jaqueta da SantaCreators',
+  'Uniforme oficial ou peça principal da empresa',
+  'Identificação visual da empresa'
+], 1);
+
+addS('Uniforme', 'Nas proximidades do prédio, o membro deve usar:', [
+  'Ao menos uma peça da SantaCreators',
+  'Uma identificação discreta da empresa',
+  'Uniforme parcial visível para reconhecimento',
+  'Peça oficial compatível com o ambiente'
+], 0);
+
+addS('Uniforme', 'Para usar as garagens da empresa, é necessário:', [
+  'Ter cargo e estar identificado',
+  'Estar com ao menos uma peça da SantaCreators',
+  'Estar com uniforme visível da empresa',
+  'Ter vínculo ativo e roupa compatível'
+], 1);
+
+addS('Uniforme', 'Se a pessoa entrar no prédio sem a jaqueta, o correto é:', [
+  'Ajustar o uniforme em local reservado',
+  'Ir a uma sala sozinho e vestir a peça',
+  'Se retirar por um momento e regularizar a roupa',
+  'Corrigir a vestimenta sem expor a cena'
+], 1);
+
+addS('Veículos', 'Usar veículos da SantaCreators para troca de tiro é:', [
+  'Totalmente inadequado e proibido',
+  'Proibido',
+  'Vedado mesmo em situação emergencial',
+  'Não autorizado em hipótese normal'
+], 1);
+
+addS('Veículos', 'Usar veículos do prédio para assalto de pista é:', [
+  'Incompatível com o uso da empresa',
+  'Proibido',
+  'Vedado por desvio de finalidade',
+  'Não autorizado para ações criminais'
+], 1);
+
+addS('Veículos', 'Sequestro com veículo da empresa só é permitido quando:', [
+  'Houver contexto aprovado e situação específica',
+  'Houver RP organizado e dentro do horário permitido',
+  'Existir autorização de liderança e cenário coerente',
+  'For uma ação alinhada e dentro da regra'
+], 1);
+
+addS('Uniforme', 'Em ações ilegais fora da sede, o uso do uniforme é:', [
+  'Desaconselhado, salvo ordem superior',
+  'Proibido, devendo trocar de roupa antes',
+  'Inadequado por expor a empresa',
+  'Vedado para preservar a identificação'
+], 1);
+
+addS('Uniforme', 'Trocar de roupa na frente de outros players durante ação externa é:', [
+  'Errado, devendo ser feito em local privado',
+  'Inadequado, salvo em local seguro e isolado',
+  'Uma quebra evitável de coerência',
+  'Algo que só deveria ocorrer fora de vista'
+], 0);
+
+// =========================
+// BAÚS
+// =========================
+addS('Baús', 'O baú pessoal da SantaCreators é:', [
+  'De uso individual do membro responsável',
+  'Uso livre e exclusivo do membro',
+  'Reservado ao uso particular autorizado',
+  'Um espaço pessoal vinculado ao membro'
+], 1);
+
+addS('Baús', 'No baú geral, o uso correto é:', [
+  'Usar com consciência e sem exagero',
+  'Usar com bom senso e pensar nos colegas',
+  'Retirar apenas o que realmente vai utilizar',
+  'Fazer uso equilibrado pensando no coletivo'
+], 1);
+
+addS('Baús', 'No baú geral, qual destas opções respeita a regra?', [
+  'Pegar apenas o suficiente para a demanda atual',
+  'Pegar somente o necessário para consumo próprio',
+  'Retirar o básico sem prejudicar os demais',
+  'Usar com limite e sem estocar'
+], 1);
+
+addS('Baús', 'O baú creators serve para:', [
+  'Doações, repasses e entregas da equipe',
+  'Doações e entregas, sem retirada',
+  'Armazenar itens destinados à operação interna',
+  'Recebimentos da equipe sem uso pessoal'
+], 1);
+
+addS('Baús', 'Retirar item do baú creators é:', [
+  'Proibido',
+  'Vedado salvo autorização expressa',
+  'Não permitido para uso comum',
+  'Incompatível com a finalidade do baú'
+], 0);
+
+addS('Baús', 'No baú de vendas, a divisão correta é:', [
+  '60% para você e 40% painel',
+  '70% para você e 30% painel',
+  '50% para você e 50% para o painel',
+  '40% para você e 60% painel'
+], 2);
+
+addS('Baús', 'Se alguém usar o baú de vendas e não dividir corretamente, a punição prevista é:', [
+  'Advertência grave e devolução',
+  'Ban imediato',
+  'Punição severa por desvio',
+  'Desligamento por quebra de confiança'
+], 1);
+
+addS('Baús', 'O baú coordenação é voltado para:', [
+  'Organização interna de metas e entregas',
+  'Materiais de apoio da coordenação',
+  'Itens voltados ao controle interno',
+  'Demandas operacionais da liderança'
+], 0);
+
+addS('Baús', 'O baú responsável pode ser acessado por:', [
+  'Somente a RESP',
+  'Apenas liderança máxima da área',
+  'Exclusivamente a responsável da equipe',
+  'Somente quem ocupa a função de RESP'
+], 0);
+
+// =========================
+// PODERES / ANTI-RP
+// =========================
+addS('Poderes', 'Os poderes da SantaCreators existem para:', [
+  'Apoio operacional e controle da empresa',
+  'Fins administrativos e empresariais',
+  'Organização estrutural e necessidade interna',
+  'Gestão de demandas sem benefício pessoal'
+], 1);
+
+addS('Poderes', 'Usar comando para ir até um amigo no outro lado da cidade durante o RP é:', [
+  'Uso indevido da função',
+  'Abuso de poder',
+  'Desvio da finalidade do comando',
+  'Aproveitamento irregular de privilégio'
+], 1);
+
+addS('Poderes', 'A regra de ouro sobre poderes é:', [
+  'Você só pode usar quando houver justificativa interna',
+  'Se um player comum não pode, você também não pode',
+  'Poder não existe para te dar vantagem no RP',
+  'Se fugir da lógica do player comum, está errado'
+], 1);
+
+addS('Poderes', 'Usar noclip sem necessidade, fora de demanda da empresa, é:', [
+  'Uso incorreto de ferramenta administrativa',
+  'Abuso de poder',
+  'Conduta proibida por desvio de função',
+  'Ação irregular fora do contexto empresarial'
+], 1);
+
+addS('Poderes', 'Se morrer em uma ação de RP, o correto é:', [
+  'Aguardar suporte adequado dentro da cena',
+  'Chamar médico ou ir para os bombeiros',
+  'Seguir o fluxo normal de atendimento do RP',
+  'Prosseguir como qualquer player comum'
+], 1);
+
+addS('Poderes', 'Se alguém cometer anti-rp contra você, o primeiro passo correto é:', [
+  'Guardar as provas e levar para análise',
+  'Clipar tudo e pegar os passaportes',
+  'Registrar a situação com evidência completa',
+  'Coletar material antes de qualquer ação'
+], 1);
+
+addS('Poderes', 'Em caso de anti-rp sofrido, você nunca deve:', [
+  'Resolver por conta própria usando comando',
+  'Usar seus poderes para resolver na hora',
+  'Punir sem fluxo e sem registro',
+  'Interferir como staff no calor da cena'
+], 1);
+
+addS('Poderes', 'Sem alinhamento e sem autorização, o uso de comando da gestão deve ser:', [
+  'Restringido ao mínimo necessário',
+  'Evitado',
+  'Suspenso até confirmação superior',
+  'Não utilizado fora de necessidade clara'
+], 1);
+
+addS('Poderes', 'Na dúvida sobre usar um poder, a orientação correta é:', [
+  'Perguntar antes',
+  'Confirmar com liderança antes da ação',
+  'Validar o contexto antes de usar',
+  'Checar autorização antes de executar'
+], 0);
+
+// =========================
+// CALL / ORGANIZAÇÃO / PONTO
+// =========================
+addS('Organização', 'Ficar em call na cidade é obrigatório para todos?', [
+  'Não',
+  'Depende do setor e da função',
+  'Apenas em situações específicas',
+  'Não de forma geral para todos'
+], 0);
+
+addS('Organização', 'Para quem busca entrosamento, aprendizado e evolução, a call é:', [
+  'Importante para evolução e acompanhamento',
+  'Altamente recomendada',
+  'Muito útil para integração da equipe',
+  'Quase essencial para quem quer crescer'
+], 1);
+
+addS('Organização', 'Responsáveis têm obrigação de:', [
+  'Acompanhar a equipe com constância',
+  'Ficar em call para ajudar a equipe',
+  'Estar disponíveis para suporte e orientação',
+  'Dar assistência ativa à operação'
+], 1);
+
+addS('Organização', 'Alinhamentos na SantaCreators acontecem:', [
+  'Em call com o responsável',
+  'Em reunião com liderança da área',
+  'Em call estruturada com quem acompanha você',
+  'Em conversa orientada com o responsável direto'
+], 0);
+
+addS('Organização', 'Sempre que usar poderes, você deve:', [
+  'Registrar no canal adequado ao fim do uso',
+  'Registrar no final do dia no canal correto',
+  'Garantir que o uso ficou documentado',
+  'Formalizar o registro no fluxo correto'
+], 1);
+
+addS('Organização', 'O bate ponto da SantaCreators funciona em quais horários?', [
+  '17:00 às 23:00 e 01:00 às 04:00',
+  '18:00 às 23:00 e 00:00 às 03:00',
+  '17:00 às 22:00 e 01:00 às 04:00',
+  '17:00 às 23:00 e 00:00 às 04:00'
+], 0);
+
+addS('Organização', 'Atualmente, qual destes itens gera pontos no sistema?', [
+  'Registro de poderes utilizados',
+  'Registro correto de uso de poder',
+  'Lançamento de poder em canal apropriado',
+  'Documentação do uso administrativo'
+], 0);
+
+addS('Organização', 'A regra sobre registros importantes é:', [
+  'Registrar uma única vez dentro do fluxo correto',
+  'Registrar somente uma vez por dia, quando necessário',
+  'Evitar duplicidade e registrar com responsabilidade',
+  'Documentar apenas quando realmente couber'
+], 1);
+
+// =========================
+// ADVERTÊNCIAS / PRESENÇA
+// =========================
+addS('Advertência', 'Qual destas situações pode gerar advertência nas proximidades da sede?', [
+  'Estar sem identificação da empresa',
+  'Circular sem peça oficial visível',
+  'Estar perto da sede sem vestimenta adequada',
+  'Ignorar o padrão visual exigido na área'
+], 0);
+
+addS('Advertência', 'Qual destes exemplos representa quebra de imersão?', [
+  'Minha mãe tá me chamando',
+  'Meu telefone tocou aqui agora',
+  'Minha internet oscilou do nada',
+  'Tive um problema aqui fora do RP'
+], 0);
+
+addS('Advertência', 'Má conduta envolve:', [
+  'Postura inadequada e tratamento desrespeitoso',
+  'Falta de respeito e respostas debochadas',
+  'Comportamento incompatível com a função',
+  'Atitudes sem educação e sem postura'
+], 1);
+
+addS('Advertência', 'Para cargos Coord.+, Resp. Líder e Resp. Influ, os eventos das 19:00 são:', [
+  'Obrigatórios',
+  'Compromissos fixos da liderança',
+  'De presença esperada salvo justificativa',
+  'Parte da obrigação dos cargos citados'
+], 0);
+
+addS('Advertência', 'Caso não possa comparecer ao evento das 19:00, é obrigatório:', [
+  'Registrar ausência até 18:30 com justificativa',
+  'Informar ausência antes do horário-limite',
+  'Formalizar justificativa antes do evento',
+  'Avisar no fluxo correto dentro do prazo'
+], 0);
+
+addS('Advertência', 'Falta sem presença e sem justificativa dentro do prazo gera:', [
+  'ADV 1/3 e -5 pontos',
+  'Advertência com desconto de pontuação',
+  'Penalidade por ausência sem cobertura',
+  'Punição padrão por falta injustificada'
+], 0);
+
+addS('Advertência', 'Ao atingir 3/3 de ADV, acontece:', [
+  'Avaliação de permanência e possível redefinição',
+  'Revisão da continuidade e da posição ocupada',
+  'Reavaliação da permanência e da posição',
+  'Análise final sobre permanência na equipe'
+], 2);
+
+// =========================
+// HIERARQUIA / GI
+// =========================
+addS('Hierarquia', 'A gestaoinfluencer é:', [
+  'Uma divisão interna da própria SantaCreators',
+  'O núcleo interno da própria SantaCreators',
+  'Um setor avançado da estrutura principal',
+  'Uma extensão interna da equipe Creators'
+], 1);
+
+addS('Hierarquia', 'O acesso à gestaoinfluencer acontece por:', [
+  'Reconhecimento interno e convite por evolução',
+  'Convite baseado em evolução e confiança',
+  'Convite após destaque consistente e confiança',
+  'Entrada por mérito e observação da liderança'
+], 1);
+
+addS('Hierarquia', 'O nível 3 da estrutura oficial da SantaCreators é:', [
+  'Creator',
+  'Base operacional da equipe',
+  'Faixa dos creators na estrutura',
+  'Nível de entrada após liderança'
+], 0);
+
+addS('Hierarquia', 'No nível 2 ficam funções como:', [
+  'Social Médias, Manager e Gestor',
+  'Cargos intermediários como Social, Manager e Gestor',
+  'As áreas técnicas e operacionais acima da base',
+  'Funções de suporte e desenvolvimento da equipe'
+], 0);
+
+addS('Hierarquia', 'O nível 1 da SantaCreators é formado por:', [
+  'Os cargos responsáveis da liderança',
+  'A liderança principal da estrutura',
+  'Os responsáveis máximos da equipe',
+  'A camada mais alta de decisão'
+], 0);
+
+addS('Hierarquia', 'O caminho normal até a gestaoinfluencer é:', [
+  'Participar, evoluir e ser convidado',
+  'Crescer na equipe até ser observado',
+  'Se destacar até receber oportunidade interna',
+  'Evoluir de forma consistente até o convite'
+], 0);
+
+// =========================
+// SOCIAL MÉDIAS
+// =========================
+addS('Social Médias', 'A principal função da Social Médias é:', [
+  'Estruturar, organizar e manter a agenda de eventos',
+  'Organizar e estruturar os eventos da SantaCreators',
+  'Planejar o cronograma e a execução dos eventos',
+  'Coordenar a parte operacional dos eventos da equipe'
+], 1);
+
+addS('Social Médias', 'Os eventos da SantaCreators acontecem em quais dias?', [
+  'Segunda a sábado',
+  'De segunda até sábado',
+  'Ao longo da semana, exceto domingo',
+  'Seis dias por semana, sem domingo'
+], 0);
+
+addS('Social Médias', 'O horário padrão dos eventos é:', [
+  '19:00',
+  '20:00 com chamada antes',
+  '19:00 como horário-base',
+  'Por volta das 19:00'
+], 0);
+
+addS('Social Médias', 'O cronograma da semana deve ser organizado em qual dia?', [
+  'Domingo',
+  'No domingo anterior à semana',
+  'Ao longo do domingo com fechamento final',
+  'Domingo, antes do início da nova agenda'
+], 0);
+
+addS('Social Médias', 'Na montagem do cronograma, não pode repetir:', [
+  'O mesmo evento na mesma cidade e mesmo dia da semana anterior',
+  'A mesma combinação da semana anterior',
+  'O mesmo formato repetido na mesma posição da agenda',
+  'Evento igual no mesmo recorte da semana passada'
+], 0);
+
+addS('Social Médias', 'A divulgação do evento deve ser feita no dia do evento entre:', [
+  '00:00 e 17:00',
+  'Até 17:00 do dia do evento',
+  'Dentro da janela da manhã e tarde do mesmo dia',
+  'No próprio dia, antes do período da noite'
+], 0);
+
+addS('Social Médias', 'Após o evento, a equipe deve registrar presença no canal de:', [
+  'Poderes em evento',
+  'Registro de presença do evento',
+  'Canal operacional de presença da equipe',
+  'Canal de presença vinculado ao evento'
+], 0);
+
+addS('Social Médias', 'Na premiação, VIPs comerciais como Ouro e Platinum exigem autorização de:', [
+  'Macedo ou diretoria da cidade',
+  'Diretoria responsável pela cidade',
+  'Macedo ou autoridade máxima da cidade',
+  'Autorização superior da cidade junto ao Macedo'
+], 0);
+
+// =========================
+// MANAGER
+// =========================
+addS('Manager', 'A missão da equipe Manager Creators é:', [
+  'Garantir presença das organizações nos eventos',
+  'Garantir organizações presentes nos eventos',
+  'Atuar para levar organizações à agenda da equipe',
+  'Fazer a ponte entre eventos e lideranças convidadas'
+], 1);
+
+addS('Manager', 'Os eventos com maior contingente para atuação dos Managers são:', [
+  'Quinta, sexta e sábado',
+  'A reta final da semana',
+  'Os dias de maior movimento da agenda',
+  'Quinta a sábado, principalmente'
+], 0);
+
+addS('Manager', 'O prazo para registrar organizações vai de:', [
+  'Domingo 00:00 até quinta 16:00',
+  'Do domingo até quinta às 16:00',
+  'Do início da semana até quinta no fim da tarde',
+  'De domingo até quinta-feira antes do evento'
+], 0);
+
+addS('Manager', 'Para convidar uma organização, o contato deve ser feito com:', [
+  'Diretamente com um líder da organização',
+  'Com liderança oficial da organização',
+  'Com alguém que represente a liderança da facção',
+  'Com o líder ou responsável oficial da organização'
+], 0);
+
+addS('Manager', 'Registrar organização sem falar com o líder é:', [
+  'Errado',
+  'Incorreto por fugir do procedimento',
+  'Inválido sem contato com liderança',
+  'Fora do padrão exigido para registro'
+], 0);
+
+addS('Manager', 'Como Manager, você é staff?', [
+  'Não',
+  'Não, apesar de representar a equipe',
+  'Não, a função não equivale a staff',
+  'Não, mesmo atuando em nome da equipe'
+], 0);
+
+addS('Manager', 'No RP, convidar organização dentro do NC é:', [
+  'Proibido',
+  'Incompatível com o RP da função',
+  'Errado por fugir da imersão',
+  'Vedado dentro do contexto de NC'
+], 0);
+
+addS('Manager', 'Cada organização registrada gera para o Manager:', [
+  'Pontos no sistema',
+  'Pontuação no sistema interno',
+  'Registro convertido em pontuação',
+  'Ponto contabilizado no sistema'
+], 0);
+
+// =========================
+// GESTOR
+// =========================
+addS('Gestor', 'A principal missão do Gestor Creators é:', [
+  'Formar e orientar quem está começando',
+  'Acompanhar e desenvolver membros em início',
+  'Conduzir a evolução de quem entra na equipe',
+  'Dar base, direção e orientação aos novatos'
+], 0);
+
+addS('Gestor', 'Para ser Gestor Creators, a pessoa deve ter vindo de:', [
+  'Social Médias ou Manager Creators',
+  'Áreas-base de desenvolvimento da equipe',
+  'Setores como Social ou Manager',
+  'Funções anteriores ligadas à operação'
+], 0);
+
+addS('Gestor', 'O Gestor ensina principalmente quem está em fase:', [
+  'Inicial da equipe',
+  'De adaptação dentro da operação',
+  'De entrada e aprendizado',
+  'De começo na trajetória interna'
+], 0);
+
+addS('Gestor', 'Os feedbacks do Gestor devem ser:', [
+  'Detalhados, com qualidades, erros e evolução',
+  'Completos, claros e voltados ao desenvolvimento',
+  'Objetivos, construtivos e bem explicados',
+  'Profundos o bastante para orientar melhoria'
+], 0);
+
+addS('Gestor', 'Sempre que ensinar algo a alguém da equipe, o Gestor deve:', [
+  'Registrar o ensinamento',
+  'Documentar o que foi orientado',
+  'Formalizar o alinhamento realizado',
+  'Deixar registrado o conteúdo ensinado'
+], 0);
+
+addS('Gestor', 'Ao registrar alinhamento, deve ser informado:', [
+  'O ID Discord da pessoa alinhada',
+  'A identificação correta de quem recebeu o alinhamento',
+  'O Discord ID do membro alinhado',
+  'O ID do usuário que foi orientado'
+], 0);
+
+addS('Gestor', 'Ser Gestor substitui a função anterior da pessoa?', [
+  'Não, ela continua na função de origem também',
+  'Não, a função anterior segue junto',
+  'Não, o Gestor soma à área de origem',
+  'Não, ela mantém a base anterior acumulada'
+], 0);
+
+// =========================
+// COORD
+// =========================
+addS('Coordenação', 'O Coord Creators é visto como:', [
+  'Braço direito da liderança e quem faz tudo funcionar',
+  'Pilar operacional da liderança no dia a dia',
+  'Quem sustenta a execução e a organização da equipe',
+  'Figura central para fazer a operação rodar'
+], 0);
+
+addS('Coordenação', 'O Coord precisa dominar quais áreas?', [
+  'Social, Manager e Gestor',
+  'As três áreas-base da operação',
+  'Social, gestão de convites e desenvolvimento',
+  'Os setores centrais de funcionamento da equipe'
+], 0);
+
+addS('Coordenação', 'Se faltar alguém em uma área da equipe, o Coord deve:', [
+  'Assumir temporariamente para nada quebrar',
+  'Cobrir a demanda até normalizar a operação',
+  'Entrar na função necessária para manter a equipe rodando',
+  'Segurar a ponta até a área se reorganizar'
+], 0);
+
+addS('Coordenação', 'Além de executar funções, o Coord também deve:', [
+  'Coordenar e acompanhar as equipes',
+  'Gerir, observar e acompanhar os setores',
+  'Supervisionar o andamento das áreas da equipe',
+  'Manter controle sobre execução e desempenho das equipes'
+], 0);
+
+addS('Coordenação', 'O próximo passo natural de evolução do Coord Creators é:', [
+  'Resp Líder',
+  'Subir para a camada de responsável',
+  'Avançar para liderança responsável',
+  'Migrar para a próxima faixa da hierarquia'
+], 0);
+
+// =========================
+// RESPONSÁVEIS
+// =========================
+addS('Responsáveis', 'O Resp Líder deve acompanhar principalmente se:', [
+  'A equipe está organizada e a coordenação está funcionando',
+  'A estrutura está fluindo sem travas',
+  'A coordenação sustenta bem a operação',
+  'A liderança intermediária está executando corretamente'
+], 0);
+
+addS('Responsáveis', 'Se houver membro iniciante presente, o Resp Líder deve:', [
+  'Dar suporte e garantir orientação adequada',
+  'Ensinar e orientar na hora',
+  'Acompanhar o iniciante de forma ativa',
+  'Aproveitar a presença para desenvolver o membro'
+], 1);
+
+addS('Responsáveis', 'O Resp Influ possui autoridade para aplicar:', [
+  'Banimento do painel e do Discord com regra e evidência',
+  'Punições severas quando houver base e prova',
+  'Sanções estruturais com respaldo da regra',
+  'Medidas de alto impacto mediante evidência'
+], 0);
+
+addS('Responsáveis', 'O Resp Creators é:', [
+  'Responsável máximo pela operação da equipe Creators',
+  'A principal autoridade da operação Creators',
+  'Quem responde pela estrutura geral da equipe',
+  'O topo da gestão operacional da Creators'
+], 0);
+
+addS('Responsáveis', 'Entre as responsabilidades do Resp Creators está:', [
+  'Aprovar premiações de eventos e supervisionar decisões importantes',
+  'Validar decisões sensíveis e acompanhar premiações',
+  'Supervisionar pontos críticos e autorizações relevantes',
+  'Responder pelas decisões importantes e aprovações finais'
+], 0);
+
+addS('Responsáveis', 'Na hierarquia final da equipe, a ordem correta de subida é:', [
+  'Social/Manager > Gestor > Coord > Resp Líder > Resp Influ > Resp Creators',
+  'Social > Manager > Gestor > Coord > Resp Líder > Resp Influ > Resp Creators',
+  'Social/Manager > Coord > Gestor > Resp Líder > Resp Influ > Resp Creators',
+  'Manager/Social > Gestor > Coord > Resp Influ > Resp Líder > Resp Creators'
+], 0);
+
+// =========================
+// NOVAS PERGUNTAS — BANCO EXTRA (MÉDIA)
+// =========================
+
+// CONDUTA / BASE GERAL
+addS('Conduta', 'A SantaCreators se define principalmente como:', [
+  'Uma empresa organizada de RP',
+  'Um grupo livre sem cobrança',
+  'Uma guilda casual para eventos',
+  'Uma equipe focada apenas em painel'
+], 0);
+
+addS('Conduta', 'Além da criação de conteúdo, a SantaCreators valoriza muito:', [
+  'Somente número e resultado',
+  'Imersão, responsabilidade e crescimento',
+  'Apenas presença em call',
+  'Exclusivamente eventos semanais'
+], 1);
+
+addS('Conduta', 'As perguntas da entrevista servem para mostrar principalmente:', [
+  'Se a pessoa decora respostas rápido',
+  'Se a pessoa sabe copiar regras',
+  'Se a pessoa tem postura e entende o peso da empresa',
+  'Se a pessoa conhece todos os canais do Discord'
+], 2);
+
+addS('Conduta', 'Na SantaCreators, problemas internos devem ser resolvidos:', [
+  'Por DM para ser mais rápido',
+  'Nos canais corretos com organização',
+  'Somente em call com qualquer pessoa',
+  'Em conversa privada fora do Discord'
+], 1);
+
+addS('Conduta', 'Ter um canal privado com seu nome significa que:', [
+  'Você pode ignorar a liderança',
+  'É um espaço seguro para resolver dúvidas e pendências',
+  'Serve apenas para receber punições',
+  'É um canal decorativo da empresa'
+], 1);
+
+addS('Conduta', 'A participação de menores de 15 anos na SantaCreators é:', [
+  'Permitida com autorização',
+  'Permitida só no painel',
+  'Proibida',
+  'Aceita apenas em teste'
+], 2);
+
+addS('Conduta', 'Se houver vínculo familiar com alguém da equipe, o correto é:', [
+  'Esconder para evitar confusão',
+  'Avisar imediatamente a liderança responsável',
+  'Falar apenas se alguém descobrir',
+  'Continuar normalmente sem comentar'
+], 1);
+
+addS('Conduta', 'Se você decidir sair da SantaCreators, o procedimento correto é:', [
+  'Remover o set sozinho',
+  'Pedir saída direto pelo Discord',
+  'Pedir demissão em game para a equipe remover corretamente',
+  'Sair sem avisar para evitar demora'
+], 2);
+
+addS('Conduta', 'A frase “isso aqui não é só mais uma empresa de RP” quer dizer que a SantaCreators:', [
+  'Tem menos regras que as outras',
+  'Exige postura, consciência e responsabilidade',
+  'Aceita qualquer tipo de conduta',
+  'Funciona só na base da amizade'
+], 1);
+
+addS('Conduta', 'Ofensas preconceituosas disfarçadas de brincadeira são tratadas como:', [
+  'Algo tolerável se for sem intenção',
+  'Brincadeiras normais entre membros',
+  'Conduta grave que não é tolerada',
+  'Advertência leve apenas'
+], 2);
+
+// IMERSÃO / RP
+addS('Imersão', 'Se seu Discord cair no meio do RP, o ideal é:', [
+  'Falar no RP que o Discord caiu',
+  'Usar uma justificativa imersiva',
+  'Ignorar e voltar do nada',
+  'Pedir para todos aguardarem fora do RP'
+], 1);
+
+addS('Imersão', 'Se você vir alguém bugado ou flutuando, a melhor conduta é:', [
+  'Quebrar a cena e rir da situação',
+  'Comentar no off na hora',
+  'Improvisar algo criativo dentro da imersão',
+  'Sair do local imediatamente'
+], 2);
+
+addS('Imersão', 'Deslogar na frente de outros players sem contexto é:', [
+  'Aceitável se for rápido',
+  'Uma quebra de imersão a ser evitada',
+  'Normal dentro da cidade',
+  'Permitido em qualquer situação'
+], 1);
+
+addS('Imersão', 'Trocar de roupa do nada na frente de outros players deve ser:', [
+  'Feito normalmente se ninguém reclamar',
+  'Evitado, buscando local discreto ou fechado',
+  'Aceito somente perto da sede',
+  'Usado como piada no RP'
+], 1);
+
+addS('Imersão', 'Qual expressão abaixo é mais imersiva?', [
+  'Meu microfone parou',
+  'Meu Discord bugou',
+  'Minha garganta tá ruim',
+  'Tô sem áudio no PC'
+], 2);
+
+addS('Imersão', 'A expressão “tô com os olhos abertos” substitui melhor:', [
+  'Tô em live',
+  'Tô sem áudio',
+  'Tô lagado',
+  'Tô sem teclado'
+], 0);
+
+addS('Imersão', 'Usar comandos do F8 para flutuar ou sentar no ar sem contexto é:', [
+  'Uma forma criativa de RP',
+  'Uma quebra desnecessária da realidade',
+  'Permitido em qualquer ocasião',
+  'Algo obrigatório em eventos'
+], 1);
+
+addS('Imersão', 'Quando algo técnico acontece, o ideal é:', [
+  'Trazer o off direto para a cidade',
+  'Improvisar e sustentar a narrativa',
+  'Parar toda a cena para explicar',
+  'Mandar todos aguardarem no Discord'
+], 1);
+
+// PRÉDIO / UNIFORME / GARAGENS
+addS('Uniforme', 'Dentro do prédio da SantaCreators, é obrigatório usar:', [
+  'Qualquer roupa escura',
+  'Apenas um boné da empresa',
+  'A jaqueta da SantaCreators',
+  'Somente roupa social'
+], 2);
+
+addS('Uniforme', 'Se entrar no prédio sem a jaqueta, o correto é:', [
+  'Continuar assim até alguém avisar',
+  'Ir imediatamente a uma sala sozinho e vestir a jaqueta',
+  'Sair correndo do prédio',
+  'Mandar mensagem para a liderança'
+], 1);
+
+addS('Uniforme', 'Nas proximidades do prédio, o membro deve usar:', [
+  'Ao menos uma peça da SantaCreators',
+  'Somente a jaqueta oficial',
+  'Uniforme completo sempre',
+  'Apenas calça da empresa'
+], 0);
+
+addS('Uniforme', 'Para usar qualquer garagem da empresa, é necessário:', [
+  'Ter cargo alto apenas',
+  'Estar com uma peça do uniforme da SantaCreators',
+  'Estar em call com a equipe',
+  'Ter registro no painel no mesmo dia'
+], 1);
+
+addS('Uniforme', 'Em ações ilegais fora da sede, o uniforme deve ser:', [
+  'Mantido para mostrar autoridade',
+  'Usado só se estiver com aliados',
+  'Retirado antes de sair para proteger a imagem da empresa',
+  'Usado apenas à noite'
+], 2);
+
+addS('Uniforme', 'Nunca se deve trocar de roupa na frente de outros players porque isso:', [
+  'Pode atrasar a ação',
+  'Prejudica a coerência do RP',
+  'Tira ponto do painel',
+  'Impede uso da garagem'
+], 1);
+
+// VEÍCULOS
+addS('Veículos', 'Usar veículos da SantaCreators em troca de tiro é:', [
+  'Permitido com líder presente',
+  'Proibido',
+  'Aceitável só no norte',
+  'Permitido se for rápido'
+], 1);
+
+addS('Veículos', 'Usar veículos da empresa em assalto de pista é:', [
+  'Autorizado com organização',
+  'Proibido',
+  'Aceito fora do horário de evento',
+  'Permitido sem uniforme'
+], 1);
+
+addS('Veículos', 'Sequestro com veículo da empresa só pode acontecer quando:', [
+  'For um RP organizado, coerente e dentro do horário permitido',
+  'Qualquer membro quiser usar',
+  'Não houver veículos próprios',
+  'For decidido no calor do momento'
+], 0);
+
+addS('Veículos', 'Se vir alguém usando veículo da empresa de forma errada, o correto é:', [
+  'Se envolver na confusão',
+  'Ignorar porque não é problema seu',
+  'Gravar, reportar e não se envolver',
+  'Tomar o veículo da pessoa'
+], 2);
+
+// BAÚS
+addS('Baús', 'O baú pessoal é de uso:', [
+  'Livre e exclusivo do membro',
+  'Coletivo da equipe toda',
+  'Apenas da coordenação',
+  'Somente para eventos'
+], 0);
+
+addS('Baús', 'No baú geral, a regra principal é:', [
+  'Pegar o máximo possível',
+  'Usar com responsabilidade e apenas o necessário',
+  'Retirar só com autorização da RESP',
+  'Pegar apenas para vender'
+], 1);
+
+addS('Baús', 'No baú geral, vender, trocar ou distribuir itens livremente é:', [
+  'Permitido entre aliados',
+  'Aceito se repor depois',
+  'Proibido',
+  'Autorizado em evento'
+], 2);
+
+addS('Baús', 'Uma das limitações do baú geral é:', [
+  '1 arma/item e 100 munições',
+  '3 armas e munição livre',
+  '2 armas e 300 munições',
+  'Somente kits reparo'
+], 0);
+
+addS('Baús', 'O baú creators serve para:', [
+  'Consumo dos membros',
+  'Doações e entregas',
+  'Uso exclusivo da coordenação',
+  'Separar itens de eventos pessoais'
+], 1);
+
+addS('Baús', 'Retirar itens do baú creators é:', [
+  'Permitido com aviso prévio',
+  'Permitido para quem doou',
+  'Proibido',
+  'Liberado aos fins de semana'
+], 2);
+
+addS('Baús', 'No baú de vendas, a divisão correta é:', [
+  '70% para você e 30% para o painel',
+  '50% para você e 50% para o painel',
+  '40% para você e 60% para o painel',
+  '100% para o painel'
+], 1);
+
+addS('Baús', 'Se alguém pegar no baú de vendas e não dividir corretamente, a punição prevista é:', [
+  'Advertência simples',
+  'Perda temporária do baú',
+  'Ban imediato',
+  'Apenas devolução dos itens'
+], 2);
+
+addS('Baús', 'O baú coordenação é destinado para:', [
+  'Organização interna de metas e entregas',
+  'Uso livre de todos os membros',
+  'Troca de itens entre equipes',
+  'Guardar prêmios pessoais'
+], 0);
+
+addS('Baús', 'O baú responsável possui acesso:', [
+  'Liberado para Coord+',
+  'Restrito à RESP',
+  'Disponível para Gestores',
+  'Aberto a qualquer liderança'
+], 1);
+
+// PODERES / ADMINISTRAÇÃO
+addS('Poderes', 'Os poderes da SantaCreators existem para:', [
+  'Dar vantagem no RP',
+  'Facilitar ações pessoais',
+  'Fins administrativos e empresariais',
+  'Ajudar amigos na cidade'
+], 2);
+
+addS('Poderes', 'A regra de ouro sobre poderes é:', [
+  'Se um player comum não pode, você também não pode',
+  'Você pode usar se ninguém ver',
+  'Poder sempre vale acima do RP',
+  'Responsável pode tudo'
+], 0);
+
+addS('Poderes', 'Usar F8 para ir até um amigo do outro lado da cidade é:', [
+  'Ajuda operacional normal',
+  'Abuso de poder',
+  'Permitido em horários vazios',
+  'Aceitável se não houver carro'
+], 1);
+
+addS('Poderes', 'Usar noclip sem necessidade para se locomover é:', [
+  'Uma forma rápida de ajudar',
+  'Aceitável fora de evento',
+  'Abuso de poder',
+  'Obrigatório para gestão'
+], 2);
+
+addS('Poderes', 'Se morrer em uma ação de RP, o correto é:', [
+  'Usar /god para voltar',
+  'Chamar médico ou ir para os bombeiros',
+  'Levantar e seguir a ação',
+  'Pedir para alguém usar poder'
+], 1);
+
+addS('Poderes', 'Se alguém cometer anti-rp contra você, o primeiro passo é:', [
+  'Resolver na hora com comando',
+  'Clipar tudo e pegar os passaportes',
+  'Usar wall para acompanhar',
+  'Punir a pessoa imediatamente'
+], 1);
+
+addS('Poderes', 'Sem alinhamento e sem autorização, comandos da gestão devem ser:', [
+  'Usados com cautela',
+  'Testados antes',
+  'Não utilizados',
+  'Aplicados só em amigos'
+], 2);
+
+addS('Poderes', 'Na dúvida sobre usar um poder, a melhor atitude é:', [
+  'Usar e explicar depois',
+  'Perguntar antes',
+  'Deixar outro resolver sem avisar',
+  'Testar em local vazio'
+], 1);
+
+addS('Poderes', 'Usar fix em benefício próprio ou de amigos, fora do contexto correto, é:', [
+  'Permitido para Coord+',
+  'Aceitável se não houver combate',
+  'Proibido',
+  'Permitido se for rápido'
+], 2);
+
+addS('Poderes', 'No treinamento de MKT Ticket, a regra de ouro dos botões é:', [
+  'Clicar para aprender na prática',
+  'Se não entende 100%, não clique',
+  'Testar em qualquer canal',
+  'Usar primeiro e perguntar depois'
+], 1);
+
+// CALL / ORGANIZAÇÃO / REGISTROS
+addS('Organização', 'Ficar em call enquanto está na cidade é:', [
+  'Obrigatório para todos',
+  'Não obrigatório, mas recomendado para evolução',
+  'Proibido em horários de evento',
+  'Permitido só para liderança'
+], 1);
+
+addS('Organização', 'Responsáveis devem ficar em call porque:', [
+  'É parte da obrigação deles ajudar e orientar',
+  'Ganham mais pontos assim',
+  'Sem call o bot não funciona',
+  'É exigência só em domingo'
+], 0);
+
+addS('Organização', 'Os alinhamentos da SantaCreators devem ser feitos:', [
+  'Por texto no Discord',
+  'Por DM com qualquer membro',
+  'Em call com o responsável',
+  'Por e-mail interno'
+], 2);
+
+addS('Organização', 'Sempre que usar poderes, você deve:', [
+  'Registrar no final do dia no canal correto',
+  'Registrar apenas se alguém pedir',
+  'Mandar por DM para a coordenação',
+  'Anotar só se usar mais de uma vez'
+], 0);
+
+addS('Organização', 'O bate ponto funciona nos horários:', [
+  '18:00 às 22:00 e 00:00 às 03:00',
+  '17:00 às 23:00 e 01:00 às 04:00',
+  '16:00 às 23:00 e 00:00 às 05:00',
+  'Somente 19:00 às 23:00'
+], 1);
+
+addS('Organização', 'Hoje, um dos itens que gera pontos no sistema é:', [
+  'Registro de poderes utilizados',
+  'Estar online no Discord',
+  'Mandar mensagem em call',
+  'Usar uniforme na sede'
+], 0);
+
+addS('Organização', 'A frase “se não foi registrado, não aconteceu” reforça que:', [
+  'O importante é só executar',
+  'Registro é opcional se a liderança viu',
+  'Tudo precisa ser documentado corretamente',
+  'Basta avisar verbalmente depois'
+], 2);
+
+// ADVERTÊNCIA / PRESENÇA
+addS('Advertência', 'Estar perto da sede sem nenhuma peça da empresa pode gerar:', [
+  'Somente orientação verbal',
+  'Advertência',
+  'Nada, se estiver parado',
+  'Aviso informal sem registro'
+], 1);
+
+addS('Advertência', 'Qual dessas frases representa quebra de imersão?', [
+  'Vou meditar um cado',
+  'Preciso mentalizar um portão abrindo',
+  'Minha mãe tá me chamando',
+  'Tive uma tontura forte'
+], 2);
+
+addS('Advertência', 'Flutuar sentado usando comando de F8 sem contexto é exemplo de:', [
+  'Criatividade no RP',
+  'Anti-RP',
+  'Registro incorreto',
+  'Conduta leve'
+], 1);
+
+addS('Advertência', 'Má conduta pode envolver:', [
+  'Falta de respeito, deboche e rispidez',
+  'Somente ausência em eventos',
+  'Apenas erro de registro',
+  'Só quebra de uniforme'
+], 0);
+
+addS('Advertência', 'Para Coord.+, Resp. Líder e Resp. Influ, os eventos das 19:00 são:', [
+  'Facultativos',
+  'Obrigatórios',
+  'Opcionais com aviso depois',
+  'Necessários apenas na sexta'
+], 1);
+
+addS('Advertência', 'Se não puder comparecer ao evento das 19:00, o correto é:', [
+  'Avisar depois do evento',
+  'Registrar ausência até 18:30 com justificativa',
+  'Explicar na próxima call',
+  'Mandar DM para qualquer membro'
+], 1);
+
+addS('Advertência', 'Falta sem presença e sem justificativa dentro do prazo gera:', [
+  'ADV 1/3 e -5 pontos',
+  'Somente advertência verbal',
+  'Apenas perda de cargo',
+  'Bloqueio de uniforme'
+], 0);
+
+addS('Advertência', 'Ao atingir 3/3 de ADV, ocorre:', [
+  'Reset automático das advertências',
+  'Suspensão de 24 horas apenas',
+  'Reavaliação da permanência e da posição na equipe',
+  'Troca imediata para Creator base'
+], 2);
+
+// HIERARQUIA / GI
+addS('Hierarquia', 'A gestaoinfluencer é:', [
+  'Um grupo separado da SantaCreators',
+  'O núcleo interno da própria SantaCreators',
+  'Uma equipe temporária externa',
+  'Um sistema usado só em eventos'
+], 1);
+
+addS('Hierarquia', 'O acesso à gestaoinfluencer acontece:', [
+  'Por formulário público',
+  'Por pedido direto ao Owner',
+  'Por convite baseado em evolução e confiança',
+  'Por sorteio interno'
+], 2);
+
+addS('Hierarquia', 'No painel oficial da SantaCreators, o Nível 3 corresponde a:', [
+  'Responsáveis',
+  'Creator',
+  'Gestão da equipe',
+  'Coordenação'
+], 1);
+
+addS('Hierarquia', 'No Nível 2 ficam funções como:', [
+  'Resp Influ e Resp Creators',
+  'Equipe Creator e Junior',
+  'Social Médias, Manager e Gestor',
+  'Somente Coordenação'
+], 2);
+
+addS('Hierarquia', 'O Nível 1 da estrutura é formado por:', [
+  'Os cargos responsáveis da liderança',
+  'A base da operação',
+  'Os iniciantes da equipe',
+  'A equipe de eventos'
+], 0);
+
+addS('Hierarquia', 'O caminho normal até a gestaoinfluencer é:', [
+  'Entrar e pedir cargo',
+  'Ser conhecido fora da empresa',
+  'Participar, evoluir e ser convidado',
+  'Ter amizade com alguém da liderança'
+], 2);
+
+// SOCIAL MÉDIAS
+addS('Social Médias', 'A função principal da Social Médias é:', [
+  'Registrar líderes de org',
+  'Organizar e estruturar os eventos da SantaCreators',
+  'Aplicar punições internas',
+  'Cuidar do baú geral'
+], 1);
+
+addS('Social Médias', 'Os eventos da SantaCreators acontecem:', [
+  'De segunda a sábado',
+  'Somente de terça a sexta',
+  'Todos os dias da semana',
+  'Apenas no fim de semana'
+], 0);
+
+addS('Social Médias', 'O horário padrão dos eventos é:', [
+  '18:00',
+  '20:00',
+  '19:00',
+  '21:00'
+], 2);
+
+addS('Social Médias', 'O cronograma da semana deve ser organizado em:', [
+  'Segunda',
+  'Domingo',
+  'Quarta',
+  'Sábado após o evento'
+], 1);
+
+addS('Social Médias', 'Na organização do cronograma, não pode repetir:', [
+  'O mesmo evento na mesma cidade e no mesmo dia da semana anterior',
+  'Nenhum evento já usado no mês',
+  'Qualquer evento da mesma categoria',
+  'Eventos em cidades diferentes'
+], 0);
+
+addS('Social Médias', 'A divulgação do evento deve ser feita:', [
+  'Somente depois das 17:00',
+  'Entre 00:00 e 17:00 do dia do evento',
+  'Na semana anterior',
+  'Apenas durante o evento'
+], 1);
+
+addS('Social Médias', 'Após o evento, a equipe deve registrar presença no canal de:', [
+  'Cronograma',
+  'Hall da fama',
+  'Poderes em evento',
+  'Convites líderes'
+], 2);
+
+addS('Social Médias', 'VIPs comerciais como Ouro e Platinum exigem autorização de:', [
+  'Qualquer Gestor',
+  'Macedo ou diretoria da cidade',
+  'Somente Social Médias',
+  'Apenas o vencedor do evento'
+], 1);
+
+// MANAGER
+addS('Manager', 'A missão da equipe Manager Creators é:', [
+  'Cuidar do ranking geral',
+  'Garantir organizações presentes nos eventos',
+  'Criar roupas de eventos',
+  'Aprovar pagamentos de premiação'
+], 1);
+
+addS('Manager', 'Os eventos com maior contingente para atuação dos Managers costumam ser:', [
+  'Quinta, sexta e sábado',
+  'Segunda e terça',
+  'Somente domingo',
+  'Quarta e quinta apenas'
+], 0);
+
+addS('Manager', 'O prazo para registrar organizações vai de:', [
+  'Segunda até sexta 18:00',
+  'Domingo 00:00 até quinta 16:00',
+  'Terça 00:00 até sábado 12:00',
+  'Somente no dia do evento'
+], 1);
+
+addS('Manager', 'Para convidar uma organização, o contato deve ser feito com:', [
+  'Qualquer membro da facção',
+  'O líder ou representante oficial',
+  'Somente com membros em call',
+  'O primeiro que responder no Discord'
+], 1);
+
+addS('Manager', 'Registrar organização sem falar diretamente com o líder é:', [
+  'Errado',
+  'Aceitável se os membros confirmarem',
+  'Permitido em evento grande',
+  'Normal na ausência do líder'
+], 0);
+
+addS('Manager', 'Como Manager, você é staff?', [
+  'Sim, sempre',
+  'Não',
+  'Apenas durante eventos',
+  'Somente no Discord'
+], 1);
+
+addS('Manager', 'Convidar organização dentro do NC é:', [
+  'Correto para agilizar',
+  'Proibido',
+  'Permitido se estiver sozinho',
+  'Aceitável na garagem'
+], 1);
+
+addS('Manager', 'Cada organização registrada gera para o Manager:', [
+  'Convite automático',
+  'Apenas reconhecimento verbal',
+  'Pontos no sistema',
+  'Permissão temporária'
+], 2);
+
+// GESTOR
+addS('Gestor', 'A principal missão do Gestor Creators é:', [
+  'Aplicar punições',
+  'Formar e orientar quem está começando',
+  'Montar o cronograma semanal',
+  'Controlar os baús'
+], 1);
+
+addS('Gestor', 'Para ser Gestor Creators, a pessoa deve ter vindo de:', [
+  'Social Médias ou Manager Creators',
+  'Resp Influ ou Resp Creators',
+  'Equipe Creator apenas',
+  'Qualquer área externa'
+], 0);
+
+addS('Gestor', 'O Gestor ensina principalmente membros que estão em fase:', [
+  'Final da hierarquia',
+  'Inicial da equipe',
+  'Exclusiva de eventos',
+  'De liderança máxima'
+], 1);
+
+addS('Gestor', 'Um feedback correto do Gestor deve ser:', [
+  'Curto e genérico',
+  'Detalhado, com qualidades, erros e evolução',
+  'Apenas positivo',
+  'Feito só por emoji'
+], 1);
+
+addS('Gestor', 'Sempre que ensinar algo a alguém da equipe, o Gestor deve:', [
+  'Registrar o ensinamento',
+  'Guardar para comentar no sábado',
+  'Avisar apenas em call',
+  'Esperar o membro pedir'
+], 0);
+
+addS('Gestor', 'Ao registrar alinhamento, deve ser informado:', [
+  'O nome do Gestor apenas',
+  'O ID Discord da pessoa alinhada',
+  'O nome da cidade',
+  'O horário da call somente'
+], 1);
+
+addS('Gestor', 'Ser Gestor substitui a função anterior da pessoa?', [
+  'Sim, a antiga é removida',
+  'Não, ela continua com a função de origem também',
+  'Sim, mas só por um tempo',
+  'Não, porém perde pontuação'
+], 1);
+
+// COORDENAÇÃO
+addS('Coordenação', 'O Coord Creators é visto como:', [
+  'Apoio secundário sem autonomia',
+  'Braço direito da liderança e quem faz tudo funcionar',
+  'Alguém focado só em eventos',
+  'Um cargo exclusivo de registro'
+], 1);
+
+addS('Coordenação', 'O Coord precisa dominar:', [
+  'Somente Social Médias',
+  'Somente Manager',
+  'Social, Manager e Gestor',
+  'Apenas a parte financeira'
+], 2);
+
+addS('Coordenação', 'Se faltar alguém em uma área da equipe, o Coord deve:', [
+  'Esperar a liderança resolver',
+  'Assumir temporariamente para nada quebrar',
+  'Cancelar a função do dia',
+  'Ignorar se não for sua área favorita'
+], 1);
+
+addS('Coordenação', 'Além de executar funções, o Coord também deve:', [
+  'Coordenar e acompanhar as equipes',
+  'Focar só na própria pontuação',
+  'Atuar apenas em call',
+  'Registrar apenas presença'
+], 0);
+
+addS('Coordenação', 'O próximo passo natural de evolução do Coord Creators é:', [
+  'Gestor',
+  'Manager',
+  'Resp Líder',
+  'Equipe Creator'
+], 2);
+
+// RESPONSÁVEIS
+addS('Responsáveis', 'O Resp Líder deve acompanhar principalmente se:', [
+  'A coordenação e a equipe estão funcionando corretamente',
+  'Só o hall da fama foi postado',
+  'Apenas a própria call está cheia',
+  'Somente o bate ponto da equipe'
+], 0);
+
+addS('Responsáveis', 'Se houver membro iniciante presente, o Resp Líder deve:', [
+  'Fazer tudo sozinho para ganhar tempo',
+  'Ensinar e orientar na hora',
+  'Mandar o membro observar apenas',
+  'Pedir para o iniciante sair da função'
+], 1);
+
+addS('Responsáveis', 'O Resp Influ possui autoridade para aplicar:', [
+  'Somente alinhamentos',
+  'Banimento do painel e do Discord com regra e evidência',
+  'Apenas mudanças no uniforme',
+  'Somente aprovação de cronograma'
+], 1);
+
+addS('Responsáveis', 'O Resp Creators é:', [
+  'Um apoio temporário da equipe',
+  'O responsável máximo pela operação da equipe Creators',
+  'Um cargo exclusivo de eventos',
+  'A base da gestão interna'
+], 1);
+
+addS('Responsáveis', 'Entre as responsabilidades do Resp Creators está:', [
+  'Supervisionar decisões importantes e aprovar premiações',
+  'Cuidar apenas do baú responsável',
+  'Registrar orgs no lugar do Manager',
+  'Fazer somente alinhamentos'
+], 0);
+
+return Q;
 })();
 
 globalThis.SC_QUIZ_BANK = globalThis.SC_QUIZ_BANK ?? SC_QUIZ_BANK;
+
+const SC_RT_BANK = globalThis.SC_RT_BANK ?? SC_QUIZ_BANK;
+globalThis.SC_RT_BANK = SC_RT_BANK;
+
+console.log('[DEBUG] SC_RT_BANK SIZE:', SC_RT_BANK?.length);
 
     // ======= HELPERS =======
     function scq_nowBRT() {
@@ -2672,6 +3408,44 @@ function scq_normalizeAnswer(raw) {
 // ✅ NOVA — usada para bloquear novos posts enquanto há um quiz válido em aberto
 function scq_hasActiveQuiz() {
   return !!SC_QUIZ_STATE.currentValidMessageId && SC_QUIZ_STATE.currentSatisfied === false;
+}
+
+function scq_isCurrentQuizMessage(messageId) {
+  return !!messageId && SC_QUIZ_STATE.currentValidMessageId === messageId;
+}
+
+function scq_hasUserPlayedInRound(messageId, userId) {
+  if (!messageId || !userId) return false;
+
+  const uid = String(userId);
+  const mid = String(messageId);
+
+  // diário / quiz por reply
+  if (SC_QUIZ_STATE.participantsByMsg?.[mid]?.[uid]) return true;
+
+  // relâmpago
+  if (SC_QUIZ_STATE.rt?.attempts?.[mid]?.[uid]) return true;
+
+  return false;
+}
+
+function scq_markUserPlayedInRound(messageId, userId, mode = 'daily') {
+  if (!messageId || !userId) return;
+
+  const uid = String(userId);
+  const mid = String(messageId);
+
+  if (mode === 'fast') {
+    SC_QUIZ_STATE.rt = SC_QUIZ_STATE.rt || {};
+    SC_QUIZ_STATE.rt.attempts = SC_QUIZ_STATE.rt.attempts || {};
+    SC_QUIZ_STATE.rt.attempts[mid] = SC_QUIZ_STATE.rt.attempts[mid] || {};
+    SC_QUIZ_STATE.rt.attempts[mid][uid] = true;
+    return;
+  }
+
+  SC_QUIZ_STATE.participantsByMsg = SC_QUIZ_STATE.participantsByMsg || {};
+  SC_QUIZ_STATE.participantsByMsg[mid] = SC_QUIZ_STATE.participantsByMsg[mid] || {};
+  SC_QUIZ_STATE.participantsByMsg[mid][uid] = true;
 }
 
 
@@ -2717,17 +3491,119 @@ function scq_pickAnswerLetter(raw, q /* opcional */) {
         .catch(() => fallbackName || `User ${userId}`);
     }
 
-    function scq_updateLeaderboard(userId, right, wrong) {
-      if (!SC_QUIZ_STATE.leaderboard[userId]) {
-        SC_QUIZ_STATE.leaderboard[userId] = { acertos:0, erros:0, interacoes:0, lastAt: Date.now() };
-      }
-      const r = SC_QUIZ_STATE.leaderboard[userId];
-      r.acertos += right;
-      r.erros   += wrong;
-      r.interacoes += (right + wrong);
-      r.lastAt = Date.now();
-      scq_save();
+function scq_updateLeaderboard(userId, right, wrong) {
+  if (!SC_QUIZ_STATE.leaderboard[userId]) {
+    SC_QUIZ_STATE.leaderboard[userId] = { acertos:0, erros:0, interacoes:0, lastAt: Date.now() };
+  }
+  const r = SC_QUIZ_STATE.leaderboard[userId];
+  r.acertos += right;
+  r.erros   += wrong;
+  r.interacoes += (right + wrong);
+  r.lastAt = Date.now();
+  scq_save();
+}
+
+async function scq_resetEntireRanking(resetReason = 'manual_reset') {
+  SC_QUIZ_STATE.leaderboard = {};
+  SC_QUIZ_STATE.participantsByMsg = {};
+  SC_QUIZ_STATE.activeQuizMessages = [];
+  SC_QUIZ_STATE.weeklyParticipants = {};
+  SC_QUIZ_STATE.currentValidMessageId = null;
+  SC_QUIZ_STATE.currentSatisfied = true;
+
+  SC_QUIZ_STATE.rt = SC_QUIZ_STATE.rt || {};
+  SC_QUIZ_STATE.rt.active = null;
+  SC_QUIZ_STATE.rt.attempts = {};
+
+  scq_save();
+  await scq_renderRankingSticky();
+
+  await scq_log(scq_buildEmbed({
+    title: '🧹 Ranking zerado',
+    description: `O ranking do quiz foi zerado com sucesso.\nMotivo: **${resetReason}**`,
+    color: 0xE67E22
+  }));
+}
+
+function scq_trackCreatorsMessage(msg) {
+  try {
+    if (!msg?.id) return;
+    SC_QUIZ_STATE.creatorsCleanupMessageIds = SC_QUIZ_STATE.creatorsCleanupMessageIds || [];
+
+    if (!SC_QUIZ_STATE.creatorsCleanupMessageIds.includes(msg.id)) {
+      SC_QUIZ_STATE.creatorsCleanupMessageIds.push(msg.id);
     }
+
+    if (SC_QUIZ_STATE.creatorsCleanupMessageIds.length > 30) {
+      SC_QUIZ_STATE.creatorsCleanupMessageIds = SC_QUIZ_STATE.creatorsCleanupMessageIds.slice(-30);
+    }
+
+    scq_save();
+  } catch (e) {
+    console.error('[SC_QUIZ] erro ao rastrear mensagem do creators:', e);
+  }
+}
+
+async function scq_clearCreatorsTrackedMessages(channel) {
+  try {
+    const trackedIds = Array.isArray(SC_QUIZ_STATE.creatorsCleanupMessageIds)
+      ? [...SC_QUIZ_STATE.creatorsCleanupMessageIds]
+      : [];
+
+    const idsToDelete = new Set(trackedIds);
+
+    SC_QUIZ_STATE.creatorsCleanupMessageIds = [];
+    scq_save();
+
+    // 1) tenta apagar tudo que já foi rastreado
+    for (const id of trackedIds) {
+      try {
+        const msg = await channel.messages.fetch(id).catch(() => null);
+        if (msg) await msg.delete().catch(() => {});
+      } catch (_) {}
+    }
+
+    // 2) fallback: procura mensagens antigas do próprio bot que sejam do quiz
+    const recent = await channel.messages.fetch({ limit: 100 }).catch(() => null);
+    if (!recent) return;
+
+    const shouldDeleteQuizMessage = (msg) => {
+      if (!msg || msg.author?.id !== client.user?.id) return false;
+      if (idsToDelete.has(msg.id)) return false;
+
+      const embed = Array.isArray(msg.embeds) && msg.embeds.length ? msg.embeds[0] : null;
+      const title = String(embed?.title || '').trim();
+      const footer = String(embed?.footer?.text || '').trim();
+      const desc = String(embed?.description || '').trim();
+      const content = String(msg.content || '').trim();
+
+      const text = [title, footer, desc, content].join(' \n ').toLowerCase();
+
+      return (
+        text.includes('quiz diário') ||
+        text.includes('pergunta relâmpago') ||
+        text.includes('quiz relâmpago') ||
+        text.includes('relâmpago encerrado') ||
+        text.includes('parabéns! resposta correta') ||
+        text.includes('resposta incorreta') ||
+        text.includes('modo relâmpago') ||
+        text.includes('responda por reply nesta mensagem') ||
+        text.includes('vale pontos internos') ||
+        text.includes('vale ponto para o primeiro')
+      );
+    };
+
+    for (const msg of recent.values()) {
+      try {
+        if (shouldDeleteQuizMessage(msg)) {
+          await msg.delete().catch(() => {});
+        }
+      } catch (_) {}
+    }
+  } catch (e) {
+    console.error('[SC_QUIZ] erro ao limpar mensagens antigas do creators:', e);
+  }
+}
 
 // Cancela QUALQUER quiz ativo (diário e/ou relâmpago) e invalida o “atual”
 function scq_cancelAllActive(reason = 'override') {
@@ -2741,7 +3617,11 @@ function scq_cancelAllActive(reason = 'override') {
       SC_QUIZ_STATE.rt.active = null;
     }
 
-    // diário: não precisa apagar mensagens do canal; só invalida o “válido”
+    // invalida também o histórico lógico do diário
+    SC_QUIZ_STATE.activeQuizMessages = [];
+    SC_QUIZ_STATE.participantsByMsg = {};
+
+    // invalida qualquer quiz atual
     SC_QUIZ_STATE.currentValidMessageId = null;
 
     // marca como “satisfeito” para liberar novo post logo depois
@@ -2982,7 +3862,7 @@ if (SC_QUIZ_STATE.stickyRankingMsgIdInteracoes) {
       } catch (_) {}
     }
        // ✅ Função global: posta o QUIZ DIÁRIO no canal Creators
- async function scq_postDailyQuiz(override = false) {
+async function scq_postDailyQuiz(override = false) {
   if (!override && scq_hasActiveQuiz()) {
     console.log("[SC_QUIZ] Já tem um quiz ativo, não vou postar outro.");
     return;
@@ -2991,6 +3871,8 @@ if (SC_QUIZ_STATE.stickyRankingMsgIdInteracoes) {
 
   const channel = await client.channels.fetch(SC_QUIZ_CREATORS_CHANNEL_ID).catch(() => null);
   if (!channel) return;
+
+  await scq_clearCreatorsTrackedMessages(channel);
 
   const q = scq_getRandomQuestion();
   if (!q) return;
@@ -3017,19 +3899,20 @@ if (SC_QUIZ_STATE.stickyRankingMsgIdInteracoes) {
     allowedMentions: { roles: SC_MENTION_ROLES }
   });
 
+  scq_trackCreatorsMessage(msg);
+
+  // limpa qualquer diária anterior da memória lógica
+  SC_QUIZ_STATE.activeQuizMessages = [];
+  SC_QUIZ_STATE.participantsByMsg = {};
+
   // marca como “válido” e bloqueia novos até interação
   SC_QUIZ_STATE.currentValidMessageId = msg.id;
   SC_QUIZ_STATE.currentSatisfied = false;
 
-  // controles antigos do diário (mantém histórico p/ DM etc.)
+  // mantém SOMENTE a diária atual
   SC_QUIZ_STATE.participantsByMsg[msg.id] = {};
   SC_QUIZ_STATE.activeQuizMessages.push({ id: msg.id, qid: q.id, createdAt: Date.now() });
-  if (SC_QUIZ_STATE.activeQuizMessages.length > 20) {
-    const removed = SC_QUIZ_STATE.activeQuizMessages.splice(
-      0, SC_QUIZ_STATE.activeQuizMessages.length - 20
-    );
-    for (const r of removed) delete SC_QUIZ_STATE.participantsByMsg[r.id];
-  }
+
   scq_save();
 
   await scq_log(scq_buildEmbed({
@@ -3045,21 +3928,31 @@ if (SC_QUIZ_STATE.stickyRankingMsgIdInteracoes) {
 
  // =================== FAST QUIZ — FUNÇÕES ===================
 function sc_rt_getRandomQuestion() {
-  if (!SC_RT_BANK.length) return null;
+  if (!Array.isArray(SC_RT_BANK) || SC_RT_BANK.length === 0) {
+    console.error('[SC_RT] ERRO: banco de perguntas vazio ou inválido');
+    return null;
+  }
   return SC_RT_BANK[Math.floor(Math.random()*SC_RT_BANK.length)];
 }
-
 // 🔧 Helper único para iniciar uma rodada de relâmpago (fora de qualquer função)
 async function sc_rt_beginRound(channel, embed, q, { announceOnTimeout = false } = {}) {
+  await scq_clearCreatorsTrackedMessages(channel);
+
   const msg = await channel.send({
     content: `<@&${SC_MENTION_ROLES[0]}> <@&${SC_MENTION_ROLES[1]}>`,
     embeds: [embed],
     allowedMentions: { roles: SC_MENTION_ROLES }
   });
 
+  scq_trackCreatorsMessage(msg);
+
   // garante a estrutura no estado
   SC_QUIZ_STATE.rt = SC_QUIZ_STATE.rt || {};
   SC_QUIZ_STATE.rt.attempts = SC_QUIZ_STATE.rt.attempts || {};
+
+  // limpa qualquer diária antiga da memória lógica
+  SC_QUIZ_STATE.activeQuizMessages = [];
+  SC_QUIZ_STATE.participantsByMsg = {};
 
   // ✅ objeto correto
   SC_QUIZ_STATE.rt.active = {
@@ -3078,34 +3971,35 @@ async function sc_rt_beginRound(channel, embed, q, { announceOnTimeout = false }
   scq_save();
 
   setTimeout(async () => {
-  try {
-    const act = SC_QUIZ_STATE.rt.active;
-    if (!act || act.messageId !== msg.id || act.winnerId) return;
+    try {
+      const act = SC_QUIZ_STATE.rt.active;
+      if (!act || act.messageId !== msg.id || act.winnerId) return;
 
-    // NÃO mata a rodada: mantém o alvo vivo pra ainda aceitarmos 1 resposta
-    // (assim, “só manda outro” quando alguém responder o anterior)
-    SC_QUIZ_STATE.rt.active.timedOut = true;
+      // NÃO mata a rodada: mantém o alvo vivo pra ainda aceitarmos 1 resposta
+      // (assim, “só manda outro” quando alguém responder o anterior)
+      SC_QUIZ_STATE.rt.active.timedOut = true;
 
-    // não mexe em currentValidMessageId nem em currentSatisfied
-    scq_save();
+      // não mexe em currentValidMessageId nem em currentSatisfied
+      scq_save();
 
-    if (announceOnTimeout) {
-      await channel.send({
-        embeds: [scq_buildEmbed({
-          title: '⏰ Relâmpago encerrado',
-          description: `Ninguém acertou a tempo. Gabarito: **${q.resposta}**`,
-          image: GIF_QUIIZ_URL
-        })]
-      });
-    }
+      if (announceOnTimeout) {
+        const timeoutMsg = await channel.send({
+          embeds: [scq_buildEmbed({
+            title: '⏰ Relâmpago encerrado',
+            description: `Ninguém acertou a tempo. Gabarito: **${q.resposta}**`,
+            image: GIF_QUIIZ_URL
+          })]
+        });
 
-    await scq_log(scq_buildEmbed({
-      title: '⏰ Relâmpago encerrado',
-      description: `Sem vencedor | qid=${q.id} | gabarito **${q.resposta}**`
-    }));
-  } catch {}
-}, SC_RT_ACTIVE_TIMEOUT_MS);
-;
+        scq_trackCreatorsMessage(timeoutMsg);
+      }
+
+      await scq_log(scq_buildEmbed({
+        title: '⏰ Relâmpago encerrado',
+        description: `Sem vencedor | qid=${q.id} | gabarito **${q.resposta}**`
+      }));
+    } catch {}
+  }, SC_RT_ACTIVE_TIMEOUT_MS);
 }
 
 
@@ -3129,8 +4023,11 @@ async function sc_rt_postFastQuiz(override = false) {
     scq_save();
   }
 
-  const q = sc_rt_getRandomQuestion();
-  if (!q) return;
+const q = sc_rt_getRandomQuestion();
+if (!q) {
+  console.error('[SC_RT] Nenhuma pergunta encontrada para relâmpago');
+  return;
+}
 
   const embed = scq_buildEmbed({
     title: '⚡ PERGUNTA RELÂMPAGO — Vale ponto para o PRIMEIRO!',
@@ -3265,33 +4162,49 @@ async function sc_rt_handlePotentialAnswer(message) {
   const act = SC_QUIZ_STATE.rt?.active;
   if (!act || message.id === act.messageId) return;
 
-  // reply só vale se apontar pro RELÂMPAGO ATUAL
+  // trava principal: só o relâmpago oficial atual pode ser respondido
+  if (!scq_isCurrentQuizMessage(act.messageId)) return;
+
+  // se for reply, ele PRECISA apontar para a mensagem oficial atual
   if (message.reference?.messageId && message.reference.messageId !== act.messageId) return;
 
   const q = SC_RT_BANK.find(x => x.id === act.qid);
-const ans = scq_pickAnswerLetter(message.content, q);
-if (!ans) return;
+  const ans = scq_pickAnswerLetter(message.content, q);
+  if (!ans) return;
 
-// Apaga pra evitar cola
-message.delete().catch(()=>{});
-
-// ✅ liberar próximos: houve interação “certa” com o quiz válido
-if (SC_QUIZ_STATE.currentValidMessageId === act.messageId) {
+  // liberar próximos: houve interação válida no quiz oficial atual
   SC_QUIZ_STATE.currentSatisfied = true;
-}
 
+  // Apaga pra evitar cola
+  message.delete().catch(()=>{});
 
   // 1 tentativa por usuário por relâmpago
   const msgId = act.messageId;
-  SC_QUIZ_STATE.rt.attempts[msgId] = SC_QUIZ_STATE.rt.attempts[msgId] || {};
-  if (SC_QUIZ_STATE.rt.attempts[msgId][message.author.id]) return;
-  SC_QUIZ_STATE.rt.attempts[msgId][message.author.id] = true;
+
+  if (scq_hasUserPlayedInRound(msgId, message.author.id)) {
+    await message.channel.send({
+      content: `<@${message.author.id}>`,
+      embeds: [scq_buildEmbed({
+        title: '⛔ Você já participou desta rodada',
+        description: 'Você já respondeu este quiz relâmpago. Aguarde a próxima rodada para tentar de novo.',
+        image: GIF_QUIIZ_URL,
+        color: 0xF39C12
+      })],
+      allowedMentions: { users: [message.author.id] }
+    }).then((m) => {
+      setTimeout(() => m.delete().catch(() => {}), 8000);
+    }).catch(() => {});
+    return;
+  }
+
+  scq_markUserPlayedInRound(msgId, message.author.id, 'fast');
+  scq_save();
 
   const acertou = (ans === act.correct);
 
   if (!acertou) {
     scq_updateLeaderboard(message.author.id, 0, 1);
-    await message.channel.send({
+    const wrongMsg = await message.channel.send({
       content: `<@${message.author.id}>`,
       embeds: [scq_buildEmbed({
         title: '❌ Resposta incorreta',
@@ -3301,6 +4214,8 @@ if (SC_QUIZ_STATE.currentValidMessageId === act.messageId) {
       })],
       allowedMentions: { users: [message.author.id] }
     });
+
+    scq_trackCreatorsMessage(wrongMsg);
     try {
       const dm = await message.author.createDM();
       await dm.send({
@@ -3327,7 +4242,7 @@ if (SC_QUIZ_STATE.currentValidMessageId === act.messageId) {
   scq_updateLeaderboard(message.author.id, 1, 0);
   scq_save();
 
-  await message.channel.send({
+  const winnerMsg = await message.channel.send({
     content: `<@${message.author.id}>`,
     embeds: [scq_buildEmbed({
       title: '🏁 Parabéns! Resposta correta',
@@ -3337,6 +4252,8 @@ if (SC_QUIZ_STATE.currentValidMessageId === act.messageId) {
     })],
     allowedMentions: { users: [message.author.id] }
   });
+
+  scq_trackCreatorsMessage(winnerMsg);
 
   try {
     const dm = await message.author.createDM();
@@ -3365,48 +4282,70 @@ async function scq_handleDailyAnswer(message) {
   try {
     if (message.channelId !== SC_QUIZ_CREATORS_CHANNEL_ID) return;
 
-    // 1) identificar alvo (reply ou última diária)
-    let refId = message.reference?.messageId || null;
-    if (!refId) {
-      const lastDaily = SC_QUIZ_STATE.activeQuizMessages[SC_QUIZ_STATE.activeQuizMessages.length - 1];
-      refId = lastDaily?.id || null;
-    }
-    if (!refId) return;
+    const currentId = SC_QUIZ_STATE.currentValidMessageId || null;
+    if (!currentId) return;
 
-    const active = SC_QUIZ_STATE.activeQuizMessages.find(x => x.id === refId);
+    const active = SC_QUIZ_STATE.activeQuizMessages.find(x => x.id === currentId);
     if (!active) return;
+
+    const replyTo = message.reference?.messageId || null;
+
+    // Se for reply, precisa apontar para a mensagem oficial atual
+    if (replyTo && replyTo !== currentId) return;
+
+    // Se NÃO for reply, só aceita se for letra única A/B/C/D
+    if (!replyTo && !scq_isSingleLetter(message.content)) return;
+
+    // trava principal: só responde ao quiz oficial atual
+    if (!scq_isCurrentQuizMessage(currentId)) return;
 
     const quizUser = message.author;
 
-    // 2) carregar pergunta e extrair resposta VÁLIDA (letra OU texto)
+    // carregar pergunta e extrair resposta válida
     const qMain = SC_QUIZ_BANK.find(x => x.id === active.qid);
+    if (!qMain) return;
+
     const ans = scq_pickAnswerLetter(message.content, qMain);
     if (!ans) return; // não é letra nem texto exato → ignora sem apagar/contar
 
-    // 3) apagar do chat só depois de validar
-message.delete().catch(() => {});
+    // trava de 1 participação por usuário neste quiz diário
+    if (scq_hasUserPlayedInRound(currentId, quizUser.id)) {
+      message.delete().catch(() => {});
 
-// ✅ liberar próximos: houve interação “certa” (resposta válida)
-if (SC_QUIZ_STATE.currentValidMessageId === refId) {
-  SC_QUIZ_STATE.currentSatisfied = true;
-}
+      await message.channel.send({
+        content: `<@${quizUser.id}>`,
+        embeds: [scq_buildEmbed({
+          title: '⛔ Você já participou deste quiz',
+          description: 'Você já participou desse quiz. Aguarde a próxima partida para tentar novamente.',
+          image: GIF_QUIIZ_URL,
+          color: 0xF39C12
+        })],
+        allowedMentions: { users: [quizUser.id] }
+      }).then((m) => {
+        setTimeout(() => m.delete().catch(() => {}), 8000);
+      }).catch(() => {});
 
-// 5) marca participação e pontua
-SC_QUIZ_STATE.participantsByMsg[refId] = SC_QUIZ_STATE.participantsByMsg[refId] || {};
-SC_QUIZ_STATE.participantsByMsg[refId][quizUser.id] = true;
-scq_save();
+      return;
+    }
 
+    // apagar do chat só depois de validar
+    message.delete().catch(() => {});
+
+    // liberar próximos: houve interação válida no quiz oficial atual
+    SC_QUIZ_STATE.currentSatisfied = true;
+
+    // marca participação
+    scq_markUserPlayedInRound(currentId, quizUser.id, 'daily');
+    scq_save();
 
     const right = (ans === qMain.resposta);
-   scq_updateLeaderboard(
-  quizUser.id,
-  right ? SC_QUIZ_POINTS_RIGHT : 0,
-  right ? 0 : 1
-);
+    scq_updateLeaderboard(
+      quizUser.id,
+      right ? SC_QUIZ_POINTS_RIGHT : 0,
+      right ? 0 : 1
+    );
 
-
-
-    // 6) logs + feedback público
+    // logs + feedback público
     await scq_log(scq_buildEmbed({
       title: right ? '✅ Resposta certa no chat' : '❌ Resposta errada no chat',
       description: [
@@ -3418,18 +4357,20 @@ scq_save();
       footer: `qid=${qMain.id}`
     }));
 
-    await message.channel.send({
-      content: `<@${quizUser.id}>`,
-      embeds: [scq_buildEmbed({
-        title: right ? '🎉 Parabéns! Resposta correta' : '❌ Resposta incorreta',
-        description: right
-          ? `+${SC_QUIZ_POINTS_RIGHT} no ranking! Em breve te mando ${SC_QUIZ_EXTRA_DM_QUESTIONS} no PV.`
-          : 'Não foi dessa vez… mas cola no PV que tem chance de recuperar!',
-        image: GIF_QUIIZ_URL,
-        color: right ? 0x2ECC71 : 0xE74C3C
-      })],
-      allowedMentions: { users: [quizUser.id] }
-    });
+    const dailyResultMsg = await message.channel.send({
+  content: `<@${quizUser.id}>`,
+  embeds: [scq_buildEmbed({
+    title: right ? '🎉 Parabéns! Resposta correta' : '❌ Resposta incorreta',
+    description: right
+      ? `+${SC_QUIZ_POINTS_RIGHT} no ranking! Em breve te mando ${SC_QUIZ_EXTRA_DM_QUESTIONS} no PV.`
+      : 'Não foi dessa vez… mas cola no PV que tem chance de recuperar!',
+    image: GIF_QUIIZ_URL,
+    color: right ? 0x2ECC71 : 0xE74C3C
+  })],
+  allowedMentions: { users: [quizUser.id] }
+});
+
+scq_trackCreatorsMessage(dailyResultMsg);
 
     // 7) DM com +3 perguntas
     let dm;
@@ -3733,35 +4674,43 @@ client.on('messageDelete', async (msg) => {
     }
     // ===== fim gatilho por atividade =====
 
-    // ===== roteamento de respostas no canal do quiz =====
-    if (message.channelId === SC_QUIZ_CREATORS_CHANNEL_ID) {
-      const replyTo = message.reference?.messageId || null;
+   // ===== roteamento de respostas no canal do quiz =====
+if (message.channelId === SC_QUIZ_CREATORS_CHANNEL_ID) {
+  const replyTo = message.reference?.messageId || null;
 
-      // a) COM reply → decide entre relâmpago vs diário
-      if (replyTo) {
-        if (SC_QUIZ_STATE.rt?.active && SC_QUIZ_STATE.rt.active.messageId === replyTo) {
-          await sc_rt_handlePotentialAnswer(message); // relâmpago
-        } else {
-          await scq_handleDailyAnswer(message);       // diário
-        }
-        return;
-      }
-
-      // b) SEM reply → só processa se for UMA letra (A–D)
-      const txt = message.content?.trim() || '';
-      if (!/^[A-D]$/i.test(txt)) return;
-
-      // decide pelo mais recente (fast vs daily)
-      const lastDaily = SC_QUIZ_STATE.activeQuizMessages[SC_QUIZ_STATE.activeQuizMessages.length - 1] || null;
-      const fastAct   = SC_QUIZ_STATE.rt?.active || null;
-      const dailyAt   = lastDaily?.createdAt || 0;
-      const fastAt    = fastAct?.createdAt || 0;
-
-      if (fastAt > dailyAt) await sc_rt_handlePotentialAnswer(message);
-      else if (dailyAt > 0) await scq_handleDailyAnswer(message);
-
-      return;
+  // a) COM reply → decide entre relâmpago vs diário
+  if (replyTo) {
+    if (SC_QUIZ_STATE.rt?.active && SC_QUIZ_STATE.rt.active.messageId === replyTo) {
+      await sc_rt_handlePotentialAnswer(message); // relâmpago
+    } else {
+      await scq_handleDailyAnswer(message);       // diário
     }
+    return;
+  }
+
+  // b) SEM reply → só processa se for UMA letra (A–D)
+  const txt = message.content?.trim() || '';
+  if (!/^[A-D]$/i.test(txt)) return;
+
+  const currentId = SC_QUIZ_STATE.currentValidMessageId || null;
+  if (!currentId) return;
+
+  const fastAct = SC_QUIZ_STATE.rt?.active || null;
+  const isCurrentFast = !!fastAct && fastAct.messageId === currentId;
+  const isCurrentDaily = !!SC_QUIZ_STATE.activeQuizMessages?.some(x => x.id === currentId);
+
+  if (isCurrentFast) {
+    await sc_rt_handlePotentialAnswer(message);
+    return;
+  }
+
+  if (isCurrentDaily) {
+    await scq_handleDailyAnswer(message);
+    return;
+  }
+
+  return;
+}
 
     // ===== comandos de operador =====
     if (message.content?.trim().startsWith('!fastid ')) {
@@ -3780,7 +4729,7 @@ client.on('messageDelete', async (msg) => {
     if (message.content?.trim() === '!fastnow') {
       const allowed = ['1262262852949905408','660311795327828008'];
       if (!allowed.includes(message.author.id)) return;
-      await sc_rt_postFastQuiz(false); // respeita a trava
+      await sc_rt_postFastQuiz(true); // força novo relâmpago
       await message.react('⚡').catch(()=>{});
       return;
     }
@@ -3815,7 +4764,7 @@ client.on('messageDelete', async (msg) => {
     if (message.content?.trim() === '!quiznow') {
       const allowed = [ '1262262852949905408','660311795327828008' ];
       if (!allowed.includes(message.author.id)) return;
-      await scq_postDailyQuiz(false);  // deixa explícito que não força
+      await scq_postDailyQuiz(true);  // força novo quiz diário
       await message.react('✅').catch(()=>{});
       return;
     }
