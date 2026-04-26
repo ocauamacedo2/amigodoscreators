@@ -4774,6 +4774,7 @@ if (message.channelId === SC_QUIZ_CREATORS_CHANNEL_ID) {
   }
 });
 
+console.log("teste deploy square");
 
 //teste
   } catch (err) {
