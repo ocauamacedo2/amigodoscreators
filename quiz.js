@@ -467,12 +467,6 @@ export async function setupQuiz(client) {
       message.delete().catch(() => {});
 scq_markUserPlayedInRound(currentId, message.author.id, isFast ? 'fast' : 'daily');
 
-const expected = String(
-  isFast
-    ? (SC_QUIZ_STATE.rt.active?.correct || q.resposta)
-    : q.resposta
-).trim().toUpperCase();
-
 const right = ans === expected;
 
 console.log('[SC_QUIZ_DEBUG]', {
