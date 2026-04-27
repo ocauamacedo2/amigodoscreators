@@ -362,15 +362,16 @@ export async function setupQuiz(client) {
         if (right) {
           SC_QUIZ_STATE.rt.active = null;
           SC_QUIZ_STATE.rt.lastWinnerId = message.author.id;
-          const winMsg = await message.channel.send({ embeds: [scq_buildEmbed({ title: '🏁 Vencedor!', description: `<@${message.author.id}> acertou primeiro! +${SC_QUIZ_POINTS_RIGHT}`, color: 0x2ECC71 })] });
+          const winMsg = await message.channel.send({ embeds: [scq_buildEmbed({ title: '🏁 Vencedor!', description: `<@${message.author.id}> acertou primeiro! +${SC_QUIZ_POINTS_RIGHT}`, color: 0x2ECC71, thumbnail: message.author.displayAvatarURL() })] });
           SC_QUIZ_STATE.creatorsCleanupMessageIds.push(winMsg.id);
           scq_save();
+          await scq_renderRankingSticky();
           await scq_finalizeRound(message.channel, currentId);
         } else {
           const errMsg = await message.channel.send(`<@${message.author.id}> errou! Próxima tentativa livre.`);
           SC_QUIZ_STATE.creatorsCleanupMessageIds.push(errMsg.id);
+          scq_save();
         }
-        await scq_renderRankingSticky();
       } else {
         // Fluxo Diário + DM
         const resMsg = await message.channel.send({ 
@@ -515,12 +516,16 @@ export async function setupQuiz(client) {
           const q = SC_QUIZ_BANK.find(x => x.id === id);
           if (q) {
             scq_cancelAllActive('manual_id');
-            const channel = await client.channels.fetch(SC_QUIZ_CREATORS_CHANNEL_ID);
+            const channel = await client.channels.fetch(SC_QUIZ_CREATORS_CHANNEL_ID).catch(() => null);
+            if (!channel) return;
+            await scq_clearCreatorsTrackedMessages(channel);
+
             const embed = scq_buildEmbed({ title: '⚡ RELÂMPAGO MANUAL', description: `**${q.texto}**\n\n${q.opcoes.join('\n')}`, image: GIF_QUIIZ_URL });
             const sent = await channel.send({ content: `<@&${SC_MENTION_ROLES[0]}>`, embeds: [embed] });
             SC_QUIZ_STATE.rt.active = { messageId: sent.id, qid: q.id, correct: q.resposta };
             SC_QUIZ_STATE.currentValidMessageId = sent.id;
             SC_QUIZ_STATE.currentSatisfied = false;
+            SC_QUIZ_STATE.creatorsCleanupMessageIds.push(sent.id);
             scq_save();
           }
         }
