@@ -642,7 +642,7 @@ function startTickers() {
     const base = new Date();
 
     // Garante uma primeira pergunta rápida depois que o bot inicia
-    times.push(now + 60 * 1000);
+      times.push(now + 30 * 1000); // 30 segundos após ligar
 
     let next = now + SC_QUIZ_MIN_GAP_MINUTES * 60 * 1000;
 
@@ -678,44 +678,42 @@ function startTickers() {
         SC_QUIZ_STATE.lastScheduleDayKey = dk;
         scq_save();
 
-        console.log("[SC_QUIZ] Agenda automática gerada:", SC_QUIZ_STATE.__todaySchedule.map(t => new Date(t).toLocaleString("pt-BR")));
+        console.log(`[SC_QUIZ] Agenda gerada: ${SC_QUIZ_STATE.__todaySchedule.length} horários para hoje.`);
       }
 
-      const nextTime = SC_QUIZ_STATE.__todaySchedule[0];
-
+      let nextTime = SC_QUIZ_STATE.__todaySchedule[0];
       if (!nextTime) return;
-      if (now < nextTime) return;
 
-      if (scq_hasActiveQuiz()) {
-        const activeCreatedAt =
-          SC_QUIZ_STATE.rt?.active?.createdAt ||
-          SC_QUIZ_STATE.activeQuizMessages?.[0]?.createdAt ||
-          0;
+      // Se o horário já passou
+      if (now >= nextTime) {
+        // Verifica se há um quiz travado há muito tempo e limpa
+        if (scq_hasActiveQuiz()) {
+          const activeCreatedAt = SC_QUIZ_STATE.rt?.active?.createdAt || SC_QUIZ_STATE.activeQuizMessages?.[0]?.createdAt || 0;
+          const activeAgeMs = activeCreatedAt ? now - activeCreatedAt : 0;
+          const maxActiveMs = 10 * 60 * 1000; // 10 minutos
 
-        const activeAgeMs = activeCreatedAt ? now - activeCreatedAt : 0;
-        const maxActiveMs = 10 * 60 * 1000;
-
-        if (activeAgeMs >= maxActiveMs) {
-          const channel = await client.channels.fetch(SC_QUIZ_CREATORS_CHANNEL_ID).catch(() => null);
-          if (channel) {
-            await scq_clearCreatorsTrackedMessages(channel);
+          if (activeAgeMs >= maxActiveMs) {
+            const channel = await client.channels.fetch(SC_QUIZ_CREATORS_CHANNEL_ID).catch(() => null);
+            if (channel) await scq_clearCreatorsTrackedMessages(channel);
+            scq_cancelAllActive("auto_unlock_stuck_quiz");
+          } else {
+            // Se tem um quiz ativo e novo (menos de 10min), espera ele acabar para mandar o próximo agendado
+            return;
           }
-
-          scq_cancelAllActive("auto_unlock_stuck_quiz");
-        } else {
-          return;
         }
-      }
 
-      SC_QUIZ_STATE.__todaySchedule.shift();
-      scq_save();
+        // Remove o horário da fila e salva
+        SC_QUIZ_STATE.__todaySchedule.shift();
+        scq_save();
 
-      console.log("[SC_QUIZ] Enviando quiz automático agora...");
-
-      if (Math.random() > 0.5) {
-        await scq_postDailyQuiz();
-      } else {
-        await sc_rt_postFastQuiz();
+        console.log("[SC_QUIZ] Disparando quiz automático agendado...");
+        
+        // Forçamos o envio (override true) para garantir que o agendado apareça
+        if (Math.random() > 0.5) {
+          await scq_postDailyQuiz(true);
+        } else {
+          await sc_rt_postFastQuiz(true);
+        }
       }
     } catch (e) {
       console.error("[SC_QUIZ] Erro no ticker automático:", e);
@@ -822,16 +820,14 @@ scq_save();
   client.__SC_QUIZ_SYSTEM_STARTED = true;
 
   await scq_renderRankingSticky();
+  scq_save(); // garante estado inicial
   startTickers();
 
-  console.log("[SC_QUIZ] Sistema ativado.");
+  console.log("[SC_QUIZ] Sistema de Quiz Automático iniciado com sucesso.");
 }
 
-if (client.isReady?.()) {
-  await scq_startSystemOnce();
-} else {
-  client.once('ready', scq_startSystemOnce);
-}
+if (client.isReady()) scq_startSystemOnce();
+else client.once('ready', scq_startSystemOnce);
 
   } catch (err) { console.error("[SC_QUIZ] Falha Crítica:", err); }
 }
