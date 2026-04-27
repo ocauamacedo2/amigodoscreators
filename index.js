@@ -3,7 +3,7 @@
 // ===================================================================
 
 // ---- Variáveis de ambiente ----
-import { setupQuiz } from './events/quiz.js';
+import { setupQuiz } from './quiz.js';
 import dotenv from 'dotenv';
 dotenv.config({ override: true }); // força usar o .env do projeto
 
