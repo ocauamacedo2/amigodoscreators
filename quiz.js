@@ -245,16 +245,26 @@ export async function setupQuiz(client) {
             .setEmoji('🧹')
         );
 
-        if (SC_QUIZ_STATE.stickyRankingMsgIdAcertos) {
-          const m = await channel.messages.fetch(SC_QUIZ_STATE.stickyRankingMsgIdAcertos).catch(() => null);
-          if (m) await m.edit({ embeds: [embedA], files: [chartA] });
-          else SC_QUIZ_STATE.stickyRankingMsgIdAcertos = (await channel.send({ embeds: [embedA], files: [chartA] })).id;
+        // Função auxiliar para encontrar mensagem existente se o ID falhar
+        const findMsg = async (id, titlePart) => {
+          let m = id ? await channel.messages.fetch(id).catch(() => null) : null;
+          if (!m) {
+            const msgs = await channel.messages.fetch({ limit: 50 }).catch(() => null);
+            m = msgs?.find(msg => msg.author.id === client.user.id && msg.embeds[0]?.title?.includes(titlePart));
+          }
+          return m;
+        };
+
+        const msgA = await findMsg(SC_QUIZ_STATE.stickyRankingMsgIdAcertos, 'Top Acertos');
+        if (msgA) {
+          await msgA.edit({ embeds: [embedA], files: [chartA] }).catch(() => null);
+          SC_QUIZ_STATE.stickyRankingMsgIdAcertos = msgA.id;
         } else SC_QUIZ_STATE.stickyRankingMsgIdAcertos = (await channel.send({ embeds: [embedA], files: [chartA] })).id;
 
-        if (SC_QUIZ_STATE.stickyRankingMsgIdInteracoes) {
-          const m = await channel.messages.fetch(SC_QUIZ_STATE.stickyRankingMsgIdInteracoes).catch(() => null);
-          if (m) await m.edit({ embeds: [embedI], files: [chartI], components: [resetRow] });
-          else SC_QUIZ_STATE.stickyRankingMsgIdInteracoes = (await channel.send({ embeds: [embedI], files: [chartI], components: [resetRow] })).id;
+        const msgI = await findMsg(SC_QUIZ_STATE.stickyRankingMsgIdInteracoes, 'Top Interações');
+        if (msgI) {
+          await msgI.edit({ embeds: [embedI], files: [chartI], components: [resetRow] }).catch(() => null);
+          SC_QUIZ_STATE.stickyRankingMsgIdInteracoes = msgI.id;
         } else SC_QUIZ_STATE.stickyRankingMsgIdInteracoes = (await channel.send({ embeds: [embedI], files: [chartI], components: [resetRow] })).id;
 
         scq_save();
