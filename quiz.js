@@ -40,7 +40,6 @@ export async function setupQuiz(client) {
     const SC_QUIZ_EXTRA_DM_QUESTIONS = 3;
     const SC_QUIZ_DATA_PATH          = path.join(process.cwd(), 'sc_quiz_data.json');
     const SC_QUIZ_POINTS_RIGHT       = 1;
-    const SC_RT_ACTIVE_TIMEOUT_MS    = 3 * 60 * 1000;
 
     const GIF_QUIIZ_URL = 'https://media.discordapp.net/attachments/1362477839944777889/1374893068649500783/standard_1.gif?ex=68c2b3b3&is=68c16233&hm=fb2088e9693479fdae08076fc482855004e662ed1a788e7b9788eff44b1c7dd6&=&width=1032&height=60';
     const SC_RT_BANK = SC_QUIZ_BANK; // Usa o mesmo banco de perguntas
@@ -332,16 +331,6 @@ export async function setupQuiz(client) {
       SC_QUIZ_STATE.currentValidMessageId = msg.id;
       SC_QUIZ_STATE.currentSatisfied = false;
       scq_save();
-
-      setTimeout(async () => {
-        if (SC_QUIZ_STATE.rt.active?.messageId === msg.id) {
-          SC_QUIZ_STATE.rt.active = null;
-          const tMsg = await channel.send({ embeds: [scq_buildEmbed({ title: '⏰ Tempo esgotado', description: `Ninguém acertou a tempo.` })] });
-          SC_QUIZ_STATE.creatorsCleanupMessageIds.push(tMsg.id);
-          scq_save();
-          await scq_finalizeRound(channel, msg.id);
-        }
-      }, SC_RT_ACTIVE_TIMEOUT_MS);
     }
 
     // ======= HANDLERS: RESPOSTAS =======
