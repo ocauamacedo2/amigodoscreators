@@ -31,18 +31,14 @@ export async function setupQuiz(client) {
     // IDs autorizados para resetar o ranking
     const SC_AUTHORIZED_RESET_IDS = ['660311795327828008', '1262262852949905408', '1352408327983861844'];
 
-    const SC_QUIZ_DAILY_COUNT        = 10;
-    const SC_QUIZ_WINDOW_START_HOUR  = 10;
-    const SC_QUIZ_WINDOW_END_HOUR    = 22;
+    const SC_QUIZ_TOTAL_PER_DAY      = 20; // Total de quizzes (diários + relâmpago) enviados aleatoriamente por dia
+    const SC_QUIZ_WINDOW_START_HOUR  = 0;  // Agora funciona 24 horas (começa meia-noite)
+    const SC_QUIZ_WINDOW_END_HOUR    = 23; // Termina às 23:59
     const SC_QUIZ_MIN_GAP_MINUTES    = 25;
     const SC_QUIZ_DM_TIMEOUT_MS      = 3 * 60 * 1000;
     const SC_QUIZ_EXTRA_DM_QUESTIONS = 3;
     const SC_QUIZ_DATA_PATH          = './sc_quiz_data.json';
     const SC_QUIZ_POINTS_RIGHT       = 1;
-
-    const SC_RT_EVERY_MINUTES        = 30; // Frequência do relâmpago
-    const SC_RT_WINDOW_START_HOUR    = 12;
-    const SC_RT_WINDOW_END_HOUR      = 23;
     const SC_RT_ACTIVE_TIMEOUT_MS    = 3 * 60 * 1000;
 
     const GIF_QUIIZ_URL = 'https://media.discordapp.net/attachments/1362477839944777889/1374893068649500783/standard_1.gif?ex=68c2b3b3&is=68c16233&hm=fb2088e9693479fdae08076fc482855004e662ed1a788e7b9788eff44b1c7dd6&=&width=1032&height=60';
@@ -432,11 +428,13 @@ export async function setupQuiz(client) {
         if (SC_QUIZ_STATE.lastScheduleDayKey !== dk) {
           // Gera agenda do dia
           const times = [];
-          for (let i = 0; i < SC_QUIZ_DAILY_COUNT; i++) {
+          for (let i = 0; i < SC_TOTAL_QUIZ_COUNT; i++) {
             const h = scq_randInt(SC_QUIZ_WINDOW_START_HOUR, SC_QUIZ_WINDOW_END_HOUR);
             const m = scq_randInt(0, 59);
-            const d = new Date(); d.setHours(h, m, 0, 0);
-            if (d > new Date()) times.push(d.getTime());
+            const s = scq_randInt(0, 59);
+            const d = new Date();
+            d.setHours(h, m, s, 0);
+            if (d.getTime() > now) times.push(d.getTime());
           }
           SC_QUIZ_STATE.__todaySchedule = times.sort();
           SC_QUIZ_STATE.lastScheduleDayKey = dk;
@@ -447,19 +445,12 @@ export async function setupQuiz(client) {
         if (dueIdx >= 0) {
           SC_QUIZ_STATE.__todaySchedule.splice(dueIdx, 1);
           scq_save();
-          await scq_postDailyQuiz();
-        }
-
-        // Relâmpago Ticker (Cadência fixa)
-        if (SC_RT_EVERY_MINUTES > 0) {
-          const nextRt = (SC_QUIZ_STATE.rt.lastRtAt || 0) + (SC_RT_EVERY_MINUTES * 60000);
-          if (now >= nextRt) {
-            const h = new Date().getHours();
-            if (h >= SC_RT_WINDOW_START_HOUR && h <= SC_RT_WINDOW_END_HOUR) {
-              SC_QUIZ_STATE.rt.lastRtAt = now;
-              scq_save();
-              await sc_rt_postFastQuiz();
-            }
+          
+          // Sorteio aleatório: 50% de chance para cada tipo
+          if (Math.random() > 0.5) {
+            await scq_postDailyQuiz();
+          } else {
+            await sc_rt_postFastQuiz();
           }
         }
       }, 15000);
