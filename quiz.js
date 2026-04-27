@@ -128,10 +128,11 @@ export async function setupQuiz(client) {
       const pool = SC_QUIZ_BANK.filter(q => !exclude.has(q.id));
       return pool.length ? pool[Math.floor(Math.random() * pool.length)] : null;
     }
-    function scq_buildEmbed({ title, description, image, color = 0x915BFF, footer }) {
+    function scq_buildEmbed({ title, description, image, color = 0x915BFF, footer, thumbnail }) {
       return {
         color, title, description,
         image: image ? { url: image } : null,
+        thumbnail: thumbnail ? { url: thumbnail } : null,
         footer: footer ? { text: footer } : null,
         timestamp: new Date().toISOString()
       };
@@ -368,7 +369,17 @@ export async function setupQuiz(client) {
         await scq_renderRankingSticky();
       } else {
         // Fluxo Diário + DM
-        const resMsg = await message.channel.send({ embeds: [scq_buildEmbed({ title: right ? '✅ Correto!' : '❌ Incorreto', description: right ? 'Mandou bem! Veja seu PV para as extras.' : 'Errou no chat, mas pode recuperar no PV!', color: right ? 0x2ECC71 : 0xE74C3C })] });
+        const resMsg = await message.channel.send({ 
+          content: right ? `🌟 Mandou bem, <@${message.author.id}>!` : `💔 Poxa, <@${message.author.id}>...`,
+          embeds: [scq_buildEmbed({ 
+            title: right ? '✅ Resposta Correta!' : '❌ Resposta Incorreta', 
+            description: right 
+              ? 'Você acertou no chat! Agora termine o desafio que te enviei no PV. 🚀' 
+              : 'Você errou no chat, mas não desanime! Ainda pode recuperar pontuando nas perguntas que te mandei no PV! 💪', 
+            color: right ? 0x2ECC71 : 0xE74C3C,
+            thumbnail: message.author.displayAvatarURL()
+          })] 
+        });
         SC_QUIZ_STATE.creatorsCleanupMessageIds.push(resMsg.id);
         scq_save();
         await scq_renderRankingSticky();
