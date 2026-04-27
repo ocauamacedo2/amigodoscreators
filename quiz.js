@@ -8,6 +8,7 @@
 // • Logs detalhados em canal próprio (quem responder, certo/errado, etc.).
 
 import fs from 'node:fs';
+import path from 'node:path';
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, Events } from 'discord.js';
 import { SC_QUIZ_BANK } from './questions.js';
 
@@ -37,7 +38,7 @@ export async function setupQuiz(client) {
     const SC_QUIZ_MIN_GAP_MINUTES    = 25;
     const SC_QUIZ_DM_TIMEOUT_MS      = 3 * 60 * 1000;
     const SC_QUIZ_EXTRA_DM_QUESTIONS = 3;
-    const SC_QUIZ_DATA_PATH          = './sc_quiz_data.json';
+    const SC_QUIZ_DATA_PATH          = path.join(process.cwd(), 'sc_quiz_data.json');
     const SC_QUIZ_POINTS_RIGHT       = 1;
     const SC_RT_ACTIVE_TIMEOUT_MS    = 3 * 60 * 1000;
 
@@ -154,11 +155,11 @@ export async function setupQuiz(client) {
     async function scq_clearCreatorsTrackedMessages(channel) {
       const tracked = [...(SC_QUIZ_STATE.creatorsCleanupMessageIds || [])];
       SC_QUIZ_STATE.creatorsCleanupMessageIds = [];
-      scq_save();
       for (const id of tracked) {
         const m = await channel.messages.fetch(id).catch(() => null);
         if (m) await m.delete().catch(() => {});
       }
+      scq_save();
     }
     function scq_cancelAllActive(reason = 'override') {
       SC_QUIZ_STATE.rt.active = null;
@@ -198,8 +199,8 @@ export async function setupQuiz(client) {
         const channel = await client.channels.fetch(SC_QUIZ_RANKING_CHANNEL_ID).catch(() => null);
         if (!channel) return;
         const entries = Object.entries(SC_QUIZ_STATE.leaderboard);
-        const byA = entries.sort((a,b) => b[1].acertos - a[1].acertos).slice(0, 10);
-        const byI = entries.sort((a,b) => b[1].interacoes - a[1].interacoes).slice(0, 10);
+        const byA = [...entries].sort((a,b) => b[1].acertos - a[1].acertos).slice(0, 10);
+        const byI = [...entries].sort((a,b) => b[1].interacoes - a[1].interacoes).slice(0, 10);
 
         const labelsA = await Promise.all(byA.map(e => scq_userDisplayNameSafe(channel.guild, e[0], '...')));
         const labelsI = await Promise.all(byI.map(e => scq_userDisplayNameSafe(channel.guild, e[0], '...')));
@@ -320,6 +321,7 @@ export async function setupQuiz(client) {
           scq_save();
           const tMsg = await channel.send({ embeds: [scq_buildEmbed({ title: '⏰ Tempo esgotado', description: `Ninguém acertou. Gabarito: **${q.resposta}**` })] });
           SC_QUIZ_STATE.creatorsCleanupMessageIds.push(tMsg.id);
+          scq_save();
         }
       }, SC_RT_ACTIVE_TIMEOUT_MS);
     }
@@ -432,7 +434,7 @@ export async function setupQuiz(client) {
         if (SC_QUIZ_STATE.lastScheduleDayKey !== dk) {
           // Gera agenda do dia
           const times = [];
-          for (let i = 0; i < SC_TOTAL_QUIZ_COUNT; i++) {
+          for (let i = 0; i < SC_QUIZ_TOTAL_PER_DAY; i++) {
             const h = scq_randInt(SC_QUIZ_WINDOW_START_HOUR, SC_QUIZ_WINDOW_END_HOUR);
             const m = scq_randInt(0, 59);
             const s = scq_randInt(0, 59);
@@ -481,9 +483,16 @@ export async function setupQuiz(client) {
 
       // Comandos Operador
       if (['1262262852949905408', '660311795327828008'].includes(msg.author.id)) {
-        if (msg.content === '!quiznow') { await scq_postDailyQuiz(true); msg.react('✅'); }
-        if (msg.content === '!fastnow' || msg.content === '!quizfast') { await sc_rt_postFastQuiz(true); msg.react('⚡'); }
+        if (msg.content === '!quiznow') { 
+          msg.delete().catch(() => {});
+          await scq_postDailyQuiz(true); 
+        }
+        if (msg.content === '!fastnow' || msg.content === '!quizfast') { 
+          msg.delete().catch(() => {});
+          await sc_rt_postFastQuiz(true); 
+        }
         if (msg.content === '!quizreset') {
+          msg.delete().catch(() => {});
           SC_QUIZ_STATE.leaderboard = {};
           scq_save(); await scq_renderRankingSticky(); msg.reply("Ranking zerado.");
         }
@@ -495,6 +504,7 @@ export async function setupQuiz(client) {
           msg.reply(`**Lista Pág ${page}**:\n${list}\n\nUse \`!fastid <id>\``);
         }
         if (msg.content.startsWith('!fastid')) {
+          msg.delete().catch(() => {});
           const id = parseInt(msg.content.split(' ')[1]);
           const q = SC_QUIZ_BANK.find(x => x.id === id);
           if (q) {
@@ -510,6 +520,7 @@ export async function setupQuiz(client) {
             SC_QUIZ_STATE.rt.attempts[sent.id] = {};
             SC_QUIZ_STATE.currentValidMessageId = sent.id;
             SC_QUIZ_STATE.currentSatisfied = false;
+            SC_QUIZ_STATE.creatorsCleanupMessageIds.push(sent.id);
             scq_save();
           }
         }
@@ -532,15 +543,26 @@ export async function setupQuiz(client) {
         return interaction.reply({ content: '❌ Você não tem permissão para resetar o ranking global.', ephemeral: true });
       }
 
-      // Executa o reset
-      SC_QUIZ_STATE.leaderboard = {};
-      scq_save();
-      
-      // Atualiza as mensagens do ranking imediatamente
-      await scq_renderRankingSticky();
-      
-      await interaction.reply({ content: '✅ O ranking foi zerado com sucesso!', ephemeral: true });
-      await scq_log(scq_buildEmbed({ title: '🧹 Ranking Resetado', description: `O ranking global do Quiz foi zerado por <@${interaction.user.id}>.`, color: 0xFF0000 }));
+      try {
+        // Executa o reset COMPLETO de dados
+        SC_QUIZ_STATE.leaderboard = {};
+        SC_QUIZ_STATE.participantsByMsg = {};
+        SC_QUIZ_STATE.activeQuizMessages = [];
+        SC_QUIZ_STATE.rt.attempts = {};
+        SC_QUIZ_STATE.currentValidMessageId = null;
+        SC_QUIZ_STATE.currentSatisfied = true;
+        
+        scq_save();
+        
+        // Atualiza as mensagens do ranking imediatamente
+        await scq_renderRankingSticky();
+        
+        await interaction.reply({ content: '✅ O ranking e o histórico foram zerados com sucesso!', ephemeral: true });
+        await scq_log(scq_buildEmbed({ title: '🧹 Ranking Resetado', description: `O ranking global do Quiz foi zerado por <@${interaction.user.id}>.`, color: 0xFF0000 }));
+      } catch (err) {
+        console.error("Erro no reset:", err);
+        await interaction.reply({ content: '❌ Erro ao resetar dados.', ephemeral: true });
+      }
     });
 
     client.once('ready', async () => {
