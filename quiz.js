@@ -31,7 +31,7 @@ export async function setupQuiz(client) {
     // IDs autorizados para resetar o ranking
     const SC_AUTHORIZED_RESET_IDS = ['660311795327828008', '1262262852949905408', '1352408327983861844'];
 
-    const SC_QUIZ_DAILY_COUNT        = 10;
+    const SC_QUIZ_TOTAL_PER_DAY      = 20; // Quantidade de quizzes aleatórios por dia
     const SC_QUIZ_WINDOW_START_HOUR  = 10;
     const SC_QUIZ_WINDOW_END_HOUR    = 22;
     const SC_QUIZ_MIN_GAP_MINUTES    = 25;
