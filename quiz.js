@@ -422,14 +422,40 @@ export async function setupQuiz(client) {
       const currentId = SC_QUIZ_STATE.currentValidMessageId;
       if (!currentId || message.author.bot) return;
 
+      const isFastRound = SC_QUIZ_STATE.rt.lastFastMsgId === currentId;
+      const isFastStillActive = SC_QUIZ_STATE.rt.active?.messageId === currentId;
+
+      // Se alguém tentar responder um desafio relâmpago que já acabou (durante os 2 min de limpeza)
+      if (isFastRound && !isFastStillActive && SC_QUIZ_STATE.rt.lastWinnerId && scq_isSingleLetter(message.content)) {
+        const winner = await message.guild.members.fetch(SC_QUIZ_STATE.rt.lastWinnerId).catch(() => null);
+        return message.reply({
+          content: `❌ <@${message.author.id}>, esse quiz já foi respondido!`,
+          embeds: [scq_buildEmbed({
+            title: '⌛ Quiz Encerrado',
+            description: `Infelizmente você chegou um pouco tarde. **${winner?.displayName || 'Alguém'}** já acertou!\n\nFica de olho que daqui a pouco tem mais um 👀`,
+            thumbnail: winner?.user.displayAvatarURL() || null,
+            color: 0xF39C12
+          })]
+        }).then(m => setTimeout(() => m.delete().catch(() => {}), 8000));
+      }
+
+      // ⛔ Garante que a interação no antigo pare de funcionar
+      if (message.reference?.messageId && message.reference.messageId !== currentId) return;
+
       const isFast = SC_QUIZ_STATE.rt.active?.messageId === currentId;
+      const act = isFast ? SC_QUIZ_STATE.rt.active : null;
       const activeDaily = SC_QUIZ_STATE.activeQuizMessages.find(x => x.id === currentId);
-      const qid = isFast ? SC_QUIZ_STATE.rt.active.qid : activeDaily?.qid;
+      const qid = isFast ? act.qid : activeDaily?.qid;
       const q = SC_QUIZ_BANK.find(x => x.id === qid);
       if (!q) return;
 
-      // Normalização
+      const expected = String(isFast ? (act.correct || q.resposta) : q.resposta).trim().toUpperCase();
       const ans = scq_pickAnswerLetter(message.content, q);
+
+      if (ans) {
+        console.log('[SC_QUIZ_DEBUG]', { qid: q.id, ans, expected, isFast });
+      }
+
       if (!ans) return;
 
       // Já participou?
@@ -674,13 +700,7 @@ scq_save();
       }
 
       // Executa o reset
-      SC_QUIZ_STATE.leaderboard = {};
-      SC_QUIZ_STATE.participantsByMsg = {};
-      SC_QUIZ_STATE.activeQuizMessages = [];
-      SC_QUIZ_STATE.rt.attempts = {};
-      SC_QUIZ_STATE.currentValidMessageId = null;
-      SC_QUIZ_STATE.currentSatisfied = true;
-      scq_save();
+      await scq_resetEntireQuizState('button_reset');
       
       // Atualiza as mensagens do ranking imediatamente
       await scq_renderRankingSticky();
