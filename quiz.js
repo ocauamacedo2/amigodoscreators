@@ -425,19 +425,28 @@ export async function setupQuiz(client) {
       const isFastRound = SC_QUIZ_STATE.rt.lastFastMsgId === currentId;
       const isFastStillActive = SC_QUIZ_STATE.rt.active?.messageId === currentId;
 
-      // Se alguém tentar responder um desafio relâmpago que já acabou (durante os 2 min de limpeza)
       if (isFastRound && !isFastStillActive && SC_QUIZ_STATE.rt.lastWinnerId && scq_isSingleLetter(message.content)) {
-        const winner = await message.guild.members.fetch(SC_QUIZ_STATE.rt.lastWinnerId).catch(() => null);
-        return message.reply({
-          content: `❌ <@${message.author.id}>, esse quiz já foi respondido!`,
-          embeds: [scq_buildEmbed({
-            title: '⌛ Quiz Encerrado',
-            description: `Infelizmente você chegou um pouco tarde. **${winner?.displayName || 'Alguém'}** já acertou!\n\nFica de olho que daqui a pouco tem mais um 👀`,
-            thumbnail: winner?.user.displayAvatarURL() || null,
-            color: 0xF39C12
-          })]
-        }).then(m => setTimeout(() => m.delete().catch(() => {}), 8000));
-      }
+  const lateUserMsg = message;
+  const winner = await message.guild.members.fetch(SC_QUIZ_STATE.rt.lastWinnerId).catch(() => null);
+
+  const warnMsg = await message.channel.send({
+    content: `❌ <@${message.author.id}>, esse quiz já foi respondido!`,
+    embeds: [scq_buildEmbed({
+      title: '⌛ Quiz Encerrado',
+      description: `Infelizmente você chegou um pouco tarde. **${winner?.displayName || 'Alguém'}** já acertou!\n\nFica de olho que daqui a pouco tem mais um 👀`,
+      thumbnail: winner?.user?.displayAvatarURL?.() || null,
+      color: 0xF39C12
+    })],
+    allowedMentions: { users: [message.author.id] }
+  }).catch(() => null);
+
+  setTimeout(async () => {
+    await lateUserMsg.delete().catch(() => {});
+    if (warnMsg) await warnMsg.delete().catch(() => {});
+  }, 8000);
+
+  return;
+}
 
       // ⛔ Garante que a interação no antigo pare de funcionar
       if (message.reference?.messageId && message.reference.messageId !== currentId) return;
@@ -485,14 +494,49 @@ scq_updateLeaderboard(message.author.id, right ? 1 : 0, right ? 0 : 1);
 
       if (isFast) {
         if (right) {
-          SC_QUIZ_STATE.rt.active = null;
-          SC_QUIZ_STATE.rt.lastWinnerId = message.author.id;
-          const winMsg = await message.channel.send({ embeds: [scq_buildEmbed({ title: '🏁 Vencedor!', description: `<@${message.author.id}> acertou primeiro! +${SC_QUIZ_POINTS_RIGHT}`, color: 0x2ECC71, thumbnail: message.author.displayAvatarURL() })] });
-          SC_QUIZ_STATE.creatorsCleanupMessageIds.push(winMsg.id);
-          scq_save();
-          await scq_renderRankingSticky();
-          await scq_finalizeRound(message.channel, currentId);
-        } else {
+  SC_QUIZ_STATE.rt.active = null;
+  SC_QUIZ_STATE.rt.lastWinnerId = message.author.id;
+
+  // Mantém bloqueado por 5 minutos para não nascer outro quiz por cima
+  SC_QUIZ_STATE.currentSatisfied = false;
+
+  const winMsg = await message.channel.send({
+    embeds: [scq_buildEmbed({
+      title: '🏁 Vencedor!',
+      description: `<@${message.author.id}> acertou primeiro! +${SC_QUIZ_POINTS_RIGHT}\n\n🧹 Esta pergunta será limpa automaticamente em **5 minutos**.`,
+      color: 0x2ECC71,
+      thumbnail: message.author.displayAvatarURL()
+    })],
+    allowedMentions: { users: [message.author.id] }
+  });
+
+  SC_QUIZ_STATE.creatorsCleanupMessageIds.push(winMsg.id);
+  scq_save();
+
+  await scq_renderRankingSticky();
+
+  setTimeout(async () => {
+    try {
+      const quizMsg = await message.channel.messages.fetch(currentId).catch(() => null);
+      if (quizMsg) await quizMsg.delete().catch(() => {});
+
+      const winnerMsg = await message.channel.messages.fetch(winMsg.id).catch(() => null);
+      if (winnerMsg) await winnerMsg.delete().catch(() => {});
+
+      SC_QUIZ_STATE.currentValidMessageId = null;
+      SC_QUIZ_STATE.currentSatisfied = true;
+      SC_QUIZ_STATE.activeQuizMessages = [];
+      SC_QUIZ_STATE.creatorsCleanupMessageIds = (SC_QUIZ_STATE.creatorsCleanupMessageIds || [])
+        .filter(id => id !== currentId && id !== winMsg.id);
+
+      scq_save();
+
+      await scq_clearCreatorsTrackedMessages(message.channel);
+    } catch (e) {
+      console.error('[SC_QUIZ] erro ao limpar relâmpago após vencedor:', e);
+    }
+  }, 5 * 60 * 1000);
+} else {
   const errMsg = await message.channel.send({
     content: `💔 Poxa, <@${message.author.id}>...`,
     embeds: [scq_buildEmbed({
