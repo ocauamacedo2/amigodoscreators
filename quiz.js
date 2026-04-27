@@ -32,8 +32,8 @@ export async function setupQuiz(client) {
     const SC_AUTHORIZED_RESET_IDS = ['660311795327828008', '1262262852949905408', '1352408327983861844'];
 
     const SC_QUIZ_TOTAL_PER_DAY      = 20; // Quantidade de quizzes aleatórios por dia
-    const SC_QUIZ_WINDOW_START_HOUR  = 10;
-    const SC_QUIZ_WINDOW_END_HOUR    = 22;
+    const SC_QUIZ_WINDOW_START_HOUR  = 0;  // 00:00 (24 horas)
+    const SC_QUIZ_WINDOW_END_HOUR    = 23; // 23:59 (24 horas)
     const SC_QUIZ_MIN_GAP_MINUTES    = 25;
     const SC_QUIZ_DM_TIMEOUT_MS      = 3 * 60 * 1000;
     const SC_QUIZ_EXTRA_DM_QUESTIONS = 3;
@@ -594,19 +594,6 @@ scq_updateLeaderboard(message.author.id, right ? 1 : 0, right ? 0 : 1);
           
           // Sorteio aleatório entre Diário e Relâmpago
           Math.random() > 0.5 ? await scq_postDailyQuiz() : await sc_rt_postFastQuiz();
-        }
-
-        // Relâmpago Ticker (Cadência fixa)
-        if (SC_RT_EVERY_MINUTES > 0) {
-          const nextRt = (SC_QUIZ_STATE.rt.lastRtAt || 0) + (SC_RT_EVERY_MINUTES * 60000);
-          if (now >= nextRt) {
-            const h = new Date().getHours();
-            if (h >= SC_RT_WINDOW_START_HOUR && h <= SC_RT_WINDOW_END_HOUR) {
-              SC_QUIZ_STATE.rt.lastRtAt = now;
-              scq_save();
-              await sc_rt_postFastQuiz();
-            }
-          }
         }
       }, 15000);
     }
