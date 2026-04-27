@@ -14,6 +14,8 @@ import { SC_QUIZ_BANK } from './questions.js';
 export async function setupQuiz(client) {
   try {
     if (client.__SC_QUIZ_INSTALLED) return;
+    console.log("[SC_QUIZ] Ativando módulo de Quiz Automático...");
+
     client.__SC_QUIZ_INSTALLED = true;
 
     // Node < 18 polyfill fetch
@@ -366,9 +368,16 @@ async function scq_buildChartAttachment({ labels, data, title, color = 'rgb(145,
     async function scq_postDailyQuiz(override = false) {
       if (!override && scq_hasActiveQuiz()) return;
       if (override) scq_cancelAllActive('daily_override');
+
       const channel = await client.channels.fetch(SC_QUIZ_CREATORS_CHANNEL_ID).catch(() => null);
+      if (!channel) {
+        console.error(`[SC_QUIZ] Erro: Canal ${SC_QUIZ_CREATORS_CHANNEL_ID} não encontrado.`);
+        return;
+      }
+
       const q = scq_getRandomQuestion();
-      if (!channel || !q) return;
+      if (!q) return;
+
       await scq_clearCreatorsTrackedMessages(channel);
 
       const embed = scq_buildEmbed({
@@ -402,9 +411,16 @@ async function scq_buildChartAttachment({ labels, data, title, color = 'rgb(145,
     async function sc_rt_postFastQuiz(override = false) {
       if (!override && scq_hasActiveQuiz()) return;
       if (override) scq_cancelAllActive('fast_override');
+
       const channel = await client.channels.fetch(SC_QUIZ_CREATORS_CHANNEL_ID).catch(() => null);
+      if (!channel) {
+        console.error(`[SC_QUIZ] Erro: Canal ${SC_QUIZ_CREATORS_CHANNEL_ID} não encontrado.`);
+        return;
+      }
+
       const q = scq_getRandomQuestion();
-      if (!channel || !q) return;
+      if (!q) return;
+
       await scq_clearCreatorsTrackedMessages(channel);
 
       const embed = scq_buildEmbed({
@@ -642,7 +658,7 @@ function startTickers() {
     const base = new Date();
 
     // Garante uma primeira pergunta rápida depois que o bot inicia
-      times.push(now + 30 * 1000); // 30 segundos após ligar
+      times.push(now + 15 * 1000); // 15 segundos após ligar
 
     let next = now + SC_QUIZ_MIN_GAP_MINUTES * 60 * 1000;
 
@@ -678,41 +694,38 @@ function startTickers() {
         SC_QUIZ_STATE.lastScheduleDayKey = dk;
         scq_save();
 
-        console.log(`[SC_QUIZ] Agenda gerada: ${SC_QUIZ_STATE.__todaySchedule.length} horários para hoje.`);
+        console.log(`[SC_QUIZ] Agenda gerada para ${dk}: ${SC_QUIZ_STATE.__todaySchedule.length} horários.`);
       }
 
-      let nextTime = SC_QUIZ_STATE.__todaySchedule[0];
+      const nextTime = SC_QUIZ_STATE.__todaySchedule[0];
       if (!nextTime) return;
 
-      // Se o horário já passou
       if (now >= nextTime) {
-        // Verifica se há um quiz travado há muito tempo e limpa
+        // Consome o horário agendado da fila imediatamente
+        SC_QUIZ_STATE.__todaySchedule.shift();
+        scq_save();
+
+        // Se houver um quiz ativo recente (menos de 5 minutos), evitamos sobrepor
         if (scq_hasActiveQuiz()) {
           const activeCreatedAt = SC_QUIZ_STATE.rt?.active?.createdAt || SC_QUIZ_STATE.activeQuizMessages?.[0]?.createdAt || 0;
           const activeAgeMs = activeCreatedAt ? now - activeCreatedAt : 0;
-          const maxActiveMs = 10 * 60 * 1000; // 10 minutos
 
-          if (activeAgeMs >= maxActiveMs) {
-            const channel = await client.channels.fetch(SC_QUIZ_CREATORS_CHANNEL_ID).catch(() => null);
-            if (channel) await scq_clearCreatorsTrackedMessages(channel);
-            scq_cancelAllActive("auto_unlock_stuck_quiz");
-          } else {
-            // Se tem um quiz ativo e novo (menos de 10min), espera ele acabar para mandar o próximo agendado
+          if (activeAgeMs > 0 && activeAgeMs < 5 * 60 * 1000) {
+            console.log("[SC_QUIZ] Já existe um quiz ativo recente. Pulando agendamento automático para evitar flood.");
             return;
           }
         }
 
-        // Remove o horário da fila e salva
-        SC_QUIZ_STATE.__todaySchedule.shift();
-        scq_save();
-
-        console.log("[SC_QUIZ] Disparando quiz automático agendado...");
+        console.log(`[SC_QUIZ] Disparando quiz automático agendado para agora (${new Date(nextTime).toLocaleTimeString('pt-BR')})`);
         
-        // Forçamos o envio (override true) para garantir que o agendado apareça
-        if (Math.random() > 0.5) {
-          await scq_postDailyQuiz(true);
-        } else {
-          await sc_rt_postFastQuiz(true);
+        try {
+          if (Math.random() > 0.5) {
+            await scq_postDailyQuiz(true);
+          } else {
+            await sc_rt_postFastQuiz(true);
+          }
+        } catch (err) {
+          console.error("[SC_QUIZ] Falha ao disparar quiz automático:", err);
         }
       }
     } catch (e) {
