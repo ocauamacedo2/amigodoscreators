@@ -162,10 +162,15 @@ export async function setupQuiz(client) {
       scq_save();
     }
 
-    async function scq_finalizeRound(channel) {
+    async function scq_finalizeRound(channel, messageId) {
       // O ciclo só termina de verdade após 2 minutos do acerto ou timeout
       setTimeout(async () => {
         try {
+          // Só executa a limpeza se a mensagem finalizada ainda for a ativa
+          if (SC_QUIZ_STATE.currentValidMessageId !== messageId && SC_QUIZ_STATE.currentValidMessageId !== null) {
+            return; 
+          }
+
           await scq_clearCreatorsTrackedMessages(channel);
           SC_QUIZ_STATE.currentValidMessageId = null;
           SC_QUIZ_STATE.currentSatisfied = true;
@@ -334,7 +339,7 @@ export async function setupQuiz(client) {
           const tMsg = await channel.send({ embeds: [scq_buildEmbed({ title: '⏰ Tempo esgotado', description: `Ninguém acertou a tempo.` })] });
           SC_QUIZ_STATE.creatorsCleanupMessageIds.push(tMsg.id);
           scq_save();
-          await scq_finalizeRound(channel);
+          await scq_finalizeRound(channel, msg.id);
         }
       }, SC_RT_ACTIVE_TIMEOUT_MS);
     }
@@ -398,7 +403,7 @@ export async function setupQuiz(client) {
         scq_save();
         await scq_renderRankingSticky();
         await runDMExtras(message.author, q.id, right);
-        await scq_finalizeRound(message.channel);
+        await scq_finalizeRound(message.channel, currentId);
       }
     }
 
