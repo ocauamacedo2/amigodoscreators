@@ -246,16 +246,41 @@ export async function setupQuiz(client) {
   }
 }
     function scq_cancelAllActive(reason = 'override') {
-      SC_QUIZ_STATE.rt.active = null;
-      SC_QUIZ_STATE.activeQuizMessages = [];
-      SC_QUIZ_STATE.currentValidMessageId = null;
-      SC_QUIZ_STATE.currentSatisfied = true;
-      scq_save();
-      console.log(`[SC_QUIZ] Cancelado: ${reason}`);
+  SC_QUIZ_STATE.rt.active = null;
+  SC_QUIZ_STATE.activeQuizMessages = [];
+  SC_QUIZ_STATE.currentValidMessageId = null;
+  SC_QUIZ_STATE.currentSatisfied = true;
+  scq_save();
+  console.log(`[SC_QUIZ] Cancelado: ${reason}`);
+}
+
+async function scq_finalizeRound(channel, messageId) {
+  try {
+    if (!channel || !messageId) return;
+
+    SC_QUIZ_STATE.rt.active = null;
+    SC_QUIZ_STATE.currentValidMessageId = null;
+    SC_QUIZ_STATE.currentSatisfied = true;
+    SC_QUIZ_STATE.activeQuizMessages = (SC_QUIZ_STATE.activeQuizMessages || []).filter(x => x.id !== messageId);
+
+    if (SC_QUIZ_STATE.participantsByMsg?.[messageId]) {
+      delete SC_QUIZ_STATE.participantsByMsg[messageId];
     }
 
-    // ======= RANKING GRÁFICO =======
-    async function scq_buildChartAttachment({ labels, data, title, color = 'rgb(145, 91, 255)' }) {
+    if (SC_QUIZ_STATE.rt?.attempts?.[messageId]) {
+      delete SC_QUIZ_STATE.rt.attempts[messageId];
+    }
+
+    SC_QUIZ_STATE.creatorsCleanupMessageIds = (SC_QUIZ_STATE.creatorsCleanupMessageIds || []).filter(id => id !== messageId);
+
+    scq_save();
+  } catch (e) {
+    console.error('[SC_QUIZ] erro ao finalizar rodada:', e);
+  }
+}
+
+// ======= RANKING GRÁFICO =======
+async function scq_buildChartAttachment({ labels, data, title, color = 'rgb(145, 91, 255)' }) {
       const fill = color.replace('rgb', 'rgba').replace(')', ',0.7)');
       const cfg = {
         type: 'bar',
