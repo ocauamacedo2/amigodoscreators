@@ -115,7 +115,13 @@ export async function setupQuiz(client) {
       return pool.length ? pool[Math.floor(Math.random() * pool.length)] : null;
     }
 
-    function scq_buildEmbed({ title, description, image, color = 0x915BFF, footer }) {
+    async function scq_userDisplayNameSafe(guild, userId, fallbackName) {
+      const member = await guild.members.fetch(userId).catch(() => null);
+      return member?.displayName || fallbackName || `User ${userId}`;
+    }
+
+    function scq_buildEmbed({ title, description, image, color = 0x915BFF, footer, fields }) {
+      if (fields) return { color, title, description, fields, image: image ? { url: image } : null, footer: footer ? { text: footer } : null, timestamp: new Date().toISOString() };
       return { color, title, description, image: image ? { url: image } : null, footer: footer ? { text: footer } : null, timestamp: new Date().toISOString() };
     }
 
@@ -162,21 +168,74 @@ export async function setupQuiz(client) {
     }
 
     async function scq_renderRankingSticky() {
-      const ch = await client.channels.fetch(SC_QUIZ_RANKING_CHANNEL_ID).catch(() => null);
-      if (!ch) return;
-      const entries = Object.entries(SC_QUIZ_STATE.leaderboard).sort((a,b) => b[1].acertos - a[1].acertos).slice(0, 10);
-      const labels = entries.map(([id]) => id.slice(-4)); // Exemplo simplificado
-      const data = entries.map(e => e[1].acertos);
-      const file = await scq_buildChartAttachment({ labels, data, title: 'Top Acertos' });
-      const embed = scq_buildEmbed({ title: '🏆 Ranking — SantaCreators', description: 'Ranking atualizado!', footer: 'Auto-update' });
-      embed.image = { url: `attachment://${file.name}` };
-      
-      if (SC_QUIZ_STATE.stickyRankingMsgIdAcertos) {
-        const m = await ch.messages.fetch(SC_QUIZ_STATE.stickyRankingMsgIdAcertos).catch(() => null);
-        if (m) await m.edit({ embeds: [embed], files: [file] });
-        else SC_QUIZ_STATE.stickyRankingMsgIdAcertos = (await ch.send({ embeds: [embed], files: [file] })).id;
-      } else SC_QUIZ_STATE.stickyRankingMsgIdAcertos = (await ch.send({ embeds: [embed], files: [file] })).id;
-      scq_save();
+      try {
+        const ch = await client.channels.fetch(SC_QUIZ_RANKING_CHANNEL_ID).catch(() => null);
+        if (!ch) return;
+
+        const entries = Object.entries(SC_QUIZ_STATE.leaderboard);
+        const byAcertos = entries.slice().sort((a, b) => b[1].acertos - a[1].acertos).slice(0, 10);
+        const byInter = entries.slice().sort((a, b) => b[1].interacoes - a[1].interacoes).slice(0, 10);
+
+        const guild = ch.guild;
+
+        async function buildLines(list) {
+          return Promise.all(list.map(async ([uid, data], idx) => {
+            const name = await scq_userDisplayNameSafe(guild, uid, `User ${uid}`);
+            const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `${idx + 1}.`;
+            return `${medal} **${name}** — ✅ ${data.acertos} | 🔥 ${data.interacoes}`;
+          }));
+        }
+
+        const labelsA = await Promise.all(byAcertos.map(e => scq_userDisplayNameSafe(guild, e[0], '...')));
+        const labelsI = await Promise.all(byInter.map(e => scq_userDisplayNameSafe(guild, e[0], '...')));
+
+        const chartA = await scq_buildChartAttachment({ labels: labelsA, data: byAcertos.map(e => e[1].acertos), title: 'Top Acertos', color: 'rgb(46, 204, 113)' });
+        const chartI = await scq_buildChartAttachment({ labels: labelsI, data: byInter.map(e => e[1].interacoes), title: 'Top Interações', color: 'rgb(243, 156, 18)' });
+
+        const embedA = scq_buildEmbed({
+          title: '🏆 Ranking — Top Acertos',
+          description: (await buildLines(byAcertos)).join('\n') || 'Ninguém pontuou ainda.',
+          color: 0x2ECC71,
+          footer: 'Atualizado em tempo real'
+        });
+        embedA.image = { url: `attachment://${chartA.name}` };
+
+        const embedI = scq_buildEmbed({
+          title: '🔥 Ranking — Top Interações',
+          description: (await buildLines(byInter)).join('\n') || 'Sem interações ainda.',
+          color: 0xF39C12,
+          footer: 'Soma de acertos e erros'
+        });
+        embedI.image = { url: `attachment://${chartI.name}` };
+
+        // --- Lógica Sticky para Ranking 1 (Acertos) ---
+        if (SC_QUIZ_STATE.stickyRankingMsgIdAcertos) {
+          const m = await ch.messages.fetch(SC_QUIZ_STATE.stickyRankingMsgIdAcertos).catch(() => null);
+          if (m) await m.edit({ embeds: [embedA], files: [chartA] });
+          else {
+            const sent = await ch.send({ embeds: [embedA], files: [chartA] });
+            SC_QUIZ_STATE.stickyRankingMsgIdAcertos = sent.id;
+          }
+        } else {
+          const sent = await ch.send({ embeds: [embedA], files: [chartA] });
+          SC_QUIZ_STATE.stickyRankingMsgIdAcertos = sent.id;
+        }
+
+        // --- Lógica Sticky para Ranking 2 (Interações) ---
+        if (SC_QUIZ_STATE.stickyRankingMsgIdInteracoes) {
+          const m = await ch.messages.fetch(SC_QUIZ_STATE.stickyRankingMsgIdInteracoes).catch(() => null);
+          if (m) await m.edit({ embeds: [embedI], files: [chartI] });
+          else {
+            const sent = await ch.send({ embeds: [embedI], files: [chartI] });
+            SC_QUIZ_STATE.stickyRankingMsgIdInteracoes = sent.id;
+          }
+        } else {
+          const sent = await ch.send({ embeds: [embedI], files: [chartI] });
+          SC_QUIZ_STATE.stickyRankingMsgIdInteracoes = sent.id;
+        }
+
+        scq_save();
+      } catch (e) { console.error("[SC_QUIZ] Erro Ranking:", e); }
     }
 
     // === POSTAR QUIZ ===

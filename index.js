@@ -1703,3 +1703,10 @@ client.on(Events.VoiceStateUpdate, async (oldS, newS) => {
     }
   });
 })();
+
+// ===================================================================
+// 🧠 INICIALIZAÇÃO DE MÓDULOS
+// ===================================================================
+client.once(Events.ClientReady, async () => {
+  await setupQuiz(client);
+});
