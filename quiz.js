@@ -8,7 +8,6 @@
 // • Logs detalhados em canal próprio (quem responder, certo/errado, etc.).
 
 import fs from 'node:fs';
-import path from 'node:path';
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, Events } from 'discord.js';
 import { SC_QUIZ_BANK } from './questions.js';
 
@@ -32,14 +31,19 @@ export async function setupQuiz(client) {
     // IDs autorizados para resetar o ranking
     const SC_AUTHORIZED_RESET_IDS = ['660311795327828008', '1262262852949905408', '1352408327983861844'];
 
-    const SC_QUIZ_TOTAL_PER_DAY      = 20; // Total de quizzes (diários + relâmpago) enviados aleatoriamente por dia
-    const SC_QUIZ_WINDOW_START_HOUR  = 0;  // Agora funciona 24 horas (começa meia-noite)
-    const SC_QUIZ_WINDOW_END_HOUR    = 23; // Termina às 23:59
+    const SC_QUIZ_DAILY_COUNT        = 10;
+    const SC_QUIZ_WINDOW_START_HOUR  = 10;
+    const SC_QUIZ_WINDOW_END_HOUR    = 22;
     const SC_QUIZ_MIN_GAP_MINUTES    = 25;
     const SC_QUIZ_DM_TIMEOUT_MS      = 3 * 60 * 1000;
     const SC_QUIZ_EXTRA_DM_QUESTIONS = 3;
-    const SC_QUIZ_DATA_PATH          = path.join(process.cwd(), 'sc_quiz_data.json');
+    const SC_QUIZ_DATA_PATH          = './sc_quiz_data.json';
     const SC_QUIZ_POINTS_RIGHT       = 1;
+
+    const SC_RT_EVERY_MINUTES        = 30; // Frequência do relâmpago
+    const SC_RT_WINDOW_START_HOUR    = 12;
+    const SC_RT_WINDOW_END_HOUR      = 23;
+    const SC_RT_ACTIVE_TIMEOUT_MS    = 3 * 60 * 1000;
 
     const GIF_QUIIZ_URL = 'https://media.discordapp.net/attachments/1362477839944777889/1374893068649500783/standard_1.gif?ex=68c2b3b3&is=68c16233&hm=fb2088e9693479fdae08076fc482855004e662ed1a788e7b9788eff44b1c7dd6&=&width=1032&height=60';
     const SC_RT_BANK = SC_QUIZ_BANK; // Usa o mesmo banco de perguntas
@@ -154,31 +158,12 @@ export async function setupQuiz(client) {
     async function scq_clearCreatorsTrackedMessages(channel) {
       const tracked = [...(SC_QUIZ_STATE.creatorsCleanupMessageIds || [])];
       SC_QUIZ_STATE.creatorsCleanupMessageIds = [];
+      scq_save();
       for (const id of tracked) {
         const m = await channel.messages.fetch(id).catch(() => null);
         if (m) await m.delete().catch(() => {});
       }
-      scq_save();
     }
-
-    async function scq_finalizeRound(channel, messageId) {
-      // O ciclo só termina de verdade após 2 minutos do acerto ou timeout
-      setTimeout(async () => {
-        try {
-          // Só executa a limpeza se a mensagem finalizada ainda for a ativa
-          if (SC_QUIZ_STATE.currentValidMessageId !== messageId) {
-            return; 
-          }
-
-          await scq_clearCreatorsTrackedMessages(channel);
-          SC_QUIZ_STATE.currentValidMessageId = null;
-          SC_QUIZ_STATE.currentSatisfied = true;
-          scq_save();
-          console.log("[SC_QUIZ] Rodada finalizada e chat limpo.");
-        } catch (e) { console.error("[SC_QUIZ] Erro ao finalizar rodada:", e); }
-      }, 2 * 60 * 1000); // 2 minutos de espera
-    }
-
     function scq_cancelAllActive(reason = 'override') {
       SC_QUIZ_STATE.rt.active = null;
       SC_QUIZ_STATE.activeQuizMessages = [];
@@ -217,8 +202,8 @@ export async function setupQuiz(client) {
         const channel = await client.channels.fetch(SC_QUIZ_RANKING_CHANNEL_ID).catch(() => null);
         if (!channel) return;
         const entries = Object.entries(SC_QUIZ_STATE.leaderboard);
-        const byA = [...entries].sort((a,b) => b[1].acertos - a[1].acertos).slice(0, 10);
-        const byI = [...entries].sort((a,b) => b[1].interacoes - a[1].interacoes).slice(0, 10);
+        const byA = entries.sort((a,b) => b[1].acertos - a[1].acertos).slice(0, 10);
+        const byI = entries.sort((a,b) => b[1].interacoes - a[1].interacoes).slice(0, 10);
 
         const labelsA = await Promise.all(byA.map(e => scq_userDisplayNameSafe(channel.guild, e[0], '...')));
         const labelsI = await Promise.all(byI.map(e => scq_userDisplayNameSafe(channel.guild, e[0], '...')));
@@ -229,7 +214,7 @@ export async function setupQuiz(client) {
         const descA = (await Promise.all(byA.map(async ([uid, d], i) => {
           const name = await scq_userDisplayNameSafe(channel.guild, uid, uid);
           const medal = i===0?'🥇':i===1?'🥈':i===2?'🥉':`${i+1}.`;
-          return `${medal} **${name}** — ✅ ${d.acertos} | 🔥 ${d.interacoes}`;
+          return `${medal} **${name}** — ✅ ${d.acertos} |  ${d.interacoes}`;
         }))).join('\n') || '_Sem dados_';
 
         const embedA = scq_buildEmbed({ title: '🏆 Ranking — Top Acertos', description: descA, color: 0x2ECC71 });
@@ -245,8 +230,8 @@ export async function setupQuiz(client) {
             .setEmoji('🧹')
         );
 
-        // Função auxiliar para encontrar mensagem existente se o ID falhar
-        const findMsg = async (id, titlePart) => {
+        // Busca inteligente no canal para evitar duplicação
+        const findRankingMsg = async (id, titlePart) => {
           let m = id ? await channel.messages.fetch(id).catch(() => null) : null;
           if (!m) {
             const msgs = await channel.messages.fetch({ limit: 50 }).catch(() => null);
@@ -255,13 +240,13 @@ export async function setupQuiz(client) {
           return m;
         };
 
-        const msgA = await findMsg(SC_QUIZ_STATE.stickyRankingMsgIdAcertos, 'Top Acertos');
+        const msgA = await findRankingMsg(SC_QUIZ_STATE.stickyRankingMsgIdAcertos, 'Top Acertos');
         if (msgA) {
           await msgA.edit({ embeds: [embedA], files: [chartA] }).catch(() => null);
           SC_QUIZ_STATE.stickyRankingMsgIdAcertos = msgA.id;
         } else SC_QUIZ_STATE.stickyRankingMsgIdAcertos = (await channel.send({ embeds: [embedA], files: [chartA] })).id;
 
-        const msgI = await findMsg(SC_QUIZ_STATE.stickyRankingMsgIdInteracoes, 'Top Interações');
+        const msgI = await findRankingMsg(SC_QUIZ_STATE.stickyRankingMsgIdInteracoes, 'Top Interações');
         if (msgI) {
           await msgI.edit({ embeds: [embedI], files: [chartI], components: [resetRow] }).catch(() => null);
           SC_QUIZ_STATE.stickyRankingMsgIdInteracoes = msgI.id;
@@ -343,33 +328,22 @@ export async function setupQuiz(client) {
       SC_QUIZ_STATE.currentValidMessageId = msg.id;
       SC_QUIZ_STATE.currentSatisfied = false;
       scq_save();
+
+      setTimeout(async () => {
+        if (SC_QUIZ_STATE.rt.active?.messageId === msg.id) {
+          SC_QUIZ_STATE.rt.active = null;
+          SC_QUIZ_STATE.currentSatisfied = true;
+          scq_save();
+          const tMsg = await channel.send({ embeds: [scq_buildEmbed({ title: '⏰ Tempo esgotado', description: `Ninguém acertou. Gabarito: **${q.resposta}**` })] });
+          SC_QUIZ_STATE.creatorsCleanupMessageIds.push(tMsg.id);
+        }
+      }, SC_RT_ACTIVE_TIMEOUT_MS);
     }
 
     // ======= HANDLERS: RESPOSTAS =======
     async function handleQuizAnswer(message) {
       const currentId = SC_QUIZ_STATE.currentValidMessageId;
       if (!currentId || message.author.bot) return;
-
-      const isFastRound = SC_QUIZ_STATE.rt.lastFastMsgId === currentId;
-      const isFastStillActive = SC_QUIZ_STATE.rt.active?.messageId === currentId;
-
-      // Se alguém tentar responder um desafio relâmpago que já acabou (durante os 2 min de limpeza)
-      if (isFastRound && !isFastStillActive && SC_QUIZ_STATE.rt.lastWinnerId && scq_isSingleLetter(message.content)) {
-        const winner = await message.guild.members.fetch(SC_QUIZ_STATE.rt.lastWinnerId).catch(() => null);
-        return message.reply({
-          content: `❌ <@${message.author.id}>, esse quiz já foi respondido!`,
-          embeds: [scq_buildEmbed({
-            title: '⌛ Quiz Encerrado',
-            description: `Infelizmente você chegou um pouco tarde. **${winner?.displayName || 'Alguém'}** já acertou!\n\nFica de olho que daqui a pouco tem mais um 👀`,
-            thumbnail: winner?.user.displayAvatarURL() || null,
-            color: 0xF39C12
-          })]
-        }).then(m => setTimeout(() => m.delete().catch(() => {}), 8000));
-      }
-
-      // ⛔ Garante que a interação no antigo pare de funcionar:
-      // Se o usuário respondeu via REPLY, verificamos se o reply é para a mensagem ativa.
-      if (message.reference?.messageId && message.reference.messageId !== currentId) return;
 
       const isFast = SC_QUIZ_STATE.rt.active?.messageId === currentId;
       const activeDaily = SC_QUIZ_STATE.activeQuizMessages.find(x => x.id === currentId);
@@ -387,6 +361,7 @@ export async function setupQuiz(client) {
         return message.channel.send(`<@${message.author.id}>, você já participou desta rodada!`).then(m => setTimeout(() => m.delete().catch(() => {}), 5000));
       }
 
+      SC_QUIZ_STATE.currentSatisfied = true;
       message.delete().catch(() => {});
       scq_markUserPlayedInRound(currentId, message.author.id, isFast ? 'fast' : 'daily');
 
@@ -474,8 +449,7 @@ export async function setupQuiz(client) {
             const h = scq_randInt(SC_QUIZ_WINDOW_START_HOUR, SC_QUIZ_WINDOW_END_HOUR);
             const m = scq_randInt(0, 59);
             const s = scq_randInt(0, 59);
-            const d = new Date();
-            d.setHours(h, m, s, 0);
+            const d = new Date(); d.setHours(h, m, s, 0);
             if (d.getTime() > now) times.push(d.getTime());
           }
           SC_QUIZ_STATE.__todaySchedule = times.sort();
@@ -485,19 +459,21 @@ export async function setupQuiz(client) {
 
         const dueIdx = SC_QUIZ_STATE.__todaySchedule.findIndex(t => now >= t);
         if (dueIdx >= 0) {
-          // SÓ envia se NÃO houver quiz ativo (garante ciclo limpo)
-          if (scq_hasActiveQuiz()) {
-            return; // Espera o atual concluir e limpar o chat
-          }
-
           SC_QUIZ_STATE.__todaySchedule.splice(dueIdx, 1);
           scq_save();
-          
-          // Sorteio aleatório: 50% de chance para cada tipo
-          if (Math.random() > 0.5) {
-            await scq_postDailyQuiz();
-          } else {
-            await sc_rt_postFastQuiz();
+          await scq_postDailyQuiz();
+        }
+
+        // Relâmpago Ticker (Cadência fixa)
+        if (SC_RT_EVERY_MINUTES > 0) {
+          const nextRt = (SC_QUIZ_STATE.rt.lastRtAt || 0) + (SC_RT_EVERY_MINUTES * 60000);
+          if (now >= nextRt) {
+            const h = new Date().getHours();
+            if (h >= SC_RT_WINDOW_START_HOUR && h <= SC_RT_WINDOW_END_HOUR) {
+              SC_QUIZ_STATE.rt.lastRtAt = now;
+              scq_save();
+              await sc_rt_postFastQuiz();
+            }
           }
         }
       }, 15000);
@@ -524,16 +500,9 @@ export async function setupQuiz(client) {
 
       // Comandos Operador
       if (['1262262852949905408', '660311795327828008'].includes(msg.author.id)) {
-        if (msg.content === '!quiznow') { 
-          msg.delete().catch(() => {});
-          await scq_postDailyQuiz(true); 
-        }
-        if (msg.content === '!fastnow' || msg.content === '!quizfast') { 
-          msg.delete().catch(() => {});
-          await sc_rt_postFastQuiz(true); 
-        }
+        if (msg.content === '!quiznow') { await scq_postDailyQuiz(true); msg.react('✅'); }
+        if (msg.content === '!fastnow') { await sc_rt_postFastQuiz(true); msg.react('⚡'); }
         if (msg.content === '!quizreset') {
-          msg.delete().catch(() => {});
           SC_QUIZ_STATE.leaderboard = {};
           scq_save(); await scq_renderRankingSticky(); msg.reply("Ranking zerado.");
         }
@@ -545,23 +514,16 @@ export async function setupQuiz(client) {
           msg.reply(`**Lista Pág ${page}**:\n${list}\n\nUse \`!fastid <id>\``);
         }
         if (msg.content.startsWith('!fastid')) {
-          msg.delete().catch(() => {});
           const id = parseInt(msg.content.split(' ')[1]);
           const q = SC_QUIZ_BANK.find(x => x.id === id);
           if (q) {
-            // 🧹 Apaga o antigo e invalida a rodada anterior
             scq_cancelAllActive('manual_id');
-            const channel = await client.channels.fetch(SC_QUIZ_CREATORS_CHANNEL_ID).catch(() => null);
-            if (!channel) return;
-            await scq_clearCreatorsTrackedMessages(channel);
-
+            const channel = await client.channels.fetch(SC_QUIZ_CREATORS_CHANNEL_ID);
             const embed = scq_buildEmbed({ title: '⚡ RELÂMPAGO MANUAL', description: `**${q.texto}**\n\n${q.opcoes.join('\n')}`, image: GIF_QUIIZ_URL });
             const sent = await channel.send({ content: `<@&${SC_MENTION_ROLES[0]}>`, embeds: [embed] });
-            SC_QUIZ_STATE.rt.active = { messageId: sent.id, qid: q.id, correct: q.resposta, createdAt: Date.now() };
-            SC_QUIZ_STATE.rt.attempts[sent.id] = {};
+            SC_QUIZ_STATE.rt.active = { messageId: sent.id, qid: q.id, correct: q.resposta };
             SC_QUIZ_STATE.currentValidMessageId = sent.id;
             SC_QUIZ_STATE.currentSatisfied = false;
-            SC_QUIZ_STATE.creatorsCleanupMessageIds.push(sent.id);
             scq_save();
           }
         }
@@ -584,26 +546,15 @@ export async function setupQuiz(client) {
         return interaction.reply({ content: '❌ Você não tem permissão para resetar o ranking global.', ephemeral: true });
       }
 
-      try {
-        // Executa o reset COMPLETO de dados
-        SC_QUIZ_STATE.leaderboard = {};
-        SC_QUIZ_STATE.participantsByMsg = {};
-        SC_QUIZ_STATE.activeQuizMessages = [];
-        SC_QUIZ_STATE.rt.attempts = {};
-        SC_QUIZ_STATE.currentValidMessageId = null;
-        SC_QUIZ_STATE.currentSatisfied = true;
-        
-        scq_save();
-        
-        // Atualiza as mensagens do ranking imediatamente
-        await scq_renderRankingSticky();
-        
-        await interaction.reply({ content: '✅ O ranking e o histórico foram zerados com sucesso!', ephemeral: true });
-        await scq_log(scq_buildEmbed({ title: '🧹 Ranking Resetado', description: `O ranking global do Quiz foi zerado por <@${interaction.user.id}>.`, color: 0xFF0000 }));
-      } catch (err) {
-        console.error("Erro no reset:", err);
-        await interaction.reply({ content: '❌ Erro ao resetar dados.', ephemeral: true });
-      }
+      // Executa o reset
+      SC_QUIZ_STATE.leaderboard = {};
+      scq_save();
+      
+      // Atualiza as mensagens do ranking imediatamente
+      await scq_renderRankingSticky();
+      
+      await interaction.reply({ content: '✅ O ranking foi zerado com sucesso!', ephemeral: true });
+      await scq_log(scq_buildEmbed({ title: '🧹 Ranking Resetado', description: `O ranking global do Quiz foi zerado por <@${interaction.user.id}>.`, color: 0xFF0000 }));
     });
 
     client.once('ready', async () => {
