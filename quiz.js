@@ -41,7 +41,7 @@ export async function setupQuiz(client) {
     const SC_RT_WINDOW_END_HOUR      = 23;
     const SC_RT_ACTIVE_TIMEOUT_MS    = 3 * 60 * 1000;
 
-    const GIF_QUIIZ_URL = 'https://media.discordapp.net/attachments/1362477839944777889/1374893068649500783/standard_1.gif?ex=68c2b3b3&is=68c16233&hm=fb2088e9693479fdae08076fc482855004e662ed1a788e7b9788eff44b1c7dd6&=&width=1032&height=60';
+    const GIF_QUIZ_URL = 'https://media.discordapp.net/attachments/1362477839944777889/1374893068649500783/standard_1.gif';
     const SC_RT_BANK = SC_QUIZ_BANK; // Usa o mesmo banco de perguntas
 
     let SC_QUIZ_STATE = {
@@ -124,10 +124,11 @@ export async function setupQuiz(client) {
       const pool = SC_QUIZ_BANK.filter(q => !exclude.has(q.id));
       return pool.length ? pool[Math.floor(Math.random() * pool.length)] : null;
     }
-    function scq_buildEmbed({ title, description, image, color = 0x915BFF, footer }) {
+    function scq_buildEmbed({ title, description, image, color = 0x915BFF, footer, thumbnail }) {
       return {
         color, title, description,
         image: image ? { url: image } : null,
+        thumbnail: thumbnail ? { url: thumbnail } : null,
         footer: footer ? { text: footer } : null,
         timestamp: new Date().toISOString()
       };
@@ -165,7 +166,6 @@ export async function setupQuiz(client) {
       SC_QUIZ_STATE.currentValidMessageId = null;
       SC_QUIZ_STATE.currentSatisfied = true;
       scq_save();
-      console.log(`[SC_QUIZ] Cancelado: ${reason}`);
     }
 
     // ======= RANKING GRÁFICO =======
@@ -197,8 +197,8 @@ export async function setupQuiz(client) {
         const channel = await client.channels.fetch(SC_QUIZ_RANKING_CHANNEL_ID).catch(() => null);
         if (!channel) return;
         const entries = Object.entries(SC_QUIZ_STATE.leaderboard);
-        const byA = entries.sort((a,b) => b[1].acertos - a[1].acertos).slice(0, 10);
-        const byI = entries.sort((a,b) => b[1].interacoes - a[1].interacoes).slice(0, 10);
+        const byA = [...entries].sort((a,b) => b[1].acertos - a[1].acertos).slice(0, 10);
+        const byI = [...entries].sort((a,b) => b[1].interacoes - a[1].interacoes).slice(0, 10);
 
         const labelsA = await Promise.all(byA.map(e => scq_userDisplayNameSafe(channel.guild, e[0], '...')));
         const labelsI = await Promise.all(byI.map(e => scq_userDisplayNameSafe(channel.guild, e[0], '...')));
@@ -209,12 +209,23 @@ export async function setupQuiz(client) {
         const descA = (await Promise.all(byA.map(async ([uid, d], i) => {
           const name = await scq_userDisplayNameSafe(channel.guild, uid, uid);
           const medal = i===0?'🥇':i===1?'🥈':i===2?'🥉':`${i+1}.`;
-          return `${medal} **${name}** — ✅ ${d.acertos} | 🔁 ${d.interacoes}`;
+          return `${medal} **${name}** — \`${d.acertos}\` acertos`;
         }))).join('\n') || '_Sem dados_';
 
-        const embedA = scq_buildEmbed({ title: '🏆 Ranking — Top Acertos', description: descA, color: 0x2ECC71 });
+        const embedA = scq_buildEmbed({ 
+          title: '🏆 RANKING — MESTRES DO QUIZ', 
+          description: `Aqui estão os melhores da **Santa Creators** em acertos!\n\n${descA}`, 
+          color: 0x2ECC71,
+          footer: 'Atualizado automaticamente'
+        });
         embedA.image = { url: `attachment://${chartA.name}` };
-        const embedI = scq_buildEmbed({ title: '🔥 Ranking — Top Interações', description: 'Atualizado em tempo real.', color: 0xF39C12 });
+
+        const embedI = scq_buildEmbed({ 
+          title: '🔥 RANKING — MAIOR ATIVIDADE', 
+          description: 'Quem mais interagiu com o bot (acertos + erros).', 
+          color: 0xF39C12,
+          footer: 'Soma total de participações'
+        });
         embedI.image = { url: `attachment://${chartI.name}` };
 
         if (SC_QUIZ_STATE.stickyRankingMsgIdAcertos) {
@@ -243,21 +254,22 @@ export async function setupQuiz(client) {
       await scq_clearCreatorsTrackedMessages(channel);
 
       const embed = scq_buildEmbed({
-        title: '🎯 QUIZ DIÁRIO — Vale Pontos!',
+        title: '🎯 QUIZ DIÁRIO — SANTA CREATORS',
         description: [
-          `> Responda **por REPLY** para participar.`,
-          `> +**${SC_QUIZ_EXTRA_DM_QUESTIONS}** perguntas no PV para quem interagir.`,
+          `> 👋 Olá <@&${SC_MENTION_ROLES[0]}>, hora de testar seus conhecimentos!`,
+          `> 💡 Responda **por REPLY** para ganhar pontos.`,
+          `> 📥 Quem responder ganhará +**${SC_QUIZ_EXTRA_DM_QUESTIONS}** no PV!`,
           '',
-          `**${q.texto}**`,
+          `✨ **Pergunta:**\n**${q.texto}**`,
           '',
-          q.opcoes.map(x => `• ${x}`).join('\n')
+          q.opcoes.join('\n')
         ].join('\n'),
-        image: GIF_QUIIZ_URL,
-        footer: 'Responda por reply nesta mensagem.'
+        image: GIF_QUIZ_URL,
+        footer: 'Apenas a primeira resposta no chat conta!'
       });
 
       const msg = await channel.send({
-        content: `<@&${SC_MENTION_ROLES[0]}> <@&${SC_MENTION_ROLES[1]}>`,
+        content: `<@&${SC_MENTION_ROLES[0]}>`,
         embeds: [embed],
         allowedMentions: { roles: SC_MENTION_ROLES }
       });
@@ -279,16 +291,16 @@ export async function setupQuiz(client) {
       await scq_clearCreatorsTrackedMessages(channel);
 
       const embed = scq_buildEmbed({
-        title: '⚡ PERGUNTA RELÂMPAGO!',
+        title: '⚡ DESAFIO RELÂMPAGO!',
         description: [
-          `O primeiro que acertar **A/B/C/D** aqui no chat ganha o ponto!`,
+          `> 🏃‍♂️ Seja rápido! O primeiro a responder corretamente ganha!`,
           '',
-          `**${q.texto}**`,
+          `🔥 **Pergunta:**\n**${q.texto}**`,
           '',
-          q.opcoes.map(x => `• ${x}`).join('\n')
+          q.opcoes.join('\n')
         ].join('\n'),
-        image: GIF_QUIIZ_URL,
-        footer: 'Modo relâmpago'
+        image: GIF_QUIZ_URL,
+        footer: 'Responda apenas com a letra A, B, C ou D'
       });
 
       const msg = await channel.send({
