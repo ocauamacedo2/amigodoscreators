@@ -167,7 +167,7 @@ export async function setupQuiz(client) {
       setTimeout(async () => {
         try {
           // Só executa a limpeza se a mensagem finalizada ainda for a ativa
-          if (SC_QUIZ_STATE.currentValidMessageId !== messageId && SC_QUIZ_STATE.currentValidMessageId !== null) {
+          if (SC_QUIZ_STATE.currentValidMessageId && SC_QUIZ_STATE.currentValidMessageId !== messageId) {
             return; 
           }
 
