@@ -56,7 +56,7 @@ export async function setupQuiz(client) {
       currentValidMessageId: null,
       currentSatisfied: true,
       activity: { counter: 0, threshold: 30 },
-      rt: { __todayScheduleFast: [], active: null, attempts: {} }
+      rt: { __todayScheduleFast: [], active: null, attempts: {}, lastWinnerId: null, lastFastMsgId: null }
     };
 
     // ======= PERSISTÊNCIA =======
@@ -166,7 +166,7 @@ export async function setupQuiz(client) {
       setTimeout(async () => {
         try {
           // Só executa a limpeza se a mensagem finalizada ainda for a ativa
-          if (SC_QUIZ_STATE.currentValidMessageId && SC_QUIZ_STATE.currentValidMessageId !== messageId) {
+          if (SC_QUIZ_STATE.currentValidMessageId !== messageId) {
             return; 
           }
 
@@ -229,7 +229,7 @@ export async function setupQuiz(client) {
         const descA = (await Promise.all(byA.map(async ([uid, d], i) => {
           const name = await scq_userDisplayNameSafe(channel.guild, uid, uid);
           const medal = i===0?'🥇':i===1?'🥈':i===2?'🥉':`${i+1}.`;
-          return `${medal} **${name}** — ✅ ${d.acertos} | 🔁 ${d.interacoes}`;
+          return `${medal} **${name}** — ✅ ${d.acertos} | 🔥 ${d.interacoes}`;
         }))).join('\n') || '_Sem dados_';
 
         const embedA = scq_buildEmbed({ title: '🏆 Ranking — Top Acertos', description: descA, color: 0x2ECC71 });
@@ -328,6 +328,8 @@ export async function setupQuiz(client) {
       SC_QUIZ_STATE.creatorsCleanupMessageIds.push(msg.id);
       SC_QUIZ_STATE.rt.active = { messageId: msg.id, qid: q.id, correct: q.resposta, createdAt: Date.now() };
       SC_QUIZ_STATE.rt.attempts[msg.id] = {};
+      SC_QUIZ_STATE.rt.lastFastMsgId = msg.id;
+      SC_QUIZ_STATE.rt.lastWinnerId = null;
       SC_QUIZ_STATE.currentValidMessageId = msg.id;
       SC_QUIZ_STATE.currentSatisfied = false;
       scq_save();
@@ -337,6 +339,23 @@ export async function setupQuiz(client) {
     async function handleQuizAnswer(message) {
       const currentId = SC_QUIZ_STATE.currentValidMessageId;
       if (!currentId || message.author.bot) return;
+
+      const isFastRound = SC_QUIZ_STATE.rt.lastFastMsgId === currentId;
+      const isFastStillActive = SC_QUIZ_STATE.rt.active?.messageId === currentId;
+
+      // Se alguém tentar responder um desafio relâmpago que já acabou (durante os 2 min de limpeza)
+      if (isFastRound && !isFastStillActive && SC_QUIZ_STATE.rt.lastWinnerId && scq_isSingleLetter(message.content)) {
+        const winner = await message.guild.members.fetch(SC_QUIZ_STATE.rt.lastWinnerId).catch(() => null);
+        return message.reply({
+          content: `❌ <@${message.author.id}>, esse quiz já foi respondido!`,
+          embeds: [scq_buildEmbed({
+            title: '⌛ Quiz Encerrado',
+            description: `Infelizmente você chegou um pouco tarde. **${winner?.displayName || 'Alguém'}** já acertou!\n\nFica de olho que daqui a pouco tem mais um 👀`,
+            thumbnail: winner?.user.displayAvatarURL() || null,
+            color: 0xF39C12
+          })]
+        }).then(m => setTimeout(() => m.delete().catch(() => {}), 8000));
+      }
 
       // ⛔ Garante que a interação no antigo pare de funcionar:
       // Se o usuário respondeu via REPLY, verificamos se o reply é para a mensagem ativa.
