@@ -630,67 +630,101 @@ scq_updateLeaderboard(message.author.id, right ? 1 : 0, right ? 0 : 1);
       await scq_renderRankingSticky();
     }
 
-    // ======= TICKER: AGENDAMENTO =======
+// ======= TICKER: AGENDAMENTO =======
 function startTickers() {
   if (client.__SC_QUIZ_TICKERS_STARTED) return;
   client.__SC_QUIZ_TICKERS_STARTED = true;
 
   console.log("[SC_QUIZ] Tickers automáticos iniciados.");
 
-  // Tick de 15s para checar agenda
-  setInterval(async () => {
-        const now = Date.now();
-        const dk = scq_dayKey();
+  function scq_generateTodaySchedule(now) {
+    const times = [];
+    const base = new Date();
 
-        // Daily Ticker
-        if (SC_QUIZ_STATE.lastScheduleDayKey !== dk) {
-          // Gera agenda do dia
-          const times = [];
-          for (let i = 0; i < SC_QUIZ_TOTAL_PER_DAY; i++) {
-            const h = scq_randInt(SC_QUIZ_WINDOW_START_HOUR, SC_QUIZ_WINDOW_END_HOUR);
-            const m = scq_randInt(0, 59);
-            const s = scq_randInt(0, 59);
-            const d = new Date(); d.setHours(h, m, s, 0);
-            if (d.getTime() > now) times.push(d.getTime());
-          }
-          SC_QUIZ_STATE.__todaySchedule = times.sort();
-          SC_QUIZ_STATE.lastScheduleDayKey = dk;
-          scq_save();
-        }
+    // Garante uma primeira pergunta rápida depois que o bot inicia
+    times.push(now + 60 * 1000);
 
-        const dueIdx = SC_QUIZ_STATE.__todaySchedule.findIndex(t => now >= t);
-if (dueIdx >= 0) {
-  // Se tiver quiz ativo há muito tempo, limpa para não travar o automático pra sempre
-  if (scq_hasActiveQuiz()) {
-    const activeCreatedAt =
-      SC_QUIZ_STATE.rt?.active?.createdAt ||
-      SC_QUIZ_STATE.activeQuizMessages?.[0]?.createdAt ||
-      0;
+    let next = now + SC_QUIZ_MIN_GAP_MINUTES * 60 * 1000;
 
-    const activeAgeMs = activeCreatedAt ? now - activeCreatedAt : 0;
-    const maxActiveMs = 10 * 60 * 1000;
+    while (times.length < SC_QUIZ_TOTAL_PER_DAY) {
+      const extraGap = scq_randInt(0, 15) * 60 * 1000;
+      next += SC_QUIZ_MIN_GAP_MINUTES * 60 * 1000 + extraGap;
 
-    if (activeAgeMs >= maxActiveMs) {
-      const channel = await client.channels.fetch(SC_QUIZ_CREATORS_CHANNEL_ID).catch(() => null);
-      if (channel) {
-        await scq_clearCreatorsTrackedMessages(channel);
+      const d = new Date(next);
+      const hour = d.getHours();
+
+      if (hour >= SC_QUIZ_WINDOW_START_HOUR && hour <= SC_QUIZ_WINDOW_END_HOUR) {
+        times.push(next);
       }
 
-      scq_cancelAllActive('auto_unlock_stuck_quiz');
-    } else {
-      return;
+      const sameDay = d.toISOString().slice(0, 10) === base.toISOString().slice(0, 10);
+      if (!sameDay) break;
+    }
+
+    return times.sort((a, b) => a - b);
+  }
+
+  async function scq_autoTick() {
+    try {
+      const now = Date.now();
+      const dk = scq_dayKey();
+
+      if (
+        SC_QUIZ_STATE.lastScheduleDayKey !== dk ||
+        !Array.isArray(SC_QUIZ_STATE.__todaySchedule) ||
+        SC_QUIZ_STATE.__todaySchedule.length === 0
+      ) {
+        SC_QUIZ_STATE.__todaySchedule = scq_generateTodaySchedule(now);
+        SC_QUIZ_STATE.lastScheduleDayKey = dk;
+        scq_save();
+
+        console.log("[SC_QUIZ] Agenda automática gerada:", SC_QUIZ_STATE.__todaySchedule.map(t => new Date(t).toLocaleString("pt-BR")));
+      }
+
+      const nextTime = SC_QUIZ_STATE.__todaySchedule[0];
+
+      if (!nextTime) return;
+      if (now < nextTime) return;
+
+      if (scq_hasActiveQuiz()) {
+        const activeCreatedAt =
+          SC_QUIZ_STATE.rt?.active?.createdAt ||
+          SC_QUIZ_STATE.activeQuizMessages?.[0]?.createdAt ||
+          0;
+
+        const activeAgeMs = activeCreatedAt ? now - activeCreatedAt : 0;
+        const maxActiveMs = 10 * 60 * 1000;
+
+        if (activeAgeMs >= maxActiveMs) {
+          const channel = await client.channels.fetch(SC_QUIZ_CREATORS_CHANNEL_ID).catch(() => null);
+          if (channel) {
+            await scq_clearCreatorsTrackedMessages(channel);
+          }
+
+          scq_cancelAllActive("auto_unlock_stuck_quiz");
+        } else {
+          return;
+        }
+      }
+
+      SC_QUIZ_STATE.__todaySchedule.shift();
+      scq_save();
+
+      console.log("[SC_QUIZ] Enviando quiz automático agora...");
+
+      if (Math.random() > 0.5) {
+        await scq_postDailyQuiz();
+      } else {
+        await sc_rt_postFastQuiz();
+      }
+    } catch (e) {
+      console.error("[SC_QUIZ] Erro no ticker automático:", e);
     }
   }
 
-  SC_QUIZ_STATE.__todaySchedule.splice(dueIdx, 1);
-  scq_save();
-  
-  // Sorteio aleatório entre Diário e Relâmpago
-  Math.random() > 0.5 ? await scq_postDailyQuiz() : await sc_rt_postFastQuiz();
+  scq_autoTick();
+  setInterval(scq_autoTick, 15000);
 }
-      }, 15000);
-    }
-
     // ======= LISTENERS =======
     client.on('messageCreate', async (msg) => {
       if (!msg.guild || msg.author.bot) return;
