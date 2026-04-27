@@ -214,7 +214,7 @@ export async function setupQuiz(client) {
         const descA = (await Promise.all(byA.map(async ([uid, d], i) => {
           const name = await scq_userDisplayNameSafe(channel.guild, uid, uid);
           const medal = i===0?'🥇':i===1?'🥈':i===2?'🥉':`${i+1}.`;
-          return `${medal} **${name}** — ✅ ${d.acertos} |  ${d.interacoes}`;
+          return `${medal} **${name}** — ✅ ${d.acertos} | 🔥 ${d.interacoes}`;
         }))).join('\n') || '_Sem dados_';
 
         const embedA = scq_buildEmbed({ title: '🏆 Ranking — Top Acertos', description: descA, color: 0x2ECC71 });
