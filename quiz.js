@@ -75,10 +75,45 @@ export async function setupQuiz(client) {
     }
     function scq_save() {
       try {
-        fs.writeFileSync(SC_QUIZ_DATA_PATH, JSON.stringify(SC_QUIZ_STATE, null, 2));
+        const tmpPath = SC_QUIZ_DATA_PATH + '.tmp';
+        fs.writeFileSync(tmpPath, JSON.stringify(SC_QUI_STATE, null, 2));
+        fs.renameSync(tmpPath, SC_QUIZ_DATA_PATH);
       } catch (e) { console.error("[SC_QUIZ] Erro salvar dados:", e); }
     }
     scq_load();
+
+    function scq_getFreshState() {
+      return {
+        leaderboard: {},
+        participantsByMsg: {},
+        activeQuizMessages: [],
+        creatorsCleanupMessageIds: [],
+        currentValidMessageId: null,
+        currentSatisfied: true,
+        activity: { counter: 0, threshold: 30 },
+        rt: {
+          __todayScheduleFast: [],
+          lastScheduleDayKeyFast: null,
+          active: null,
+          attempts: {},
+          lastWinnerId: null,
+          lastFastMsgId: null,
+          lastRtAt: 0,
+          nextFastAt: 0
+        },
+        lastScheduleDayKey: null,
+        __todaySchedule: [],
+        // Mantém apenas os IDs das mensagens fixas para não perder o canal
+        stickyRankingMsgIdAcertos: SC_QUIZ_STATE.stickyRankingMsgIdAcertos || null,
+        stickyRankingMsgIdInteracoes: SC_QUIZ_STATE.stickyRankingMsgIdInteracoes || null,
+      };
+    }
+
+    async function scq_resetEntireQuizState(reason) {
+      console.log(`[SC_QUIZ] Reset total acionado por: ${reason}`);
+      SC_QUIZ_STATE = scq_getFreshState();
+      scq_save();
+    }
 
     // ======= HELPERS =======
     function scq_nowBRT() { return new Date(); }
@@ -321,7 +356,13 @@ export async function setupQuiz(client) {
       });
 
       SC_QUIZ_STATE.creatorsCleanupMessageIds.push(msg.id);
-      SC_QUIZ_STATE.rt.active = { messageId: msg.id, qid: q.id, correct: q.resposta, createdAt: Date.now() };
+      SC_QUIZ_STATE.rt.active = { 
+        messageId: msg.id, 
+        qid: q.id, 
+        correct: q.resposta,
+        correctText: q.opcoes.find(o => o.startsWith(`${q.resposta})`)) || null,
+        createdAt: Date.now() 
+      };
       SC_QUIZ_STATE.rt.attempts[msg.id] = {};
       SC_QUIZ_STATE.rt.lastFastMsgId = msg.id;
       SC_QUIZ_STATE.rt.lastWinnerId = null;
@@ -355,7 +396,7 @@ export async function setupQuiz(client) {
       message.delete().catch(() => {});
       scq_markUserPlayedInRound(currentId, message.author.id, isFast ? 'fast' : 'daily');
 
-      const right = (ans === (isFast ? SC_QUIZ_STATE.rt.active.correct : q.resposta));
+      const right = ans === expected;
       scq_updateLeaderboard(message.author.id, right ? 1 : 0, right ? 0 : 1);
 
       if (isFast) {
@@ -501,8 +542,9 @@ export async function setupQuiz(client) {
         if (msg.content === '!quiznow') { await scq_postDailyQuiz(true); msg.react('✅'); }
         if (msg.content === '!fastnow' || msg.content === '!quizfast') { await sc_rt_postFastQuiz(true); msg.react('⚡'); }
         if (msg.content === '!quizreset') {
-          SC_QUIZ_STATE.leaderboard = {};
-          scq_save(); await scq_renderRankingSticky(); msg.reply("Ranking zerado.");
+          await scq_resetEntireQuizState('command_reset');
+          await scq_renderRankingSticky();
+          msg.reply("✅ Todo o sistema de quiz foi resetado do ZERO.");
         }
         if (msg.content.startsWith('!fastlist')) {
           const page = parseInt(msg.content.split(' ')[1]) || 1;
