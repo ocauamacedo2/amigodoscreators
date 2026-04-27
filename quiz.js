@@ -74,12 +74,14 @@ export async function setupQuiz(client) {
       } catch (e) { console.error("[SC_QUIZ] Erro carregar dados:", e); }
     }
     function scq_save() {
-      try {
-        const tmpPath = SC_QUIZ_DATA_PATH + '.tmp';
-        fs.writeFileSync(tmpPath, JSON.stringify(SC_QUI_STATE, null, 2));
-        fs.renameSync(tmpPath, SC_QUIZ_DATA_PATH);
-      } catch (e) { console.error("[SC_QUIZ] Erro salvar dados:", e); }
-    }
+  try {
+    const tmpPath = SC_QUIZ_DATA_PATH + '.tmp';
+    fs.writeFileSync(tmpPath, JSON.stringify(SC_QUIZ_STATE, null, 2));
+    fs.renameSync(tmpPath, SC_QUIZ_DATA_PATH);
+  } catch (e) {
+    console.error("[SC_QUIZ] Erro salvar dados:", e);
+  }
+}
     scq_load();
 
     function scq_getFreshState() {
@@ -191,14 +193,58 @@ export async function setupQuiz(client) {
       if (ch) await ch.send({ embeds: [embed] }).catch(() => {});
     }
     async function scq_clearCreatorsTrackedMessages(channel) {
-      const tracked = [...(SC_QUIZ_STATE.creatorsCleanupMessageIds || [])];
-      SC_QUIZ_STATE.creatorsCleanupMessageIds = [];
-      scq_save();
-      for (const id of tracked) {
-        const m = await channel.messages.fetch(id).catch(() => null);
-        if (m) await m.delete().catch(() => {});
+  try {
+    const trackedIds = Array.isArray(SC_QUIZ_STATE.creatorsCleanupMessageIds)
+      ? [...SC_QUIZ_STATE.creatorsCleanupMessageIds]
+      : [];
+
+    const idsToDelete = new Set(trackedIds);
+
+    SC_QUIZ_STATE.creatorsCleanupMessageIds = [];
+    scq_save();
+
+    for (const id of trackedIds) {
+      const m = await channel.messages.fetch(id).catch(() => null);
+      if (m) await m.delete().catch(() => {});
+    }
+
+    const recent = await channel.messages.fetch({ limit: 100 }).catch(() => null);
+    if (!recent) return;
+
+    const shouldDeleteQuizMessage = (msg) => {
+      if (!msg || msg.author?.id !== client.user?.id) return false;
+      if (idsToDelete.has(msg.id)) return false;
+
+      const embed = msg.embeds?.[0] || null;
+      const title = String(embed?.title || '').toLowerCase();
+      const footer = String(embed?.footer?.text || '').toLowerCase();
+      const desc = String(embed?.description || '').toLowerCase();
+      const content = String(msg.content || '').toLowerCase();
+
+      const text = `${title}\n${footer}\n${desc}\n${content}`;
+
+      return (
+        text.includes('quiz diário') ||
+        text.includes('pergunta relâmpago') ||
+        text.includes('relâmpago manual') ||
+        text.includes('modo relâmpago') ||
+        text.includes('resposta correta') ||
+        text.includes('resposta incorreta') ||
+        text.includes('vencedor') ||
+        text.includes('você já participou desta rodada') ||
+        text.includes('errou! próxima tentativa livre')
+      );
+    };
+
+    for (const msg of recent.values()) {
+      if (shouldDeleteQuizMessage(msg)) {
+        await msg.delete().catch(() => {});
       }
     }
+  } catch (e) {
+    console.error('[SC_QUIZ] erro ao limpar mensagens antigas:', e);
+  }
+}
     function scq_cancelAllActive(reason = 'override') {
       SC_QUIZ_STATE.rt.active = null;
       SC_QUIZ_STATE.activeQuizMessages = [];
@@ -392,12 +438,30 @@ export async function setupQuiz(client) {
         return message.channel.send(`<@${message.author.id}>, você já participou desta rodada!`).then(m => setTimeout(() => m.delete().catch(() => {}), 5000));
       }
 
-      SC_QUIZ_STATE.currentSatisfied = true;
       message.delete().catch(() => {});
-      scq_markUserPlayedInRound(currentId, message.author.id, isFast ? 'fast' : 'daily');
+scq_markUserPlayedInRound(currentId, message.author.id, isFast ? 'fast' : 'daily');
 
-      const right = ans === expected;
-      scq_updateLeaderboard(message.author.id, right ? 1 : 0, right ? 0 : 1);
+const expected = String(
+  isFast
+    ? (SC_QUIZ_STATE.rt.active?.correct || q.resposta)
+    : q.resposta
+).trim().toUpperCase();
+
+const right = ans === expected;
+
+console.log('[SC_QUIZ_DEBUG]', {
+  qid: q.id,
+  pergunta: q.texto,
+  opcoes: q.opcoes,
+  respostaRecebida: message.content,
+  ans,
+  expected,
+  activeCorrect: SC_QUIZ_STATE.rt.active?.correct,
+  bankCorrect: q.resposta,
+  isFast
+});
+
+scq_updateLeaderboard(message.author.id, right ? 1 : 0, right ? 0 : 1);
 
       if (isFast) {
         if (right) {
@@ -409,10 +473,19 @@ export async function setupQuiz(client) {
           await scq_renderRankingSticky();
           await scq_finalizeRound(message.channel, currentId);
         } else {
-          const errMsg = await message.channel.send(`<@${message.author.id}> errou! Próxima tentativa livre.`);
-          SC_QUIZ_STATE.creatorsCleanupMessageIds.push(errMsg.id);
-          scq_save();
-        }
+  const errMsg = await message.channel.send({
+    content: `💔 Poxa, <@${message.author.id}>...`,
+    embeds: [scq_buildEmbed({
+      title: '❌ Resposta Incorreta',
+      description: 'Você errou no chat, mas a rodada continua até alguém acertar! 💪',
+      color: 0xE74C3C,
+      thumbnail: message.author.displayAvatarURL()
+    })]
+  });
+
+  SC_QUIZ_STATE.creatorsCleanupMessageIds.push(errMsg.id);
+  scq_save();
+}
       } else {
         // Fluxo Diário + DM
         const resMsg = await message.channel.send({ 
@@ -564,11 +637,21 @@ export async function setupQuiz(client) {
 
             const embed = scq_buildEmbed({ title: '⚡ RELÂMPAGO MANUAL', description: `**${q.texto}**\n\n${q.opcoes.join('\n')}`, image: GIF_QUIIZ_URL });
             const sent = await channel.send({ content: `<@&${SC_MENTION_ROLES[0]}>`, embeds: [embed] });
-            SC_QUIZ_STATE.rt.active = { messageId: sent.id, qid: q.id, correct: q.resposta };
-            SC_QUIZ_STATE.currentValidMessageId = sent.id;
-            SC_QUIZ_STATE.currentSatisfied = false;
-            SC_QUIZ_STATE.creatorsCleanupMessageIds.push(sent.id);
-            scq_save();
+            SC_QUIZ_STATE.rt.active = {
+  messageId: sent.id,
+  qid: q.id,
+  correct: q.resposta,
+  correctText: q.opcoes.find(o => o.startsWith(`${q.resposta})`)) || null,
+  createdAt: Date.now()
+};
+
+SC_QUIZ_STATE.rt.attempts[sent.id] = {};
+SC_QUIZ_STATE.rt.lastFastMsgId = sent.id;
+SC_QUIZ_STATE.rt.lastWinnerId = null;
+SC_QUIZ_STATE.currentValidMessageId = sent.id;
+SC_QUIZ_STATE.currentSatisfied = false;
+SC_QUIZ_STATE.creatorsCleanupMessageIds.push(sent.id);
+scq_save();
           }
         }
       }
