@@ -631,9 +631,14 @@ scq_updateLeaderboard(message.author.id, right ? 1 : 0, right ? 0 : 1);
     }
 
     // ======= TICKER: AGENDAMENTO =======
-    function startTickers() {
-      // Tick de 15s para checar agenda
-      setInterval(async () => {
+function startTickers() {
+  if (client.__SC_QUIZ_TICKERS_STARTED) return;
+  client.__SC_QUIZ_TICKERS_STARTED = true;
+
+  console.log("[SC_QUIZ] Tickers automáticos iniciados.");
+
+  // Tick de 15s para checar agenda
+  setInterval(async () => {
         const now = Date.now();
         const dk = scq_dayKey();
 
@@ -654,16 +659,35 @@ scq_updateLeaderboard(message.author.id, right ? 1 : 0, right ? 0 : 1);
         }
 
         const dueIdx = SC_QUIZ_STATE.__todaySchedule.findIndex(t => now >= t);
-        if (dueIdx >= 0) {
-          // SÓ envia se NÃO houver quiz ativo
-          if (scq_hasActiveQuiz()) return;
+if (dueIdx >= 0) {
+  // Se tiver quiz ativo há muito tempo, limpa para não travar o automático pra sempre
+  if (scq_hasActiveQuiz()) {
+    const activeCreatedAt =
+      SC_QUIZ_STATE.rt?.active?.createdAt ||
+      SC_QUIZ_STATE.activeQuizMessages?.[0]?.createdAt ||
+      0;
 
-          SC_QUIZ_STATE.__todaySchedule.splice(dueIdx, 1);
-          scq_save();
-          
-          // Sorteio aleatório entre Diário e Relâmpago
-          Math.random() > 0.5 ? await scq_postDailyQuiz() : await sc_rt_postFastQuiz();
-        }
+    const activeAgeMs = activeCreatedAt ? now - activeCreatedAt : 0;
+    const maxActiveMs = 10 * 60 * 1000;
+
+    if (activeAgeMs >= maxActiveMs) {
+      const channel = await client.channels.fetch(SC_QUIZ_CREATORS_CHANNEL_ID).catch(() => null);
+      if (channel) {
+        await scq_clearCreatorsTrackedMessages(channel);
+      }
+
+      scq_cancelAllActive('auto_unlock_stuck_quiz');
+    } else {
+      return;
+    }
+  }
+
+  SC_QUIZ_STATE.__todaySchedule.splice(dueIdx, 1);
+  scq_save();
+  
+  // Sorteio aleatório entre Diário e Relâmpago
+  Math.random() > 0.5 ? await scq_postDailyQuiz() : await sc_rt_postFastQuiz();
+}
       }, 15000);
     }
 
@@ -759,11 +783,21 @@ scq_save();
       await scq_log(scq_buildEmbed({ title: '🧹 Ranking Resetado', description: `O ranking global do Quiz foi zerado por <@${interaction.user.id}>.`, color: 0xFF0000 }));
     });
 
-    client.once('ready', async () => {
-      await scq_renderRankingSticky();
-      startTickers();
-      console.log("[SC_QUIZ] Sistema ativado.");
-    });
+    async function scq_startSystemOnce() {
+  if (client.__SC_QUIZ_SYSTEM_STARTED) return;
+  client.__SC_QUIZ_SYSTEM_STARTED = true;
+
+  await scq_renderRankingSticky();
+  startTickers();
+
+  console.log("[SC_QUIZ] Sistema ativado.");
+}
+
+if (client.isReady?.()) {
+  await scq_startSystemOnce();
+} else {
+  client.once('ready', scq_startSystemOnce);
+}
 
   } catch (err) { console.error("[SC_QUIZ] Falha Crítica:", err); }
 }
