@@ -329,6 +329,10 @@ export async function setupQuiz(client) {
       const currentId = SC_QUIZ_STATE.currentValidMessageId;
       if (!currentId || message.author.bot) return;
 
+      // ⛔ Garante que a interação no antigo pare de funcionar:
+      // Se o usuário respondeu via REPLY, verificamos se o reply é para a mensagem ativa.
+      if (message.reference?.messageId && message.reference.messageId !== currentId) return;
+
       const isFast = SC_QUIZ_STATE.rt.active?.messageId === currentId;
       const activeDaily = SC_QUIZ_STATE.activeQuizMessages.find(x => x.id === currentId);
       const qid = isFast ? SC_QUIZ_STATE.rt.active.qid : activeDaily?.qid;
@@ -478,7 +482,7 @@ export async function setupQuiz(client) {
       // Comandos Operador
       if (['1262262852949905408', '660311795327828008'].includes(msg.author.id)) {
         if (msg.content === '!quiznow') { await scq_postDailyQuiz(true); msg.react('✅'); }
-        if (msg.content === '!fastnow') { await sc_rt_postFastQuiz(true); msg.react('⚡'); }
+        if (msg.content === '!fastnow' || msg.content === '!quizfast') { await sc_rt_postFastQuiz(true); msg.react('⚡'); }
         if (msg.content === '!quizreset') {
           SC_QUIZ_STATE.leaderboard = {};
           scq_save(); await scq_renderRankingSticky(); msg.reply("Ranking zerado.");
@@ -494,11 +498,16 @@ export async function setupQuiz(client) {
           const id = parseInt(msg.content.split(' ')[1]);
           const q = SC_QUIZ_BANK.find(x => x.id === id);
           if (q) {
+            // 🧹 Apaga o antigo e invalida a rodada anterior
             scq_cancelAllActive('manual_id');
-            const channel = await client.channels.fetch(SC_QUIZ_CREATORS_CHANNEL_ID);
+            const channel = await client.channels.fetch(SC_QUIZ_CREATORS_CHANNEL_ID).catch(() => null);
+            if (!channel) return;
+            await scq_clearCreatorsTrackedMessages(channel);
+
             const embed = scq_buildEmbed({ title: '⚡ RELÂMPAGO MANUAL', description: `**${q.texto}**\n\n${q.opcoes.join('\n')}`, image: GIF_QUIIZ_URL });
             const sent = await channel.send({ content: `<@&${SC_MENTION_ROLES[0]}>`, embeds: [embed] });
-            SC_QUIZ_STATE.rt.active = { messageId: sent.id, qid: q.id, correct: q.resposta };
+            SC_QUIZ_STATE.rt.active = { messageId: sent.id, qid: q.id, correct: q.resposta, createdAt: Date.now() };
+            SC_QUIZ_STATE.rt.attempts[sent.id] = {};
             SC_QUIZ_STATE.currentValidMessageId = sent.id;
             SC_QUIZ_STATE.currentSatisfied = false;
             scq_save();
