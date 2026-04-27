@@ -328,16 +328,6 @@ export async function setupQuiz(client) {
       SC_QUIZ_STATE.currentValidMessageId = msg.id;
       SC_QUIZ_STATE.currentSatisfied = false;
       scq_save();
-
-      setTimeout(async () => {
-        if (SC_QUIZ_STATE.rt.active?.messageId === msg.id) {
-          SC_QUIZ_STATE.rt.active = null;
-          SC_QUIZ_STATE.currentSatisfied = true;
-          scq_save();
-          const tMsg = await channel.send({ embeds: [scq_buildEmbed({ title: '⏰ Tempo esgotado', description: `Ninguém acertou. Gabarito: **${q.resposta}**` })] });
-          SC_QUIZ_STATE.creatorsCleanupMessageIds.push(tMsg.id);
-        }
-      }, SC_RT_ACTIVE_TIMEOUT_MS);
     }
 
     // ======= HANDLERS: RESPOSTAS =======
@@ -371,13 +361,15 @@ export async function setupQuiz(client) {
       if (isFast) {
         if (right) {
           SC_QUIZ_STATE.rt.active = null;
+          SC_QUIZ_STATE.rt.lastWinnerId = message.author.id;
           const winMsg = await message.channel.send({ embeds: [scq_buildEmbed({ title: '🏁 Vencedor!', description: `<@${message.author.id}> acertou primeiro! +${SC_QUIZ_POINTS_RIGHT}`, color: 0x2ECC71 })] });
           SC_QUIZ_STATE.creatorsCleanupMessageIds.push(winMsg.id);
+          scq_save();
+          await scq_finalizeRound(message.channel, currentId);
         } else {
           const errMsg = await message.channel.send(`<@${message.author.id}> errou! Próxima tentativa livre.`);
           SC_QUIZ_STATE.creatorsCleanupMessageIds.push(errMsg.id);
         }
-        scq_save();
         await scq_renderRankingSticky();
       } else {
         // Fluxo Diário + DM
@@ -459,9 +451,14 @@ export async function setupQuiz(client) {
 
         const dueIdx = SC_QUIZ_STATE.__todaySchedule.findIndex(t => now >= t);
         if (dueIdx >= 0) {
+          // SÓ envia se NÃO houver quiz ativo
+          if (scq_hasActiveQuiz()) return;
+
           SC_QUIZ_STATE.__todaySchedule.splice(dueIdx, 1);
           scq_save();
-          await scq_postDailyQuiz();
+          
+          // Sorteio aleatório entre Diário e Relâmpago
+          Math.random() > 0.5 ? await scq_postDailyQuiz() : await sc_rt_postFastQuiz();
         }
 
         // Relâmpago Ticker (Cadência fixa)
@@ -501,7 +498,7 @@ export async function setupQuiz(client) {
       // Comandos Operador
       if (['1262262852949905408', '660311795327828008'].includes(msg.author.id)) {
         if (msg.content === '!quiznow') { await scq_postDailyQuiz(true); msg.react('✅'); }
-        if (msg.content === '!fastnow') { await sc_rt_postFastQuiz(true); msg.react('⚡'); }
+        if (msg.content === '!fastnow' || msg.content === '!quizfast') { await sc_rt_postFastQuiz(true); msg.react('⚡'); }
         if (msg.content === '!quizreset') {
           SC_QUIZ_STATE.leaderboard = {};
           scq_save(); await scq_renderRankingSticky(); msg.reply("Ranking zerado.");
@@ -548,6 +545,11 @@ export async function setupQuiz(client) {
 
       // Executa o reset
       SC_QUIZ_STATE.leaderboard = {};
+      SC_QUIZ_STATE.participantsByMsg = {};
+      SC_QUIZ_STATE.activeQuizMessages = [];
+      SC_QUIZ_STATE.rt.attempts = {};
+      SC_QUIZ_STATE.currentValidMessageId = null;
+      SC_QUIZ_STATE.currentSatisfied = true;
       scq_save();
       
       // Atualiza as mensagens do ranking imediatamente
