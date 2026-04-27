@@ -161,6 +161,20 @@ export async function setupQuiz(client) {
       }
       scq_save();
     }
+
+    async function scq_finalizeRound(channel) {
+      // O ciclo só termina de verdade após 2 minutos do acerto ou timeout
+      setTimeout(async () => {
+        try {
+          await scq_clearCreatorsTrackedMessages(channel);
+          SC_QUIZ_STATE.currentValidMessageId = null;
+          SC_QUIZ_STATE.currentSatisfied = true;
+          scq_save();
+          console.log("[SC_QUIZ] Rodada finalizada e chat limpo.");
+        } catch (e) { console.error("[SC_QUIZ] Erro ao finalizar rodada:", e); }
+      }, 2 * 60 * 1000); // 2 minutos de espera
+    }
+
     function scq_cancelAllActive(reason = 'override') {
       SC_QUIZ_STATE.rt.active = null;
       SC_QUIZ_STATE.activeQuizMessages = [];
@@ -317,11 +331,10 @@ export async function setupQuiz(client) {
       setTimeout(async () => {
         if (SC_QUIZ_STATE.rt.active?.messageId === msg.id) {
           SC_QUIZ_STATE.rt.active = null;
-          SC_QUIZ_STATE.currentSatisfied = true;
-          scq_save();
-          const tMsg = await channel.send({ embeds: [scq_buildEmbed({ title: '⏰ Tempo esgotado', description: `Ninguém acertou. Gabarito: **${q.resposta}**` })] });
+          const tMsg = await channel.send({ embeds: [scq_buildEmbed({ title: '⏰ Tempo esgotado', description: `Ninguém acertou a tempo.` })] });
           SC_QUIZ_STATE.creatorsCleanupMessageIds.push(tMsg.id);
           scq_save();
+          await scq_finalizeRound(channel);
         }
       }, SC_RT_ACTIVE_TIMEOUT_MS);
     }
@@ -351,7 +364,6 @@ export async function setupQuiz(client) {
         return message.channel.send(`<@${message.author.id}>, você já participou desta rodada!`).then(m => setTimeout(() => m.delete().catch(() => {}), 5000));
       }
 
-      SC_QUIZ_STATE.currentSatisfied = true;
       message.delete().catch(() => {});
       scq_markUserPlayedInRound(currentId, message.author.id, isFast ? 'fast' : 'daily');
 
@@ -386,6 +398,7 @@ export async function setupQuiz(client) {
         scq_save();
         await scq_renderRankingSticky();
         await runDMExtras(message.author, q.id, right);
+        await scq_finalizeRound(message.channel);
       }
     }
 
@@ -449,6 +462,11 @@ export async function setupQuiz(client) {
 
         const dueIdx = SC_QUIZ_STATE.__todaySchedule.findIndex(t => now >= t);
         if (dueIdx >= 0) {
+          // SÓ envia se NÃO houver quiz ativo (garante ciclo limpo)
+          if (scq_hasActiveQuiz()) {
+            return; // Espera o atual concluir e limpar o chat
+          }
+
           SC_QUIZ_STATE.__todaySchedule.splice(dueIdx, 1);
           scq_save();
           
