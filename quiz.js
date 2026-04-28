@@ -782,11 +782,21 @@ function startTickers() {
         if (isReply || isLetter) await handleQuizAnswer(msg);
       }
 
-      // Comandos Operador
-      if (['1262262852949905408', '660311795327828008'].includes(msg.author.id)) {
-        if (msg.content === '!quiznow') { await scq_postDailyQuiz(true); msg.react('✅'); }
-        if (msg.content === '!fastnow' || msg.content === '!quizfast') { await sc_rt_postFastQuiz(true); msg.react('⚡'); }
-        if (msg.content === '!quizreset') {
+          // Comandos Operador
+      const scq_cmd = String(msg.content || '').trim().toLowerCase();
+
+      if (SC_AUTHORIZED_RESET_IDS.includes(msg.author.id)) {
+        if (scq_cmd === '!quiznow') {
+          await scq_postDailyQuiz(true);
+          await msg.react('✅').catch(() => {});
+        }
+
+        if (scq_cmd === '!fastnow' || scq_cmd === '!quizfast') {
+          await sc_rt_postFastQuiz(true);
+          await msg.react('⚡').catch(() => {});
+        }
+
+        if (scq_cmd === '!quizreset') {
           await scq_resetEntireQuizState('command_reset');
           await scq_renderRankingSticky();
           msg.reply("✅ Todo o sistema de quiz foi resetado do ZERO.");
