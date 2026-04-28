@@ -281,6 +281,31 @@ async function scq_finalizeRound(channel, messageId) {
   }
 }
 
+function scq_startDailyCleanupTimer(channel, messageId) {
+  const activeDaily = SC_QUIZ_STATE.activeQuizMessages.find(x => x.id === messageId);
+  if (!activeDaily) return;
+
+  if (activeDaily.cleanupStarted) return;
+
+  activeDaily.cleanupStarted = true;
+  activeDaily.cleanupAt = Date.now() + (5 * 60 * 1000);
+
+  SC_QUIZ_STATE.currentSatisfied = false;
+  scq_save();
+
+  setTimeout(async () => {
+    try {
+      const stillActive = SC_QUIZ_STATE.currentValidMessageId === messageId;
+      if (!stillActive) return;
+
+      await scq_clearCreatorsTrackedMessages(channel);
+      await scq_finalizeRound(channel, messageId);
+    } catch (e) {
+      console.error('[SC_QUIZ] erro ao limpar quiz diário após primeira interação:', e);
+    }
+  }, 5 * 60 * 1000);
+}
+
 // ======= RANKING GRÁFICO =======
 async function scq_buildChartAttachment({ labels, data, title, color = 'rgb(145, 91, 255)' }) {
       const fill = color.replace('rgb', 'rgba').replace(')', ',0.7)');
@@ -604,11 +629,13 @@ scq_updateLeaderboard(message.author.id, right ? 1 : 0, right ? 0 : 1);
             thumbnail: message.author.displayAvatarURL()
           })] 
         });
-        SC_QUIZ_STATE.creatorsCleanupMessageIds.push(resMsg.id);
+               SC_QUIZ_STATE.creatorsCleanupMessageIds.push(resMsg.id);
         scq_save();
+
+        scq_startDailyCleanupTimer(message.channel, currentId);
+
         await scq_renderRankingSticky();
         await runDMExtras(message.author, q.id, right);
-        await scq_finalizeRound(message.channel, currentId);
       }
     }
 
