@@ -785,6 +785,340 @@ addS('Responsáveis', 'Na hierarquia final da equipe, a ordem correta de subida 
   'Manager/Social > Gestor > Coord > Resp Influ > Resp Líder > Resp Creators'
 ], 0);
 
+
+
+// =========================
+// CULTURA, ÉTICA E CONDUTA (ANTI-EGO / ANTI-FUXICO)
+// =========================
+addS('Cultura', 'Qual é o destino garantido na SantaCreators para quem deixa o ego subir?', [
+  'Advertência verbal',
+  'Conversa com a coordenação',
+  'Banimento garantido',
+  'Redução de cargo temporária'
+], 2);
+
+addS('Cultura', 'Sobre o "Fuxico" dentro da empresa, qual é a diretriz oficial?', [
+  'É permitido se for sobre trabalho',
+  'Não agrega nada e resulta em BAN',
+  'Deve ser resolvido no privado',
+  'É tolerado se não houver provas'
+], 1);
+
+addS('Cultura', 'O que acontece com quem entra na Creators pensando em tirar vantagem própria?', [
+  'Recebe orientação técnica',
+  'Não possui espaço na cultura da empresa',
+  'É monitorado pela gestão influencer',
+  'Ganha advertência nível 2'
+], 1);
+
+addS('Cultura', 'A "Cultura da Santa" é resumida em quais pilares principais?', [
+  'Poder, hierarquia e controle',
+  'Respeito, humildade e ser gente boa',
+  'Quantidade de clips e engajamento',
+  'Presença em call e metas batidas'
+], 1);
+
+addS('Cultura', 'Ao receber um membro novo, qual deve ser a primeira atitude do responsável?', [
+  'Passar a lista de regras',
+  'Motivá-lo e criar conexão',
+  'Cobrar a setagem no painel',
+  'Pedir para entrar em call'
+], 1);
+
+addS('Cultura', 'Sobre o uso de Inteligência Artificial nas entrevistas, a SantaCreators:', [
+  'Recomenda para agilizar o processo',
+  'Identifica e reprova o Ctrl+C/Ctrl+V',
+  'Aceita se a resposta estiver correta',
+  'Não possui regras sobre isso'
+], 1);
+
+addS('Cultura', 'Por que é fundamental denunciar qualquer sinal de abuso de poder?', [
+  'Para ganhar pontos no sistema',
+  'Para comprometer a liderança',
+  'Porque compromete a integridade e a experiência de todos',
+  'Para subir de cargo mais rápido'
+], 2);
+
+addS('Cultura', 'O que é esperado de um membro no feedback obrigatório de sábado?', [
+  'Apenas ouvir a liderança',
+  'Participar e ouvir orientações (mesmo novatos)',
+  'Ficar mutado em call',
+  'Apenas marcar presença no chat'
+], 1);
+
+// =========================
+// GESTÃO INFLUENCER E HIERARQUIA AVANÇADA
+// =========================
+addS('Hierarquia', 'Para ter autonomia de comandos (GI 5), o Equipe Creator precisa:', [
+  'Ter 1 mês de empresa',
+  'Dominar contratações, conduta, baús, vestes e veículos',
+  'Ser indicado por um membro comum',
+  'Apenas saber usar o noclip'
+], 1);
+
+addS('Hierarquia', 'O cargo "Contratador" na cidade é destinado a quem:', [
+  'Já é estagiário há muito tempo',
+  'Aprendeu a contratar e recebeu o OK da liderança',
+  'Possui qualquer cargo de coordenação',
+  'Entrou agora na empresa'
+], 1);
+
+addS('Hierarquia', 'Um coordenador que está ensinando alguém a contratar precisa de:', [
+  'Autorização do Owner',
+  'Validação de outro Coordenador ou Responsável',
+  'Print de todos os passos',
+  'Um vídeo tutorial'
+], 1);
+
+addS('Hierarquia', 'Ao liberar o cargo de poderes, o que deve ser feito no canal de controle GI?', [
+  'Pausar o controle',
+  'Despausar o controle GI',
+  'Mandar o ID do membro',
+  'Apenas marcar o responsável'
+], 1);
+
+addS('Hierarquia', 'Sobre as áreas Social Medias e Manager Creators, o membro:', [
+  'Deve atuar em ambas obrigatoriamente',
+  'Pode escolher uma e nunca ter os dois cargos de área ao mesmo tempo',
+  'Não pode trocar de área após escolher',
+  'Não precisa de área se for GI 5'
+], 1);
+
+addS('Hierarquia', 'O cargo GI 4 (Coordenação Criativa) exige do membro:', [
+  'Resultados constantes e envolvimento em entrevistas/eventos',
+  'Apenas ser amigo da liderança',
+  'Ter o maior número de pontos do mês',
+  'Saber usar o wall perfeitamente'
+], 0);
+
+addS('Hierarquia', 'Qual cargo é removido ao subir para GI 4 (Coordenação)?', [
+  'Creator Base',
+  'Equipe Creator na cidade (GI 5)',
+  'Todos os cargos do Discord',
+  'Apenas o cargo de área'
+], 1);
+
+addS('Hierarquia', 'O GI 3 (Responsável de Liderança) tem como foco principal:', [
+  'Executar os eventos sozinho',
+  'Cobrança, auxílio à coordenação e aprovação de promoções',
+  'Apenas fiscalizar o noclip',
+  'Criar artes para o Instagram'
+], 1);
+
+addS('Hierarquia', 'Para crescer além de Responsável Líder, o membro deve:', [
+  'Focar apenas em uma única frente',
+  'Dominar sua área e atuar em ambas as frentes (Social e Manager)',
+  'Pedir o cargo ao Resp Creators',
+  'Ser o que mais usa poderes em RP'
+], 1);
+
+addS('Hierarquia', 'Qual é a principal responsabilidade do Responsável Influ (GI 3)?', [
+  'Aprovar apenas o cronograma',
+  'Ser referência prática, ensinar e cobrar com equilíbrio',
+  'Ficar apenas em call de diretoria',
+  'Setar skins aleatórias'
+], 1);
+
+// =========================
+// PODERES: NC, TPWAY, TPTO E TPTOME
+// =========================
+addS('Poderes', 'O uso indevido de poderes na SantaCreators resulta em:', [
+  'Advertência leve',
+  'Remoção imediata dos poderes',
+  'Perda de 10 pontos',
+  'Conversa em call'
+], 1);
+
+addS('Poderes', 'O NC (No-Clip) é permitido individualmente apenas para:', [
+  'Locomoção rápida pelo mapa',
+  'Casos urgentes a favor da empresa (recrutamento/alinhamento)',
+  'Ver o que os outros players estão fazendo',
+  'Fugir de abordagem policial'
+], 1);
+
+addS('Poderes', 'Qual é a regra de ouro ao sair do NC (No-Clip)?', [
+  'Sair em qualquer lugar',
+  'NUNCA aparecer na frente de outros players',
+  'Sair voando para impressionar',
+  'Sair perto da garagem'
+], 1);
+
+addS('Poderes', 'O uso de NC e TPWAY como meio de transporte comum é considerado:', [
+  'Agilidade operacional',
+  'Abuso de poder',
+  'Procedimento padrão',
+  'Uso estratégico'
+], 1);
+
+addS('Poderes', 'NC e TPWAY estão liberados livremente em qual condição?', [
+  'Durante a madrugada',
+  'Em mundos que não sejam o padrão (sozinho)',
+  'Perto de amigos',
+  'Dentro da sede'
+], 1);
+
+addS('Poderes', 'O TPWAY pode ser usado para:', [
+  'Visitar amigos fora da empresa',
+  'Apoio rápido a ações da empresa e deslocamento para eventos/resenhas',
+  'Chegar mais rápido na praça',
+  'Ir até a mecânica'
+], 1);
+
+addS('Poderes', 'O comando TPTOME deve ser usado exclusivamente para:', [
+  'Puxar qualquer player aleatório',
+  'Puxar membros da empresa (com autorização ou consciência)',
+  'Puxar administradores da cidade',
+  'Trazer veículos'
+], 1);
+
+addS('Poderes', 'Como deve ser a comunicação imersiva ao usar TPTOME?', [
+  'Falar que usou comando',
+  'Dizer que a pessoa "pegou um Uber" até você',
+  'Não falar nada',
+  'Dizer que ela teletransportou'
+], 1);
+
+addS('Poderes', 'Sobre o TPTO para ir até um membro em RP, qual o procedimento?', [
+  'Dar TPTO direto na frente dele',
+  'Usar o ZipZap e ir até ele usando veículo RP',
+  'Usar noclip para chegar por cima',
+  'Dar TPTO e sair do NC correndo'
+], 1);
+
+addS('Poderes', 'Entrar em uma cena de RP usando TPTO é considerado:', [
+  'Boa prática',
+  'Abuso de poder grave',
+  'Agilidade necessária',
+  'Suporte operacional'
+], 1);
+
+addS('Poderes', 'Comandos avançados como "dvarea", "godarea" e "wall" são de nível:', [
+  'GI 5 (Creator)',
+  'GI 4 (Coordenador)',
+  'GI 3 (Responsável)',
+  'Membro comum'
+], 2);
+
+addS('Poderes', 'É permitido usar poderes em amigos ou aliados de fora da empresa?', [
+  'Sim, se for para gravação',
+  'Não, os poderes são apenas para si ou membros oficiais',
+  'Apenas com autorização verbal',
+  'Sim, se for para ajudar no conteúdo'
+], 1);
+
+// =========================
+// REGRAS DE SKIN E IDENTIDADE
+// =========================
+addS('Imersão', 'Quem pode autorizar o uso de skin para RP na SantaCreators?', [
+  'Qualquer coordenador',
+  'Apenas GI 3+ (Responsável)',
+  'O próprio membro se tiver poder',
+  'Um estagiário'
+], 1);
+
+addS('Imersão', 'Onde o uso de skin é EXTREMAMENTE proibido?', [
+  'Hospital',
+  'Praça',
+  'Mecânica',
+  'Píer'
+], 1);
+
+addS('Imersão', 'Ao usar uma skin de animal, a regra de fala é:', [
+  'Falar normalmente',
+  'Não fala (segue o RP do animal)',
+  'Falar apenas no rádio',
+  'Usar sintetizador de voz'
+], 1);
+
+addS('Imersão', 'Ao usar uma skin de personagem, o membro deve:', [
+  'Manter seu nome original',
+  'Mudar o nome para o do personagem e viver o personagem',
+  'Não precisa mudar nada',
+  'Usar o nome da empresa'
+], 1);
+
+addS('Imersão', 'Para o uso de skin em GRUPO, o requisito mínimo é:', [
+  'No mínimo 2 membros',
+  'No mínimo 4 membros participando e RP planejado',
+  'Apenas ter autorização por texto',
+  'Estar no mesmo veículo'
+], 1);
+
+addS('Imersão', 'O uso indevido de skin ou falta de troca de nome resulta em:', [
+  'Apenas um aviso',
+  'Advertência e rebaixamento imediato',
+  'Perda de 5 pontos',
+  'Nada, se for a primeira vez'
+], 1);
+
+addS('Imersão', 'Em quais locais (com autorização) é permitido circular com skin?', [
+  'Somente na sede',
+  'Hospital, Mecânica e Píer (Praça nunca)',
+  'Qualquer lugar da cidade',
+  'Somente em áreas de favela'
+], 1);
+
+addS('Imersão', 'Qual é a regra sobre setar skin em membros que não possuem poder?', [
+  'É proibido, exceto com autorização específica',
+  'É liberado para qualquer GI 5',
+  'Pode fazer se for seu amigo',
+  'É permitido apenas em eventos'
+], 0);
+
+// =========================
+// SPAWN DE VEÍCULOS E MUNDO PADRÃO
+// =========================
+addS('Veículos', 'Spawnar veículos no mundo padrão é considerado:', [
+  'Procedimento normal',
+  'Abuso de poder e gera punição',
+  'Agilidade para a empresa',
+  'Permitido para coordenadores'
+], 1);
+
+addS('Veículos', 'Ao precisar de um veículo via spawn (em outro mundo), a preferência é:', [
+  'Veículos VIP de outros players',
+  'Veículos comerciais rápidos',
+  'Seus próprios, da garagem pública ou da empresa',
+  'Veículos de staff'
+], 2);
+
+addS('Veículos', 'É permitido spawnar veículos comerciais ou VIPs de terceiros?', [
+  'Sim, se for para teste',
+  'Não (Regra: NÃO spawnar)',
+  'Apenas com autorização de GI 3',
+  'Sim, se for em outro mundo'
+], 1);
+
+addS('Veículos', 'Em que situação extrema o spawn pode ser usado em RP?', [
+  'Quando estiver com preguiça de andar',
+  'somente em eventos/gravações externas da SantaCreators',
+  'Para fazer racha na rodovia',
+  'Para fugir de perseguição'
+], 1);
+
+addS('Veículos', 'A SantaCreators prioriza qual tipo de deslocamento?', [
+  'Teleporte e Spawn',
+  'Narrativa, imersão e uso de garagens',
+  'Noclip por cima dos prédios',
+  'Puxar todos os membros com TPTOME'
+], 1);
+
+addS('Veículos', 'Spawnar um carro na frente de outros players no mundo padrão é:', [
+  'Uma demonstração de poder',
+  'Uma falha grave de conduta e abuso',
+  'Permitido se você estiver com pressa',
+  'Um erro técnico aceitável'
+], 1);
+
+addS('Veículos', 'O comando /dv (deletar veículo) deve ser usado:', [
+  'Em qualquer carro na rua',
+  'Para limpar carros em área ',
+  'Para administrar veiculos da cidade',
+  'Para sumir com carros de polícia'
+], 1);
+
+export const SC_QUIZ_BANK = Q;
+
 // =========================
 // NOVAS PERGUNTAS — BANCO EXTRA (MÉDIA)
 // =========================
