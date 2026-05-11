@@ -1116,8 +1116,7 @@ addS('Veículos', 'O comando /dv (deletar veículo) deve ser usado:', [
   'Para administrar veiculos da cidade',
   'Para sumir com carros de polícia'
 ], 1);
-
-export const SC_QUIZ_BANK = Q;
+// =========================
 
 // =========================
 // NOVAS PERGUNTAS — BANCO EXTRA (MÉDIA)
