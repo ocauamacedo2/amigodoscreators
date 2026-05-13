@@ -865,6 +865,20 @@ scq_save();
       await scq_log(scq_buildEmbed({ title: '🧹 Ranking Resetado', description: `O ranking global do Quiz foi zerado por <@${interaction.user.id}>.`, color: 0xFF0000 }));
     });
 
+    // Remove automaticamente do ranking quando o membro sai do servidor
+    client.on(Events.GuildMemberRemove, async (member) => {
+      try {
+        if (SC_QUIZ_STATE.leaderboard && SC_QUIZ_STATE.leaderboard[member.id]) {
+          console.log(`[SC_QUIZ] Removendo ${member.user.tag} (${member.id}) do ranking pois saiu do servidor.`);
+          delete SC_QUIZ_STATE.leaderboard[member.id];
+          scq_save();
+          await scq_renderRankingSticky();
+        }
+      } catch (e) {
+        console.error(`[SC_QUIZ] Erro ao remover membro ${member.id} do ranking:`, e);
+      }
+    });
+
     async function scq_startSystemOnce() {
   if (client.__SC_QUIZ_SYSTEM_STARTED) return;
   client.__SC_QUIZ_SYSTEM_STARTED = true;
