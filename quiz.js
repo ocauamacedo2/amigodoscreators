@@ -334,9 +334,27 @@ async function scq_buildChartAttachment({ labels, data, title, color = 'rgb(145,
       try {
         const channel = await client.channels.fetch(SC_QUIZ_RANKING_CHANNEL_ID).catch(() => null);
         if (!channel) return;
-        const entries = Object.entries(SC_QUIZ_STATE.leaderboard);
-        const byA = entries.sort((a,b) => b[1].acertos - a[1].acertos).slice(0, 10);
-        const byI = entries.sort((a,b) => b[1].interacoes - a[1].interacoes).slice(0, 10);
+
+        // --- LIMPEZA DE MEMBROS QUE SAÍRAM DO SERVIDOR ---
+        const allEntries = Object.entries(SC_QUIZ_STATE.leaderboard || {});
+        const validEntries = [];
+        let needsSave = false;
+
+        for (const [uid, data] of allEntries) {
+          const isPresent = await channel.guild.members.fetch(uid).catch(() => null);
+          if (isPresent) {
+            validEntries.push([uid, data]);
+          } else {
+            // Se o membro não for encontrado, removemos do banco
+            delete SC_QUIZ_STATE.leaderboard[uid];
+            needsSave = true;
+          }
+        }
+
+        if (needsSave) scq_save();
+
+        const byA = validEntries.sort((a,b) => b[1].acertos - a[1].acertos).slice(0, 10);
+        const byI = validEntries.sort((a,b) => b[1].interacoes - a[1].interacoes).slice(0, 10);
 
         const labelsA = await Promise.all(byA.map(e => scq_userDisplayNameSafe(channel.guild, e[0], '...')));
         const labelsI = await Promise.all(byI.map(e => scq_userDisplayNameSafe(channel.guild, e[0], '...')));
