@@ -15,12 +15,7 @@ const shuffle = (arr) => {
   return a;
 };
 
-let nextLetterIdx = 0;
-const rotateLetter = () => {
-  const t = nextLetterIdx;
-  nextLetterIdx = (nextLetterIdx + 1) % 4;
-  return t;
-};
+const getRandomLetterIdx = () => Math.floor(Math.random() * 4);
 
 const compact = (s) => {
   let out = String(s || '').trim().replace(/\s+/g, ' ');
@@ -31,9 +26,10 @@ const compact = (s) => {
 function addS(categoria, texto, choices, correctIndex) {
   const idx = [0, 1, 2, 3];
   const perm = shuffle(idx);
-  const targetLetterIdx = rotateLetter();
+  const targetLetterIdx = getRandomLetterIdx();
   const posCorrect = perm.indexOf(correctIndex);
 
+  const respostaTexto = choices[correctIndex];
   if (posCorrect !== targetLetterIdx) {
     [perm[posCorrect], perm[targetLetterIdx]] = [perm[targetLetterIdx], perm[posCorrect]];
   }
@@ -41,7 +37,7 @@ function addS(categoria, texto, choices, correctIndex) {
   const opcoes = perm.map((i, k) => `${L[k]}) ${compact(choices[i])}`);
   const resposta = L[targetLetterIdx];
 
-  Q.push({ id: idc++, categoria, texto, opcoes, resposta });
+  Q.push({ id: idc++, categoria, texto, opcoes, resposta, respostaTexto });
 }
 
 // --- REGRAS GERAIS / CONDUTA ---
@@ -1849,5 +1845,125 @@ addS('Responsáveis', 'Entre as responsabilidades do Resp Creators está:', [
   'Registrar orgs no lugar do Manager',
   'Fazer somente alinhamentos'
 ], 0);
+
+// =========================
+// NOVAS QUESTÕES — REGRAS E COMANDOS (RP AVALIAÇÃO)
+// =========================
+
+// --- IDENTIFICAÇÃO E SEDE ---
+addS('Conduta', 'Estar nas proximidades da sede sem nenhuma peça da empresa gera:', ['Apenas um aviso verbal', 'Advertência', 'Nada, se estiver a pé', 'Perda de pontos apenas'], 1);
+addS('Conduta', 'Onde o uso de uniforme/identificação é obrigatório?', ['Apenas dentro das salas', 'Na sede e áreas próximas', 'Somente em eventos', 'Apenas quando estiver em live'], 1);
+addS('Conduta', 'Se você estiver parado na garagem da sede, você precisa estar:', ['Sem roupa para não sujar', 'Identificado visualmente como membro', 'Com qualquer roupa de civil', 'Invisível para não atrapalhar'], 1);
+addS('Conduta', 'A regra de identificação na sede vale para quem está:', ['Apenas em veículos da empresa', 'A pé, parado ou usando a garagem', 'Somente em reuniões', 'Apenas os novatos'], 1);
+
+// --- QUEBRA DE IMERSÃO E SUBSTITUIÇÕES ---
+addS('Imersão', 'Trazer assuntos do "mundo real" para dentro do RP é chamado de:', ['Meta-RP', 'Quebra de imersão', 'Power-gaming', 'RP Avançado'], 1);
+addS('Imersão', 'Qual a forma correta de avisar que vai ao banheiro no RP?', ['"Peraí que vou no banheiro"', '"Vou ali rapidinho"', '"Vou meditar um cado"', '"Vou deslogar um pouco"'], 2);
+addS('Imersão', 'Para "mentalizar um portão abrindo do além", você está se referindo a:', ['Abrir o Discord', 'Abrir um chamado', 'Usar o F8', 'Abrir o mapa'], 0);
+addS('Imersão', 'Substituição imersiva para "Meu Discord caiu":', ['Minha cabeça doeu', 'Meu e-mail bugou', 'Fui para Nárnia', 'Dormi no meio da rua'], 1);
+addS('Imersão', 'Substituição imersiva para "Tô sem microfone":', ['Tô mutado no PC', 'Minha garganta tá ruim / sumiu', 'O microfone quebrou', 'Tô sem voz no Windows'], 1);
+addS('Imersão', 'Substituição imersiva para "Tô em live":', ['Tô com os olhos abertos', 'Tô transmitindo', 'Tô sendo filmado', 'Tô gravando pro YouTube'], 0);
+addS('Imersão', 'Falar "tô com febre" ou "meio gripado" pode substituir:', ['Tô com lag', 'Tô sem áudio (ouvir os outros)', 'Tô sem bateria', 'Tô com sono'], 1);
+addS('Imersão', 'Por que devemos evitar termos como "Nárnia"?', ['Porque é um termo infantil', 'Porque quebra a imersão (prefira substituições criativas)', 'Porque é proibido pelo FiveM', 'Porque ninguém entende'], 1);
+addS('Imersão', 'O que fazer se a imersão for quebrada por outro player?', ['Gritar que ele está errado', 'Chamar admin na hora', 'Improvisar e tirar proveito da situação narrativamente', 'Sair correndo e ignorar'], 2);
+addS('Imersão', 'Qual destas frases é proibida por quebrar o RP?', ['"Minha cabeça tá doendo"', '"Tô com bug no voip"', '"Vou dar uma cochilada"', '"Meu rádio tá falhando"'], 1);
+
+// --- ANTI-RP E REALIDADE ---
+addS('Anti-RP', 'Flutuar sentado usando comandos do F8 sem sentido narrativo é:', ['Um truque legal', 'Anti-RP', 'RP Criativo', 'Permitido para veteranos'], 1);
+addS('Anti-RP', 'Pular de lugares altos e não interpretar dor é considerado:', ['Coragem no RP', 'Anti-RP (falta de coerência com a realidade)', 'Habilidade de parkour', 'Normal no jogo'], 1);
+addS('Anti-RP', 'Se algo absurdo ou um bug acontecer no RP, você deve:', ['Parar de falar', 'Interpretar com sentido e lógica real', 'Dar risada no chat local', 'Deslogar imediatamente'], 1);
+addS('Anti-RP', 'Ignorar a lógica da vida real só porque é um jogo resulta em:', ['Mais diversão', 'Punições e quebra de imersão', 'Melhor desempenho', 'Cargo de staff'], 1);
+
+// --- MÁ CONDUTA E ÉTICA ---
+addS('Conduta', 'Qual o motivo mais sério de advertência na SantaCreators?', ['Uniforme errado', 'Má conduta (falta de respeito/rispidez)', 'Faltar um evento', 'Esquecer o kit'], 1);
+addS('Conduta', 'Respostas debochadas ou atravessadas com colegas são tratadas como:', ['Personalidade forte', 'Má conduta', 'Zoeira saudável', 'Liberdade de expressão'], 1);
+addS('Conduta', 'O que acontece com quem ignora orientações dos superiores?', ['Nada, cada um faz o seu', 'Pode ser advertido por má conduta', 'Recebe um prêmio', 'Ganha mais autonomia'], 1);
+addS('Conduta', 'Sobre piadas racistas ou homofóbicas disfarçadas de "zoeira":', ['São aceitas entre amigos', 'A SantaCreators não tolera de forma alguma', 'Gera apenas um aviso verbal', 'Pode se for sem intenção'], 1);
+addS('Conduta', 'Qual a "vibe" esperada dos membros na SantaCreators?', ['Competição e seriedade extrema', 'Respeito, conexão e diversão com consciência', 'Ficar mutado o dia todo', 'Falar apenas o necessário'], 1);
+addS('Conduta', 'Se você não tem certeza se uma piada vai ofender, você deve:', ['Falar logo para testar', 'Perguntar antes ou não fazer', 'Falar e pedir desculpa depois', 'Mandar por DM'], 1);
+addS('Conduta', 'O primeiro deslize grave de desrespeito ou preconceito resulta em:', ['Advertência 1/3', 'Expulsão direta sem segunda chance', 'Conversa de 1 hora', 'Perda de 5 pontos'], 1);
+
+// --- PRESENÇA E LIDERANÇA ---
+addS('Organização', 'Quem tem disponibilidade OBRIGATÓRIA nos eventos das 19:00?', ['Apenas os novatos', 'Coord.+, Resp. Líder e Resp. Influ', 'Toda a empresa sem exceção', 'Apenas o Social Médias'], 1);
+addS('Organização', 'Qual o prazo limite para registrar ausência justificável?', ['Até o início do evento', 'Até às 18:30 do dia do evento', 'Até 1 hora depois do evento', 'Qualquer hora do dia'], 1);
+addS('Organização', 'Não comparecer e não justificar no prazo gera qual penalidade?', ['Apenas um aviso', 'ADV 1/3 permanente e -5 pontos', 'Suspensão de 2 dias', 'Nada, se for a primeira vez'], 1);
+addS('Organização', 'O que acontece ao acumular 3/3 advertências?', ['Resetam as ADVs', 'Reavaliação da permanência e posição na equipe', 'Ganha um bônus de consolação', 'Fica 1 semana sem poder'], 1);
+addS('Organização', 'A justificativa de ausência deve conter:', ['Apenas um "não vou"', 'Motivo real/Justificativa', 'O nome de quem vai cobrir', 'O horário que vai voltar'], 1);
+addS('Organização', 'Em quais dias ocorrem os eventos obrigatórios de liderança?', ['Segunda a Sexta', 'Segunda a Sábado', 'Terça a Domingo', 'Apenas nos fins de semana'], 1);
+
+// --- COMANDOS FIVEM (F8) ---
+addS('Comandos', 'O comando "hud" no F8 serve para:', ['Aumentar o volume', 'Remover informações da tela e o mapa/GPS', 'Ver o nome dos players', 'Ligar o carro'], 1);
+addS('Comandos', 'O comando "hud2" é ideal para gravações porque silencia:', ['O rádio do carro', 'Anúncios VIP, zaralho e chats de eventos', 'A voz dos amigos', 'O som dos tiros'], 1);
+addS('Comandos', 'Como se desativa o efeito do comando "hud2"?', ['Digitando hud3', 'Tomando um chá', 'Reiniciando o PC', 'Dando TP'], 1);
+addS('Comandos', 'O comando "rec" no F8 grava:', ['Sons de músicas do jogo', 'Apenas o vídeo (sem sons de música ou vozes)', 'Vozes de todos os players', 'O menu do Discord'], 1);
+addS('Comandos', 'Para alterar o ângulo da câmera em gravações, usamos:', ['hud', 'hubcam', 'camshow', 'freecam'], 1);
+addS('Comandos', 'O comando "hidepromo" serve para remover:', ['Mensagens de erro', 'Informações de VIP no canto esquerdo da tela', 'O chat geral', 'Os nomes em cima da cabeça'], 1);
+addS('Comandos', 'Qual comando limpa a roupa suja de sangue?', ['/limpar', 'sangue (no F8)', 'kitinf', 'lavar'], 1);
+addS('Comandos', 'O comando "barreira" no F8 é ideal para:', ['Trancar a porta da sede', 'Compor cenas e dar suporte em ações/gravações', 'Fugir da polícia', 'Prender outros players'], 1);
+addS('Comandos', 'Os comandos de F8 da SantaGroup são focados em:', ['Facilitar trapaças', 'Melhorar a experiência, imersão e criação de conteúdo', 'Ganhar dinheiro mais rápido', 'Ficar invisível'], 1);
+
+// --- KITS EXCLUSIVOS ---
+addS('Kits', 'O kit "KITINF" é voltado para:', ['Venda de itens', 'Suporte rápido pro RP e conteúdo diário', 'Ações de grande porte apenas', 'Eventos de sábado'], 1);
+addS('Kits', 'Quais armas vêm no "KITINF"?', ['2 G3 e 2 Pistolas', '1 Sniper e 1 SMG', '3 Doze e 1 Faca', 'Somente munição'], 0);
+addS('Kits', 'Quantas munições de G3 vêm no "KITINF"?', ['50', '150', '500', '1000'], 1);
+addS('Kits', 'O kit "KITINFLU" (Premium) tem foco em:', ['Troca de tiro pesada', 'Mobilidade, suporte e performance nas gravações', 'Entregar comida pros outros', 'Limpar o prédio'], 1);
+addS('Kits', 'Qual item de cura/suporte vem no "KITINFLU"?', ['10 Bandagens', '1 Adrenalina e 1 Kit de Reparo', '5 Coletes', '20 Sanduíches'], 1);
+addS('Kits', 'Qual a frequência de renovação dos kits?', ['A cada 24 horas', 'A cada 1 hora', 'A cada 15 minutos', 'Apenas uma vez por dia'], 1);
+addS('Kits', 'Quem tem direito a resgatar os kits exclusivos?', ['Qualquer player da cidade', 'Apenas Creators ativos da empresa', 'Somente a Staff', 'Quem ganhar o quiz'], 1);
+
+// --- REGRAS GERAIS DE CONDUTA RP ---
+addS('Imersão', 'Quitar na frente de outros players sem contexto é:', ['Uma conduta a ser evitada (procure local vazio/justificativa)', 'Permitido se você estiver com pressa', 'Normal se for fora da sede', 'Direito de todo jogador'], 0);
+addS('Imersão', 'Uma justificativa imersiva para sair do expediente (deslogar) é:', ['"Meu PC tá travando"', '"Vou sair por agora"', '"Tô passando mal, vou sair do expediente"', '"Vou ali no Discord"'], 2);
+addS('Imersão', 'Trocar de roupa na frente dos outros players é errado porque:', ['O uniforme é feio', 'Cria quebra de imersão e desorganiza o ambiente', 'Gasta pontos de skin', 'Atrai a polícia'], 1);
+addS('Imersão', 'Substituição correta para "Tá com bug no voip":', ['"Minha voz tá lagada"', '"Minha garganta sumiu aqui rapidinho"', '"O servidor tá bugado"', '"Meu microfone faliu"'], 1);
+addS('Imersão', 'Perguntar "Você está em live?" de forma direta é:', ['Recomendado para ganhar fama', 'Uma quebra de RP (prefira observar ou perguntar no off)', 'Obrigatório para segurança', 'Normal em qualquer conversa'], 1);
+addS('Imersão', 'O uso de comandos F8 que quebram a física (como sentar no ar) deve:', ['Ser feito sempre por ser engraçado', 'Ser evitado, salvo se fizer sentido pro RP', 'Ser usado para tirar print', 'Ser livre em qualquer lugar'], 1);
+addS('Imersão', 'O que significa "viver a cidade" no contexto SantaCreators?', ['Correr o tempo todo', 'Ter atitude, postura, respeito e manter a imersão', 'Ter o carro mais caro', 'Conhecer todos os admins'], 1);
+addS('Conduta', 'Ser "Gente Boa" na SantaCreators envolve:', ['Dar itens de graça', 'Tratar todos com leveza, empatia e responsabilidade', 'Não falar com ninguém', 'Seguir apenas as ordens do Owner'], 1);
+addS('Conduta', 'Se você ofender alguém em uma "zoeira", quem está errado?', ['Quem se ofendeu', 'Você (ofensa não é brincadeira)', 'Ninguém, é só um jogo', 'A coordenação por não ver'], 1);
+addS('Conduta', 'A SantaCreators busca ser um ambiente:', ['Hostil para selecionar os fortes', 'Saudável, acolhedor e divertido para geral', 'Apenas para quem tem PC bom', 'Focado em guerra de facções'], 1);
+
+// --- CONTINUAÇÃO DE QUESTÕES ATÉ CHEGAR EM 100+ ---
+addS('Conduta', 'A disponibilidade de 19:00 é para quais dias?', ['Segunda a Sexta', 'Segunda a Sábado', 'Todos os dias', 'Finais de semana'], 1);
+addS('Organização', 'O registro de ausência até 18:30 é:', ['Opcional', 'Obrigatório para cargos de responsabilidade', 'Apenas para novatos', 'Apenas se houver punição'], 1);
+addS('Conduta', 'Rispidez em mensagens ou reuniões gera qual motivo de ADV?', ['Falta de kit', 'Má conduta', 'Anti-RP', 'Quebra de uniforme'], 1);
+addS('Conduta', 'O que é "Falta de interesse em aprender" para a empresa?', ['Algo normal', 'Um tipo de Má Conduta', 'Motivo de bônus', 'Direito do membro'], 1);
+addS('Conduta', 'Se você ignorar conselhos dos superiores, você está tendo:', ['Autonomia', 'Má conduta', 'Visão de líder', 'Iniciativa'], 1);
+addS('Conduta', 'A advertência por falta de identificação vale para áreas:', ['Apenas dentro da sede', 'Proximidades da sede ou áreas próximas', 'Apenas no hospital', 'Somente na praça'], 1);
+addS('Comandos', 'O kit emergencial de RP no F8 é o:', ['kitinflu', 'kitinf', 'kitmed', 'kitrp'], 1);
+addS('Comandos', 'Qual comando do F8 remove as informações de VIP do lado esquerdo?', ['hidepromo', 'novip', 'limparvip', 'hudoff'], 0);
+addS('Comandos', 'O comando "rec" grava as vozes dos players?', ['Sim', 'Não', 'Apenas se estiverem perto', 'Apenas a sua'], 1);
+addS('Imersão', 'Dizer "Tô com febre" no RP pode significar que você:', ['Está com frio', 'Está sem áudio (não ouve os outros)', 'Quer ir pro hospital', 'Vai deslogar'], 1);
+addS('Conduta', 'A regra "Respeito nunca sai de moda" refere-se a:', ['Uniforme novo', 'Tratar todos bem, independente do cargo ou clima', 'Usar roupas sociais', 'Falar formalmente'], 1);
+addS('Conduta', 'O que é "falas maldosas disfarçadas de brincadeira"?', ['Humor inteligente', 'Preconceito/Má conduta (não tolerado)', 'Forma de entrosamento', 'Regra da empresa'], 1);
+addS('Conduta', 'A SantaCreators agradece quem é:', ['O melhor atirador', 'Luz, leve e gente boa', 'O mais rico da cidade', 'O mais polêmico'], 1);
+addS('Comandos', 'O comando "hud2" é bom para editores porque:', ['Aumenta o FPS', 'Silencia chats e sons que poluem a gravação', 'Luzes ficam mais fortes', 'Mostra os nomes'], 1);
+addS('Comandos', 'O kit "KITINFLU" vem com quantos baseados?', ['1', '2', '5', '10'], 1);
+addS('Comandos', 'O kit "KITINFLU" vem com quantas metanfetaminas?', ['1', '2', '3', '4'], 1);
+addS('Comandos', 'O kit "KITINF" vem com quantas munições de pistola?', ['100', '250', '500', '50'], 0);
+addS('Conduta', 'O status "Permanente" na ADV 1/3 por falta injustificada significa:', ['Sai depois de 1 mês', 'Não sai do registro (fica no histórico)', 'Pode ser removida com pontos', 'É resetada todo domingo'], 1);
+addS('Conduta', 'Perder 5 pontos no sistema por falta é uma punição para:', ['Quem chega atrasado', 'Quem falta e não justifica no prazo', 'Quem erra o uniforme', 'Quem usa comando errado'], 1);
+addS('Conduta', 'A reavaliação com 3/3 ADVs serve para:', ['Dar um cargo maior', 'Verificar se o membro tem comprometimento para continuar', 'Trocar o uniforme dele', 'Dar férias remuneradas'], 1);
+addS('Imersão', 'O termo "Mentalizar" no RP geralmente substitui a ação de:', ['Pensar', 'Usar um comando ou tecla (tecnicamente)', 'Dormir', 'Falar'], 1);
+addS('Conduta', 'Se um membro ignora a identidade visual da empresa, ele está:', ['Sendo estiloso', 'Desrespeitando a regra de identificação/uniforme', 'Inovando no RP', 'Seguindo a regra de civil'], 1);
+addS('Conduta', 'A má conduta é o motivo mais sério porque:', ['É difícil de provar', 'Ataca a base de respeito e parceria do grupo', 'Gasta muito tempo do RESP', 'O Owner não gosta'], 1);
+addS('Comandos', 'O kit resgatado via "kitinflu" é renovável a cada:', ['10 minutos', '1 hora', '5 horas', '12 horas'], 1);
+addS('Conduta', 'O aviso "Seja exemplo" foca em qual perfil de membro?', ['Apenas os novatos', 'Todos (especialmente lideranças e quem quer crescer)', 'Apenas a Staff', 'Somente quem está em live'], 1);
+addS('Conduta', 'O que a SantaCreators faz com quem não quer evoluir com o grupo?', ['Dá um cargo de conselheiro', 'Acaba ficando pra trás (desligamento/rebaixamento)', 'Ignora e deixa lá', 'Aumenta o salário'], 1);
+addS('Comandos', 'O comando "hud" remove qual item essencial do GPS?', ['O rádio', 'O mapa da cidade', 'O velocímetro', 'A bússola'], 1);
+addS('Imersão', 'Dizer "Minha garganta tá ruim" é melhor que dizer:', ['"Tô gripado"', '"Tô sem microfone"', '"Vou beber água"', '"Tô com sono"'], 1);
+addS('Imersão', 'Dizer "Meu e-mail bugou" substitui imersivamente:', ['"Meu PC desligou"', '"Meu Discord caiu"', '"Meu rádio quebrou"', '"Meu mouse parou"'], 1);
+addS('Conduta', 'A SantaCreators prioriza membros que:', ['Causam polêmica', 'Estão dispostos a crescer, respeitar e ter parceria', 'Jogam sozinhos', 'Têm muitos seguidores'], 1);
+addS('Comandos', 'O comando "rec" é usado via:', ['F1', 'F8', 'T (Chat)', 'F10'], 1);
+addS('Comandos', 'O comando "sangue" limpa:', ['A sede', 'A roupa suja de sangue', 'O carro', 'As mãos'], 1);
+addS('Conduta', 'A regra de disponibilidade obrigatória às 19:00 serve para:', ['Ocupar o tempo do membro', 'Sustentar a base da operação semanal da empresa', 'Testar a paciência da equipe', 'Ganhar visualização no YouTube'], 1);
+addS('Organização', 'O registro de ausência até 18:30 é uma prova de:', ['Burocracia', 'Comprometimento e organização', 'Falta de liberdade', 'Controle de staff'], 1);
+addS('Conduta', 'Ao atingir 3/3 ADVs, o membro pode ser:', ['Promovido', 'Desligado ou rebaixado após reavaliação', 'Suspenso por 5 minutos', 'Convidado para uma festa'], 1);
+addS('Conduta', 'O primeiro passo ao ter dúvidas sobre conduta é:', ['Fazer o que der na telha', 'Procurar alguém da liderança', 'Perguntar no chat geral da cidade', 'Ignorar a dúvida'], 1);
+addS('Conduta', 'A SantaCreators se baseia em:', ['Respeito mútuo e evolução coletiva', 'Competição interna feroz', 'Individualismo', 'Apenas lucro in-game'], 0);
+addS('Conduta', 'O "Comprometimento" na empresa é avaliado por:', ['Presença, pontualidade e respeito às regras', 'Quantidade de dinheiro in-game', 'Nível de amizade com o Owner', 'Poderes de staff'], 0);
+addS('Organização', 'Se você é Coord.+ e não avisou que ia faltar, você perde:', ['100 pontos', '5 pontos e recebe ADV 1/3 permanente', 'A skin do personagem', 'O acesso à sede por 1 mês'], 1);
+addS('Imersão', 'O RP de verdade, segundo a SantaCreators, se faz com:', ['Armas caras', 'Atitude, postura e respeito', 'Gritos e polêmicas', 'Muitos comandos de F8'], 1);
+addS('Imersão', 'A imersão na cidade começa com:', ['O Admin', 'Você (cada membro fazendo sua parte)', 'O mapa novo', 'O rádio da empresa'], 1);
 
 export const SC_QUIZ_BANK = Q;

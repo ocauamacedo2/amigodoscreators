@@ -680,8 +680,7 @@ scq_updateLeaderboard(message.author.id, right ? 1 : 0, right ? 0 : 1);
         }
 
         const ans = scq_normalizeAnswer(collected.first().content);
-        const hit = (ans === q.resposta || collected.first().content.toUpperCase().includes(q.opcoes.find(o=>o.startsWith(q.resposta))?.slice(3).toUpperCase()));
-
+        const hit = (ans === q.resposta || collected.first().content.toUpperCase().includes(String(q.respostaTexto || '').toUpperCase()));
         if (hit) { r++; scq_updateLeaderboard(user.id, 1, 0); await dm.send("✅ Correto!"); }
         else { w++; scq_updateLeaderboard(user.id, 0, 1); await dm.send(`❌ Errou! Gabarito: **${q.resposta}**`); }
         
