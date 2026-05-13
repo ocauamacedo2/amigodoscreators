@@ -7,8 +7,9 @@ export async function setupAutoReact(client) {
   // Canais que reagem apenas a mídias (Fotos/Vídeos)
   const MEDIA_CHANNEL_IDS = [
     "1432149017378426941", // Canal original de fotos
-    "1385003944803041371", // Novo canal solicitado
-    "1474605177771397223"  // Novo canal solicitado
+    "1385003944803041371", // Canal solicitado anteriormente
+    "1474605177771397223", // Canal solicitado anteriormente
+    "1386503496353976470"  // Novo canal adicionado agora
   ];
   
   // Canal que reage a todas as mensagens
@@ -154,7 +155,8 @@ export async function setupAutoReact(client) {
             return r.emoji.name === emoji;
           });
           if (alreadyThere?.me) return;
-          if (message.reactions.cache.size >= 20 && !alreadyThere) return;
+          
+          // Tentativa agressiva: reage mesmo que outros bots já tenham reagido
           await message.react(emoji);
           await sleep(REACTION_DELAY_MS);
         } catch (err) {
