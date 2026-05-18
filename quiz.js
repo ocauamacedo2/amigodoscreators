@@ -190,6 +190,33 @@ export async function setupQuiz(client) {
       r.lastAt = Date.now();
       scq_save();
     }
+
+    function scq_getUserRankStatus(userId) {
+      const leaderboard = SC_QUIZ_STATE.leaderboard || {};
+      const sorted = Object.entries(leaderboard)
+        .sort((a, b) => b[1].acertos - a[1].acertos || b[1].interacoes - a[1].interacoes);
+
+      const index = sorted.findIndex(e => e[0] === userId);
+      if (index === -1) return `📊 Ranking: _Processando..._\n🔗 Confira aqui: <#${SC_QUIZ_RANKING_CHANNEL_ID}>`;
+
+      const userEntry = sorted[index][1];
+      const rank = index + 1;
+      let info = `\n\n📊 **Seu Ranking:** #${rank} (✅ ${userEntry.acertos} acertos)\n🔗 **Ver Ranking Completo:** <#${SC_QUIZ_RANKING_CHANNEL_ID}>`;
+
+      if (index > 0) {
+        const nextUp = sorted[index - 1][1];
+        const diff = (nextUp.acertos - userEntry.acertos) + 1;
+        info += `\n🚀 Faltam **${diff}** acerto(s) para você passar o próximo colocado!`;
+      } else if (sorted.length > 1) {
+        const secondPlace = sorted[1][1];
+        const diff = (userEntry.acertos - secondPlace.acertos) + 1;
+        info += `\n👑 Você está no topo! O vice-líder precisa de **${diff}** acerto(s) para te ultrapassar.`;
+      } else {
+        info += `\n👑 Você é o único no ranking por enquanto!`;
+      }
+      return info;
+    }
+
     async function scq_log(embed) {
       const ch = await client.channels.fetch(SC_QUIZ_LOGS_CHANNEL_ID).catch(() => null);
       if (ch) await ch.send({ embeds: [embed] }).catch(() => {});
@@ -584,10 +611,12 @@ scq_updateLeaderboard(message.author.id, right ? 1 : 0, right ? 0 : 1);
   // Mantém bloqueado por 5 minutos para não nascer outro quiz por cima
   SC_QUIZ_STATE.currentSatisfied = false;
 
+  const rankInfo = scq_getUserRankStatus(message.author.id);
+
   const winMsg = await message.channel.send({
     embeds: [scq_buildEmbed({
       title: '🏁 Vencedor!',
-      description: `<@${message.author.id}> acertou primeiro! +${SC_QUIZ_POINTS_RIGHT}\n\n🧹 Esta pergunta será limpa automaticamente em **5 minutos**.`,
+      description: `<@${message.author.id}> acertou primeiro! +${SC_QUIZ_POINTS_RIGHT}${rankInfo}\n\n🧹 Esta pergunta será limpa automaticamente em **5 minutos**.`,
       color: 0x2ECC71,
       thumbnail: message.author.displayAvatarURL()
     })],
@@ -621,11 +650,12 @@ scq_updateLeaderboard(message.author.id, right ? 1 : 0, right ? 0 : 1);
     }
   }, 5 * 60 * 1000);
 } else {
+  const rankInfo = scq_getUserRankStatus(message.author.id);
   const errMsg = await message.channel.send({
     content: `💔 Poxa, <@${message.author.id}>...`,
     embeds: [scq_buildEmbed({
       title: '❌ Resposta Incorreta',
-      description: 'Você errou no chat, mas a rodada continua até alguém acertar! 💪',
+      description: `Você errou no chat, mas a rodada continua até alguém acertar! 💪${rankInfo}`,
       color: 0xE74C3C,
       thumbnail: message.author.displayAvatarURL()
     })]
@@ -636,13 +666,14 @@ scq_updateLeaderboard(message.author.id, right ? 1 : 0, right ? 0 : 1);
 }
       } else {
         // Fluxo Diário + DM
+        const rankInfo = scq_getUserRankStatus(message.author.id);
         const resMsg = await message.channel.send({ 
           content: right ? `🌟 Mandou bem, <@${message.author.id}>!` : `💔 Poxa, <@${message.author.id}>...`,
           embeds: [scq_buildEmbed({ 
             title: right ? '✅ Resposta Correta!' : '❌ Resposta Incorreta', 
             description: right 
-              ? 'Você acertou no chat! Agora termine o desafio que te enviei no PV. 🚀' 
-              : 'Você errou no chat, mas não desanime! Ainda pode recuperar pontuando nas perguntas que te mandei no PV! 💪', 
+              ? `Você acertou no chat! Agora termine o desafio que te enviei no PV. 🚀${rankInfo}` 
+              : `Você errou no chat, mas não desanime! Ainda pode recuperar pontuando nas perguntas que te mandei no PV! 💪${rankInfo}`, 
             color: right ? 0x2ECC71 : 0xE74C3C,
             thumbnail: message.author.displayAvatarURL()
           })] 
@@ -684,9 +715,13 @@ scq_updateLeaderboard(message.author.id, right ? 1 : 0, right ? 0 : 1);
         if (hit) { r++; scq_updateLeaderboard(user.id, 1, 0); await dm.send("✅ Correto!"); }
         else { w++; scq_updateLeaderboard(user.id, 0, 1); await dm.send(`❌ Errou! Gabarito: **${q.resposta}**`); }
         
+        const rankInfo = scq_getUserRankStatus(user.id);
+        await dm.send(rankInfo);
+        
         await scq_log(scq_buildEmbed({ title: hit ? '✅ Acerto PV' : '❌ Erro PV', description: `Usuário: <@${user.id}>\nQID: ${q.id}\nResposta: ${collected.first().content}` }));
       }
-      await dm.send({ embeds: [scq_buildEmbed({ title: '📊 Resumo', description: `Chat: ${mainRight ? '✅' : '❌'}\nPV: ✅ ${r} | ❌ ${w}` })] });
+      const finalRank = scq_getUserRankStatus(user.id);
+      await dm.send({ embeds: [scq_buildEmbed({ title: '📊 Resumo', description: `Chat: ${mainRight ? '✅' : '❌'}\nPV: ✅ ${r} | ❌ ${w}${finalRank}` })] });
       await scq_renderRankingSticky();
     }
 
