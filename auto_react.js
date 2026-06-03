@@ -121,7 +121,23 @@ export async function setupAutoReact(client) {
     return selected;
   }
 
-  function buildReactionList(guild) {
+function buildExistingReactionList(message) {
+  const existing = [];
+
+  try {
+    for (const reaction of message.reactions.cache.values()) {
+      if (reaction?.emoji?.id) {
+        existing.push(reaction.emoji.toString());
+      } else if (reaction?.emoji?.name) {
+        existing.push(reaction.emoji.name);
+      }
+    }
+  } catch {}
+
+  return existing;
+}
+
+function buildReactionList(guild) {
     const finalList = [];
     const seen = new Set();
     const priorityCustoms = getPriorityCustomEmojis(guild);
@@ -141,34 +157,89 @@ export async function setupAutoReact(client) {
     return finalList;
   }
 
-  async function reactToMessage(message, mode = "unknown") {
-    if (!message?.guild) return;
-    const reactions = buildReactionList(message.guild);
-    if (!reactions.length) return;
-    for (const emoji of reactions) {
-      await enqueue(async () => {
-        try {
-          const alreadyThere = message.reactions.cache.find((r) => {
-            if (typeof r.emoji.id === "string" && String(emoji).startsWith("<")) {
-              return String(emoji).includes(r.emoji.id);
-            }
-            return r.emoji.name === emoji;
-          });
-          if (alreadyThere?.me) return;
-          
-          // Tentativa agressiva: reage mesmo que outros bots já tenham reagido
-          await message.react(emoji);
-          await sleep(REACTION_DELAY_MS);
-        } catch (err) {
-          const status = Number(err?.status || 0);
-          const code = Number(err?.code || 0);
-          const ignoreCodes = [10008, 30010, 10014, 50001, 50013];
-          if (status === 404 || ignoreCodes.includes(code)) return;
-          console.error(`[AUTO_REACT] erro ao reagir msg=${message.id} modo=${mode} emoji=${emoji}:`, err?.message);
-        }
-      });
-    }
+async function reactToMessage(message, mode = "unknown") {
+  if (!message?.guild) {
+    return { added: 0, alreadyMine: 0, noSlot: 0, failed: 0 };
   }
+
+  try {
+    if (message.partial) {
+      await message.fetch();
+    }
+  } catch {}
+
+  const existingReactions = buildExistingReactionList(message);
+  const defaultReactions = buildReactionList(message.guild);
+
+  const reactions = [];
+  const seen = new Set();
+
+  for (const emoji of [...existingReactions, ...defaultReactions]) {
+    const key = String(emoji);
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    reactions.push(emoji);
+
+    if (reactions.length >= MAX_REACTIONS_PER_MESSAGE) break;
+  }
+
+  const stats = {
+    added: 0,
+    alreadyMine: 0,
+    noSlot: 0,
+    failed: 0,
+  };
+
+  for (const emoji of reactions) {
+    await enqueue(async () => {
+      try {
+        const alreadyThere = message.reactions.cache.find((r) =>
+          reactionMatchesEmoji(r, emoji)
+        );
+
+        if (alreadyThere?.me) {
+          stats.alreadyMine++;
+          return;
+        }
+
+        if (message.reactions.cache.size >= 20 && !alreadyThere) {
+          stats.noSlot++;
+          return;
+        }
+
+        await message.react(emoji);
+        stats.added++;
+      } catch (err) {
+        stats.failed++;
+
+        const msg = String(err?.message || err);
+
+        if (
+          msg.includes("Unknown Emoji") ||
+          msg.includes("Missing Access") ||
+          msg.includes("Missing Permissions") ||
+          msg.includes("Unknown Message") ||
+          msg.includes("Invalid Form Body") ||
+          msg.includes("10014") ||
+          msg.includes("50001") ||
+          msg.includes("50013") ||
+          msg.includes("10008") ||
+          msg.includes("30010") ||
+          err?.code === 30010
+        ) {
+          return;
+        }
+
+        console.error(
+          `[SC_AUTO_REACTS] erro ao reagir msg=${message.id} canal=${message.channel?.id} modo=${mode} emoji=${emoji}:`,
+          err?.message || err
+        );
+      }
+    });
+  }
+
+  return stats;
+}
 
   async function processAutoReactMessage(message, source = "create") {
     if (!message || !message.guild || !message.channel || message.system) return;
