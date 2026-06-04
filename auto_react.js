@@ -208,6 +208,7 @@ async function reactToMessage(message, mode = "unknown") {
     alreadyMine: 0,
     noSlot: 0,
     failed: 0,
+    blocked: 0,
   };
 
   for (const emoji of reactions) {
@@ -239,6 +240,7 @@ async function reactToMessage(message, mode = "unknown") {
           msg.includes("Reaction blocked") ||
           code === 90001
         ) {
+          stats.blocked++;
           return;
         }
 
@@ -315,7 +317,10 @@ async function reactToMessage(message, mode = "unknown") {
 
   async function backfillChannel(channelId, mode, options = {}) {
     const channel = await client.channels.fetch(channelId).catch(() => null);
-    if (!channel) return { scanned: 0, processed: 0 };
+    if (!channel) {
+      console.log(`[AUTO_REACT] canal ${channelId} não encontrado.`);
+      return { scanned: 0, processed: 0, added: 0, alreadyMine: 0, noSlot: 0, failed: 0, blocked: 0 };
+    }
 
     const maxMessages = Number(options.maxMessages || BACKFILL_MAX_MESSAGES);
     const sourceLabel = options.manual ? "manual" : "auto";
@@ -323,12 +328,18 @@ async function reactToMessage(message, mode = "unknown") {
     let lastId = undefined;
     let scanned = 0;
     let processed = 0;
+    let added = 0;
+    let alreadyMine = 0;
+    let noSlot = 0;
+    let failed = 0;
+    let blocked = 0;
 
     console.log(`[AUTO_REACT] backfill ${sourceLabel} iniciado no canal ${channelId}. Limite: ${maxMessages}`);
 
     while (scanned < maxMessages) {
       const remaining = maxMessages - scanned;
       const limit = Math.min(BACKFILL_FETCH_PER_PAGE, remaining);
+
       const messages = await channel.messages.fetch({ limit, before: lastId }).catch((err) => {
         console.error(`[AUTO_REACT] erro ao buscar mensagens do canal ${channelId}:`, err?.message || err);
         return null;
@@ -340,39 +351,82 @@ async function reactToMessage(message, mode = "unknown") {
 
       for (const msg of ordered) {
         scanned++;
+
         if (!msg || msg.system) continue;
         if (IGNORE_BOT_MESSAGES && !shouldProcessBotMessage(msg)) continue;
         if (mode === "media" && !hasMediaContent(msg)) continue;
 
         const stats = await reactToMessage(msg, sourceLabel);
+
+        added += Number(stats?.added || 0);
+        alreadyMine += Number(stats?.alreadyMine || 0);
+        noSlot += Number(stats?.noSlot || 0);
+        failed += Number(stats?.failed || 0);
+        blocked += Number(stats?.blocked || 0);
+
         if ((stats?.added || 0) > 0 || (stats?.alreadyMine || 0) > 0) {
           processed++;
         }
       }
 
-      console.log(`[AUTO_REACT] backfill ${sourceLabel} canal ${channelId} em andamento. Vasculhadas: ${scanned} | Processadas: ${processed}`);
+      console.log(
+        `[AUTO_REACT] backfill ${sourceLabel} canal ${channelId} em andamento. ` +
+        `Vasculhadas: ${scanned} | Processadas: ${processed} | ` +
+        `Add: ${added} | Já minhas: ${alreadyMine} | Sem slot: ${noSlot} | Bloqueadas: ${blocked} | Falhas: ${failed}`
+      );
 
       lastId = ordered[0]?.id;
       if (!lastId || messages.size < limit) break;
     }
 
-    console.log(`[AUTO_REACT] backfill ${sourceLabel} canal ${channelId} concluído. Vasculhadas: ${scanned} | Processadas: ${processed}`);
-    return { scanned, processed };
+    console.log(
+      `[AUTO_REACT] backfill ${sourceLabel} canal ${channelId} concluído. ` +
+      `Vasculhadas: ${scanned} | Processadas: ${processed} | ` +
+      `Add: ${added} | Já minhas: ${alreadyMine} | Sem slot: ${noSlot} | Bloqueadas: ${blocked} | Falhas: ${failed}`
+    );
+
+    return { scanned, processed, added, alreadyMine, noSlot, failed, blocked };
   }
 
   async function backfillChannels(channelIds, mode, options = {}) {
     let totalScanned = 0;
     let totalProcessed = 0;
+    let totalAdded = 0;
+    let totalAlreadyMine = 0;
+    let totalNoSlot = 0;
+    let totalFailed = 0;
+    let totalBlocked = 0;
+
+    console.log(`[AUTO_REACT] backfill em múltiplos canais iniciado. Canais: ${channelIds.join(", ")}`);
 
     for (const channelId of channelIds) {
+      console.log(`[AUTO_REACT] iniciando próximo canal da lista: ${channelId}`);
+
       const result = await backfillChannel(channelId, mode, options);
+
       totalScanned += Number(result?.scanned || 0);
       totalProcessed += Number(result?.processed || 0);
+      totalAdded += Number(result?.added || 0);
+      totalAlreadyMine += Number(result?.alreadyMine || 0);
+      totalNoSlot += Number(result?.noSlot || 0);
+      totalFailed += Number(result?.failed || 0);
+      totalBlocked += Number(result?.blocked || 0);
     }
+
+    console.log(
+      `[AUTO_REACT] backfill em múltiplos canais concluído. ` +
+      `Vasculhadas: ${totalScanned} | Processadas: ${totalProcessed} | ` +
+      `Add: ${totalAdded} | Já minhas: ${totalAlreadyMine} | Sem slot: ${totalNoSlot} | Bloqueadas: ${totalBlocked} | Falhas: ${totalFailed}`
+    );
 
     return {
       scanned: totalScanned,
       processed: totalProcessed,
+      added: totalAdded,
+      alreadyMine: totalAlreadyMine,
+      noSlot: totalNoSlot,
+      failed: totalFailed,
+      blocked: totalBlocked,
     };
   }
 
@@ -421,8 +475,16 @@ async function reactToMessage(message, mode = "unknown") {
         ? await backfillChannels(channelId, mode, { maxMessages: customMaxMessages, manual: true })
         : await backfillChannel(channelId, mode, { maxMessages: customMaxMessages, manual: true });
 
-      await message.reply(`✅ Backfill manual concluído em ${label}.\n• Vasculhadas: **${result?.scanned ?? 0}**\n• Processadas: **${result?.processed ?? 0}**`);
-    } catch (err) {
+      await message.reply(`✅ Backfill manual concluído em ${label}.\n• Vasculhadas: **${result?.scanned ?? 0}**\n• Processadas: **${result?.processed ?? 0}**`);      await message.reply(
+        `✅ Backfill manual concluído em ${label}.\n` +
+        `• Vasculhadas: **${result?.scanned ?? 0}**\n` +
+        `• Processadas: **${result?.processed ?? 0}**\n` +
+        `• Reações adicionadas: **${result?.added ?? 0}**\n` +
+        `• Já eram minhas: **${result?.alreadyMine ?? 0}**\n` +
+        `• Sem espaço: **${result?.noSlot ?? 0}**\n` +
+        `• Bloqueadas pelo Discord: **${result?.blocked ?? 0}**\n` +
+        `• Falhas: **${result?.failed ?? 0}**`
+      );    } catch (err) {
       console.error("[AUTO_REACT] erro no comando manual:", err);
       await message.reply("❌ Deu erro ao rodar o backfill manual.");
     }
@@ -446,28 +508,15 @@ async function reactToMessage(message, mode = "unknown") {
   });
 
   async function startAutoReactBackfill() {
-    console.log("[AUTO_REACT] iniciando backfill automático...");
-    
-    // Backfill para todos os canais de mídia
-    for (const channelId of MEDIA_CHANNEL_IDS) {
-      try {
-        await backfillChannel(channelId, "media", { maxMessages: BACKFILL_MAX_MESSAGES });
-      } catch (err) { console.error(`[AUTO_REACT] erro no backfill do canal ${channelId}:`, err); }
-    }
-
-    // Backfill para o canal geral
-    try {
-      await backfillChannel(ALL_MESSAGES_CHANNEL_ID, "all", { maxMessages: BACKFILL_MAX_MESSAGES });
-    } catch (err) { console.error("[AUTO_REACT] erro no backfill do canal geral:", err); }
-
-    console.log("[AUTO_REACT] backfill automático concluído.");
+    console.log("[AUTO_REACT] backfill automático desativado para evitar conflito com o manual.");
+    return;
   }
 
   if (client.isReady()) {
-    startAutoReactBackfill().catch(err => console.error("[AUTO_REACT] erro ao iniciar:", err));
+    console.log("[AUTO_REACT] sistema pronto. Backfill automático está desativado.");
   } else {
     client.once(Events.ClientReady, async () => {
-      await startAutoReactBackfill();
+      console.log("[AUTO_REACT] sistema pronto. Backfill automático está desativado.");
     });
   }
 }
