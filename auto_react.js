@@ -157,6 +157,21 @@ function buildReactionList(guild) {
     return finalList;
   }
 
+function extractCustomEmojiId(emoji) {
+  const match = String(emoji).match(/^<a?:[^:]+:(\d+)>$/);
+  return match?.[1] || null;
+}
+
+function reactionMatchesEmoji(reaction, emoji) {
+  const customId = extractCustomEmojiId(emoji);
+
+  if (customId) {
+    return reaction?.emoji?.id === customId;
+  }
+
+  return reaction?.emoji?.name === emoji;
+}
+
 async function reactToMessage(message, mode = "unknown") {
   if (!message?.guild) {
     return { added: 0, alreadyMine: 0, noSlot: 0, failed: 0 };
@@ -165,6 +180,11 @@ async function reactToMessage(message, mode = "unknown") {
   try {
     if (message.partial) {
       await message.fetch();
+    }
+
+    const freshMessage = await message.channel.messages.fetch(message.id).catch(() => null);
+    if (freshMessage) {
+      message = freshMessage;
     }
   } catch {}
 
@@ -213,6 +233,14 @@ async function reactToMessage(message, mode = "unknown") {
         stats.failed++;
 
         const msg = String(err?.message || err);
+        const code = err?.code || err?.rawError?.code;
+
+        if (
+          msg.includes("Reaction blocked") ||
+          code === 90001
+        ) {
+          return;
+        }
 
         if (
           msg.includes("Unknown Emoji") ||
@@ -225,13 +253,13 @@ async function reactToMessage(message, mode = "unknown") {
           msg.includes("50013") ||
           msg.includes("10008") ||
           msg.includes("30010") ||
-          err?.code === 30010
+          code === 30010
         ) {
           return;
         }
 
         console.error(
-          `[SC_AUTO_REACTS] erro ao reagir msg=${message.id} canal=${message.channel?.id} modo=${mode} emoji=${emoji}:`,
+          `[AUTO_REACT] erro ao reagir msg=${message.id} canal=${message.channel?.id} modo=${mode} emoji=${emoji}:`,
           err?.message || err
         );
       }
