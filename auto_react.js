@@ -231,8 +231,6 @@ async function reactToMessage(message, mode = "unknown") {
         await message.react(emoji);
         stats.added++;
       } catch (err) {
-        stats.failed++;
-
         const msg = String(err?.message || err);
         const code = err?.code || err?.rawError?.code;
 
@@ -243,6 +241,8 @@ async function reactToMessage(message, mode = "unknown") {
           stats.blocked++;
           return;
         }
+
+        stats.failed++;
 
         if (
           msg.includes("Unknown Emoji") ||
@@ -356,7 +356,8 @@ async function reactToMessage(message, mode = "unknown") {
         if (IGNORE_BOT_MESSAGES && !shouldProcessBotMessage(msg)) continue;
         if (mode === "media" && !hasMediaContent(msg)) continue;
 
-        const stats = await reactToMessage(msg, sourceLabel);
+        const freshMsg = await msg.channel.messages.fetch(msg.id).catch(() => msg);
+        const stats = await reactToMessage(freshMsg, `${sourceLabel}-old`);
 
         added += Number(stats?.added || 0);
         alreadyMine += Number(stats?.alreadyMine || 0);
@@ -367,6 +368,8 @@ async function reactToMessage(message, mode = "unknown") {
         if ((stats?.added || 0) > 0 || (stats?.alreadyMine || 0) > 0) {
           processed++;
         }
+
+        await sleep(REACTION_DELAY_MS);
       }
 
       console.log(
@@ -475,7 +478,7 @@ async function reactToMessage(message, mode = "unknown") {
         ? await backfillChannels(channelId, mode, { maxMessages: customMaxMessages, manual: true })
         : await backfillChannel(channelId, mode, { maxMessages: customMaxMessages, manual: true });
 
-      await message.reply(`✅ Backfill manual concluído em ${label}.\n• Vasculhadas: **${result?.scanned ?? 0}**\n• Processadas: **${result?.processed ?? 0}**`);      await message.reply(
+      await message.reply(
         `✅ Backfill manual concluído em ${label}.\n` +
         `• Vasculhadas: **${result?.scanned ?? 0}**\n` +
         `• Processadas: **${result?.processed ?? 0}**\n` +
@@ -484,7 +487,8 @@ async function reactToMessage(message, mode = "unknown") {
         `• Sem espaço: **${result?.noSlot ?? 0}**\n` +
         `• Bloqueadas pelo Discord: **${result?.blocked ?? 0}**\n` +
         `• Falhas: **${result?.failed ?? 0}**`
-      );    } catch (err) {
+      );
+    } catch (err) {
       console.error("[AUTO_REACT] erro no comando manual:", err);
       await message.reply("❌ Deu erro ao rodar o backfill manual.");
     }
