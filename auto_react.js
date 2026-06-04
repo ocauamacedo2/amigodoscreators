@@ -324,25 +324,56 @@ async function reactToMessage(message, mode = "unknown") {
     let scanned = 0;
     let processed = 0;
 
+    console.log(`[AUTO_REACT] backfill ${sourceLabel} iniciado no canal ${channelId}. Limite: ${maxMessages}`);
+
     while (scanned < maxMessages) {
       const remaining = maxMessages - scanned;
       const limit = Math.min(BACKFILL_FETCH_PER_PAGE, remaining);
-      const messages = await channel.messages.fetch({ limit, before: lastId }).catch(() => null);
+      const messages = await channel.messages.fetch({ limit, before: lastId }).catch((err) => {
+        console.error(`[AUTO_REACT] erro ao buscar mensagens do canal ${channelId}:`, err?.message || err);
+        return null;
+      });
+
       if (!messages?.size) break;
+
       const ordered = [...messages.values()].sort((a, b) => a.createdTimestamp - b.createdTimestamp);
+
       for (const msg of ordered) {
         scanned++;
         if (!msg || msg.system) continue;
         if (IGNORE_BOT_MESSAGES && !shouldProcessBotMessage(msg)) continue;
         if (mode === "media" && !hasMediaContent(msg)) continue;
-        await reactToMessage(msg, sourceLabel);
-        processed++;
+
+        const stats = await reactToMessage(msg, sourceLabel);
+        if ((stats?.added || 0) > 0 || (stats?.alreadyMine || 0) > 0) {
+          processed++;
+        }
       }
+
+      console.log(`[AUTO_REACT] backfill ${sourceLabel} canal ${channelId} em andamento. Vasculhadas: ${scanned} | Processadas: ${processed}`);
+
       lastId = ordered[0]?.id;
       if (!lastId || messages.size < limit) break;
     }
+
     console.log(`[AUTO_REACT] backfill ${sourceLabel} canal ${channelId} concluído. Vasculhadas: ${scanned} | Processadas: ${processed}`);
     return { scanned, processed };
+  }
+
+  async function backfillChannels(channelIds, mode, options = {}) {
+    let totalScanned = 0;
+    let totalProcessed = 0;
+
+    for (const channelId of channelIds) {
+      const result = await backfillChannel(channelId, mode, options);
+      totalScanned += Number(result?.scanned || 0);
+      totalProcessed += Number(result?.processed || 0);
+    }
+
+    return {
+      scanned: totalScanned,
+      processed: totalProcessed,
+    };
   }
 
   async function handleManualBackfillCommand(message) {
@@ -366,9 +397,9 @@ async function reactToMessage(message, mode = "unknown") {
     let label = null;
 
     if (["fotos", "foto", "media", "midia"].includes(targetRaw)) {
-      channelId = MEDIA_CHANNEL_IDS[0]; // Padrão fotos
+      channelId = MEDIA_CHANNEL_IDS;
       mode = "media";
-      label = "canal de fotos/vídeos";
+      label = "todos os canais de fotos/vídeos";
     } else if (["geral", "all"].includes(targetRaw)) {
       channelId = ALL_MESSAGES_CHANNEL_ID;
       mode = "all";
@@ -386,7 +417,10 @@ async function reactToMessage(message, mode = "unknown") {
     await message.reply(`🔄 Iniciando backfill manual no ${label}...\n📦 Limite: **${customMaxMessages}** mensagens.`);
 
     try {
-      const result = await backfillChannel(channelId, mode, { maxMessages: customMaxMessages, manual: true });
+      const result = Array.isArray(channelId)
+        ? await backfillChannels(channelId, mode, { maxMessages: customMaxMessages, manual: true })
+        : await backfillChannel(channelId, mode, { maxMessages: customMaxMessages, manual: true });
+
       await message.reply(`✅ Backfill manual concluído em ${label}.\n• Vasculhadas: **${result?.scanned ?? 0}**\n• Processadas: **${result?.processed ?? 0}**`);
     } catch (err) {
       console.error("[AUTO_REACT] erro no comando manual:", err);
