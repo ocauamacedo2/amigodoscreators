@@ -411,10 +411,10 @@ addS('Organização', 'Sempre que usar poderes, você deve:', [
 ], 1);
 
 addS('Organização', 'O bate ponto da SantaCreators funciona em quais horários?', [
+  '19:00 às 00:00 e 00:30 às 03:30',
   '17:00 às 23:00 e 01:00 às 04:00',
   '18:00 às 23:00 e 00:00 às 03:00',
-  '17:00 às 22:00 e 01:00 às 04:00',
-  '17:00 às 23:00 e 00:00 às 04:00'
+  'Somente 19:00 às 23:00'
 ], 0);
 
 addS('Organização', 'Atualmente, qual destes itens gera pontos no sistema?', [
@@ -455,11 +455,11 @@ addS('Advertência', 'Má conduta envolve:', [
   'Atitudes sem educação e sem postura'
 ], 1);
 
-addS('Advertência', 'Para cargos Coord.+, Resp. Líder e Resp. Influ, os eventos das 19:00 são:', [
-  'Obrigatórios',
-  'Compromissos fixos da liderança',
-  'De presença esperada salvo justificativa',
-  'Parte da obrigação dos cargos citados'
+addS('Advertência', 'Para cargos Coord.+, Resp. Líder e Resp. Influ, a presença nos eventos da operação é:', [
+  'Obrigatória no acompanhamento da operação, respeitando cronograma atual e justificativa quando necessário',
+  'Obrigatória apenas em evento fixo das 19:00',
+  'Facultativa se a pessoa tiver feito pontos na semana',
+  'Necessária somente quando houver premiação em dinheiro'
 ], 0);
 
 addS('Advertência', 'Caso não possa comparecer ao evento das 19:00, é obrigatório:', [
@@ -545,12 +545,12 @@ addS('Social Médias', 'Os eventos da SantaCreators acontecem em quais dias?', [
   'Seis dias por semana, sem domingo'
 ], 0);
 
-addS('Social Médias', 'O horário padrão dos eventos é:', [
-  '19:00',
-  '20:00 com chamada antes',
-  '19:00 como horário-base',
-  'Por volta das 19:00'
-], 0);
+addS('Social Médias', 'Na operação atual, qual opção descreve melhor os horários dos eventos?', [
+  'Um horário fixo de 19:00 para todos os dias',
+  'Uma agenda fixa apenas às 20:00',
+  'Horários definidos por cronograma, com 21:00, 23:00, 23:30, 00:00 e 01:00 conforme a operação',
+  'Somente eventos de madrugada sem cronograma'
+], 2);
 
 addS('Social Médias', 'O cronograma da semana deve ser organizado em qual dia?', [
   'Domingo',
@@ -1965,5 +1965,1409 @@ addS('Conduta', 'O "Comprometimento" na empresa é avaliado por:', ['Presença, 
 addS('Organização', 'Se você é Coord.+ e não avisou que ia faltar, você perde:', ['100 pontos', '5 pontos e recebe ADV 1/3 permanente', 'A skin do personagem', 'O acesso à sede por 1 mês'], 1);
 addS('Imersão', 'O RP de verdade, segundo a SantaCreators, se faz com:', ['Armas caras', 'Atitude, postura e respeito', 'Gritos e polêmicas', 'Muitos comandos de F8'], 1);
 addS('Imersão', 'A imersão na cidade começa com:', ['O Admin', 'Você (cada membro fazendo sua parte)', 'O mapa novo', 'O rádio da empresa'], 1);
+
+// =========================
+// NOVAS 200 QUESTÕES — MANUAL ATUAL SANTACREATORS
+// Inserir antes de: export const SC_QUIZ_BANK = Q;
+// =========================
+addS('Conduta', 'A SantaCreators existe principalmente para quê?', [
+  'Criar conteúdo, entretenimento, experiências e desenvolver pessoas',
+  'Ser apenas uma empresa de eventos com prédio próprio',
+  'Reunir membros para conviver sem processo interno',
+  'Funcionar como uma staff informal da cidade'
+], 0);
+
+addS('Conduta', 'Qual interpretação mais correta sobre a frase “não é só mais uma empresa de RP”?', [
+  'A empresa possui cultura, processo, desenvolvimento e responsabilidade',
+  'A empresa possui menos regras por ser criativa',
+  'A empresa só aceita pessoas famosas ou influenciadores grandes',
+  'A empresa existe apenas para entregar premiações'
+], 0);
+
+addS('Conduta', 'O que a empresa mais observa em alguém que quer crescer?', [
+  'Participação, postura, responsabilidade e constância',
+  'Apenas quantidade de seguidores e clips postados',
+  'Amizade com liderança e tempo parado em call',
+  'Saber todos os comandos antes de entrar'
+], 0);
+
+addS('Conduta', 'Uma pessoa talentosa, mas ausente e sem participação, tende a:', [
+  'Evoluir menos que alguém presente e comprometido',
+  'Ser promovida mais rápido por ter talento natural',
+  'Receber cargo por não precisar de acompanhamento',
+  'Entrar direto na gestaoinfluencer'
+], 0);
+
+addS('Organização', 'O domingo operacional da SantaCreators serve principalmente para:', [
+  'Planejamento, revisão de cronogramas, organização e preparação',
+  'Aplicar punições antigas e zerar todas as regras',
+  'Fazer apenas eventos sem revisar nada',
+  'Cancelar demandas da semana anterior'
+], 0);
+
+addS('Organização', 'A regra “se não foi registrado, não aconteceu” significa que:', [
+  'O trabalho precisa de comprovação, histórico e documentação',
+  'Só vale registrar quando alguém da liderança cobrar',
+  'Registro é opcional quando a tarefa foi bem feita',
+  'A fala em call substitui qualquer registro'
+], 0);
+
+addS('Organização', 'Por que a SantaCreators evita resolver assuntos oficiais apenas por DM?', [
+  'Para manter transparência, histórico e evitar mal-entendidos',
+  'Porque DM nunca deve ser usada em nenhuma situação',
+  'Porque apenas responsáveis podem conversar no privado',
+  'Porque registro só importa em casos de punição'
+], 0);
+
+addS('Organização', 'Quando existe um problema interno, o fluxo mais correto é:', [
+  'Procurar liderança direta, coordenação ou responsáveis conforme a necessidade',
+  'Pular direto para o Owner em qualquer situação simples',
+  'Resolver em conversa paralela sem deixar histórico',
+  'Comentar com terceiros até alguém resolver'
+], 0);
+
+addS('Imersão', 'O que melhor define imersão dentro da SantaCreators?', [
+  'Agir de forma coerente com o universo do personagem',
+  'Falar o mínimo possível durante qualquer cena',
+  'Usar comandos de F8 para resolver cenas rapidamente',
+  'Evitar participar de RP com desconhecidos'
+], 0);
+
+addS('Imersão', 'Qual frase mantém melhor a imersão ao precisar sair de uma cena?', [
+  'Vou meditar um pouco e já volto quando estiver melhor',
+  'Meu teclado parou e preciso reiniciar o PC',
+  'Meu Discord bugou, espera eu reconectar',
+  'Vou no banheiro rapidinho, segura aí'
+], 0);
+
+addS('Imersão', 'Um comportamento técnico possível no jogo, mas incoerente no RP, é tratado como:', [
+  'Anti-RP',
+  'Apenas estilo de gameplay',
+  'Permissão administrativa automática',
+  'RP criativo sem limite'
+], 0);
+
+addS('Imersão', 'Se algo bugado acontecer em cena, a melhor postura é:', [
+  'Contornar com criatividade sem trazer o off diretamente',
+  'Parar tudo e explicar o bug para todos',
+  'Rir no personagem falando de Discord e teclado',
+  'Usar poder para corrigir sem registrar nada'
+], 0);
+
+addS('Uniforme', 'Dentro do prédio da SantaCreators, a regra atual exige:', [
+  'Jaqueta oficial da SantaCreators',
+  'Qualquer peça escura parecida com uniforme',
+  'Apenas estar com cargo no Discord',
+  'Uma peça da empresa, mesmo sem jaqueta'
+], 0);
+
+addS('Uniforme', 'Nos arredores da sede ou ao usar garagem, o membro deve:', [
+  'Usar pelo menos uma peça oficial da empresa',
+  'Usar obrigatoriamente o uniforme completo',
+  'Ficar identificado apenas se houver evento',
+  'Usar qualquer roupa desde que esteja em call'
+], 0);
+
+addS('Uniforme', 'A falta de identificação perto da sede pode gerar advertência porque:', [
+  'Afeta imagem, organização e reconhecimento da empresa',
+  'Só atrapalha quando há transmissão ao vivo',
+  'Impede o sistema de contar pontos automaticamente',
+  'É proibido apenas para membros novos'
+], 0);
+
+addS('Uniforme', 'O uniforme oficial representa principalmente:', [
+  'Identidade, pertencimento e responsabilidade ao representar a empresa',
+  'Vantagem hierárquica para mandar em outros players',
+  'Permissão para usar veículos em qualquer RP',
+  'Obrigação estética sem relação com cultura'
+], 0);
+
+addS('Veículos', 'Os veículos da SantaCreators devem ser usados para:', [
+  'Eventos, operações e deslocamentos relacionados à empresa',
+  'Troca de tiro, assalto e ações pessoais rápidas',
+  'Substituir qualquer garagem pessoal do membro',
+  'Emprestar para aliados de fora da empresa'
+], 0);
+
+addS('Veículos', 'Usar veículo da empresa em ação ilegal sem contexto adequado é problema porque:', [
+  'Expõe a imagem e desvia a finalidade do recurso',
+  'É permitido se o membro estiver sem uniforme',
+  'Só vira erro quando alguém grava em vídeo',
+  'É uma escolha individual sem efeito na empresa'
+], 0);
+
+addS('Veículos', 'Spawnar veículo no mundo padrão na frente de players é:', [
+  'Falha grave de conduta e abuso de poder',
+  'Uma forma aceitável de agilizar eventos',
+  'Permitido quando o veículo é da própria empresa',
+  'Apenas quebra leve se não houver combate'
+], 0);
+
+addS('Veículos', 'Ao usar recurso da empresa, a mentalidade correta é:', [
+  'Zelo, responsabilidade e cuidado com o patrimônio coletivo',
+  'Usar o máximo possível antes que outro use',
+  'Priorizar benefício pessoal se estiver com pressa',
+  'Pedir desculpa apenas se alguém perceber'
+], 0);
+
+addS('Baús', 'A regra geral dos baús da empresa é:', [
+  'Usar com consciência, controle e finalidade correta',
+  'Retirar bastante para garantir estoque pessoal',
+  'Usar livremente se a pessoa tiver cargo alto',
+  'Pegar primeiro e justificar depois'
+], 0);
+
+addS('Baús', 'O baú creators existe principalmente para:', [
+  'Doações e entregas ligadas à operação',
+  'Consumo livre dos membros mais ativos',
+  'Guardar itens pessoais de responsáveis',
+  'Venda particular sem divisão'
+], 0);
+
+addS('Baús', 'No baú geral, uma retirada correta é aquela que:', [
+  'Pega apenas o necessário e não prejudica os demais',
+  'Garante estoque individual para a semana toda',
+  'Retira para revender e depois repor se lembrar',
+  'É feita sem pensar no coletivo'
+], 0);
+
+addS('Baús', 'Por que retirar do baú creators para uso pessoal é errado?', [
+  'Porque desvia a finalidade de doações e entregas',
+  'Porque apenas novatos são proibidos de retirar',
+  'Porque só pode retirar depois das 23:30',
+  'Porque o baú serve para lucro pessoal'
+], 0);
+
+addS('Poderes', 'A filosofia correta sobre poderes é:', [
+  'Poder é responsabilidade, não privilégio pessoal',
+  'Poder serve para facilitar a vida do membro',
+  'Quem tem poder pode corrigir qualquer RP na hora',
+  'Poder substitui registro quando usado corretamente'
+], 0);
+
+addS('Poderes', 'Usar poder para vantagem própria ou de amigos é:', [
+  'Abuso de poder',
+  'Autonomia de gestão',
+  'Apoio informal permitido',
+  'Erro leve sem impacto'
+], 0);
+
+addS('Poderes', 'Quando houver dúvida sobre usar um poder, o correto é:', [
+  'Perguntar antes e validar o contexto',
+  'Usar primeiro e explicar no registro',
+  'Evitar registrar para não gerar confusão',
+  'Pedir para um amigo confirmar'
+], 0);
+
+addS('Poderes', 'O registro de poderes existe para garantir:', [
+  'Transparência, controle e responsabilidade',
+  'Apenas contagem automática de dinheiro',
+  'Permissão para usar comandos fora da empresa',
+  'Substituição de qualquer alinhamento'
+], 0);
+
+addS('GI', 'A gestaoinfluencer é melhor definida como:', [
+  'Núcleo interno administrativo da própria SantaCreators',
+  'Staff da cidade voltada a punir jogadores',
+  'Equipe separada que funciona independente da empresa',
+  'Cargo único entregue por formulário'
+], 0);
+
+addS('GI', 'A entrada na gestaoinfluencer acontece por:', [
+  'Evolução, confiança, participação e convite',
+  'Pedido direto em formulário público',
+  'Tempo de Discord sem atuação prática',
+  'Indicação de amizade sem observação'
+], 0);
+
+addS('GI', 'A missão final da gestaoinfluencer é:', [
+  'Formar pessoas capazes de fortalecer a SantaCreators',
+  'Distribuir cargos e poderes para quem pedir',
+  'Controlar a cidade como staff administrativa',
+  'Separar a gestão do restante da empresa'
+], 0);
+
+addS('GI', 'Possuir cargo na gestão não significa automaticamente:', [
+  'Ter acesso total a todas as permissões',
+  'Ter responsabilidades maiores que antes',
+  'Ser observado pela liderança',
+  'Precisar manter postura'
+], 0);
+
+addS('Hierarquia', 'No painel oficial, o Nível 3 representa:', [
+  'Creator',
+  'Resp Líder',
+  'Coord Creators',
+  'Social Media e Manager'
+], 0);
+
+addS('Hierarquia', 'No painel oficial, o Nível 2 reúne:', [
+  'Social Medias, Manager, Gestor e Coord',
+  'Apenas Resp Influ e Resp Creators',
+  'Somente Creator e Creator Líder',
+  'Todos os membros sem função'
+], 0);
+
+addS('Hierarquia', 'No painel oficial, o Nível 1 representa:', [
+  'Responsáveis da liderança operacional',
+  'Base de entrada da empresa',
+  'Área exclusiva dos Managers',
+  'Equipe temporária de eventos'
+], 0);
+
+addS('Hierarquia', 'O caminho natural de evolução é melhor representado por:', [
+  'Creator > Creator Líder > Social/Manager > Gestor > Coord > Responsáveis',
+  'Creator > Responsável > Manager > Social > Coord',
+  'Social > Creator > Gestor > Resp Creators',
+  'Manager > Creator > Resp Influ > Equipe Social'
+], 0);
+
+addS('Creator', 'O Creator é importante porque:', [
+  'Sustenta comunidade, movimentação, crescimento e retenção',
+  'É apenas um cargo decorativo antes da gestão',
+  'Serve somente para preencher lista de membros',
+  'Recebe todas as permissões administrativas'
+], 0);
+
+addS('Creator', 'O Creator não precisa entrar sabendo tudo, mas precisa:', [
+  'Demonstrar interesse, participação e vontade de aprender',
+  'Cobrar promoção antes de participar',
+  'Escolher cargo alto logo na entrada',
+  'Focar apenas em premiação'
+], 0);
+
+addS('Creator Líder', 'O Creator Líder representa:', [
+  'Primeiro passo dentro da gestão e formação de liderança',
+  'Cargo máximo da equipe de eventos',
+  'Função externa sem ligação com Social/Manager',
+  'Cargo automático para quem faz live'
+], 0);
+
+addS('Creator Líder', 'O Creator Líder é formado por quais bases?', [
+  'Equipe Social Medias e Equipe Manager',
+  'Gestor e Coordenação apenas',
+  'Resp Líder e Resp Influ',
+  'Staff e Marketing'
+], 0);
+
+addS('Social Médias', 'A Social Media constrói a experiência porque cuida de:', [
+  'Eventos, cronogramas, premiações, hall da fama e registros',
+  'Apenas convites de líderes e facções',
+  'Punições da cidade e denúncias gerais',
+  'Somente roupas pessoais dos membros'
+], 0);
+
+addS('Social Médias', 'A escolha dos eventos importa porque eles existem para:', [
+  'Movimentar cidades, gerar retenção e entretenimento',
+  'Distribuir prêmio sem estratégia',
+  'Aumentar cargos automaticamente',
+  'Substituir presença da liderança'
+], 0);
+
+addS('Social Médias', 'A regra de repetição do cronograma impede repetir:', [
+  'Mesmo evento, mesma cidade e mesmo dia da semana anterior',
+  'Qualquer evento que já aconteceu no mês',
+  'Qualquer cidade usada por outra equipe',
+  'Qualquer premiação com VIP'
+], 0);
+
+addS('Social Médias', 'Após eventos, o registro de presença/poderes serve para:', [
+  'Criar histórico da atuação da equipe',
+  'Apenas mostrar quem ganhou o evento',
+  'Substituir pagamento e hall da fama',
+  'Evitar que Managers precisem registrar orgs'
+], 0);
+
+addS('Manager', 'A missão central do Manager é:', [
+  'Garantir organizações presentes nos eventos',
+  'Criar sozinho todos os cronogramas',
+  'Aplicar punição em organização ausente',
+  'Montar hall da fama das cidades'
+], 0);
+
+addS('Manager', 'O Manager deve confirmar participação com:', [
+  'Liderança oficial da organização',
+  'Qualquer membro que responda rápido',
+  'Terceiros que conhecem a facção',
+  'Apenas prints antigos de presença'
+], 0);
+
+addS('Manager', 'Registrar organização sem confirmação direta do líder é:', [
+  'Incorreto e fora do procedimento',
+  'Aceitável se muitos membros prometerem ir',
+  'Correto quando o evento está vazio',
+  'Permitido se for cidade Nobre'
+], 0);
+
+addS('Manager', 'A relação correta entre Social Media e Manager é:', [
+  'Social cria o evento e Manager leva participantes',
+  'Manager substitui Social quando há pouco contingente',
+  'Social cuida apenas de imagem e Manager de tudo',
+  'São áreas rivais com objetivos opostos'
+], 0);
+
+addS('Gestor', 'O Gestor existe principalmente para:', [
+  'Desenvolver pessoas em formação',
+  'Produzir tudo sozinho para ganhar pontos',
+  'Substituir permanentemente Coordenação',
+  'Aprovar premiação sem supervisão'
+], 0);
+
+addS('Gestor', 'Um Gestor obrigatoriamente veio de:', [
+  'Social Media ou Manager Creators',
+  'Creator recém-entrado sem área',
+  'Resp Influ ou Resp Creators',
+  'Qualquer staff externa'
+], 0);
+
+addS('Gestor', 'O Gestor ensina principalmente membros em fase:', [
+  'Inicial/GI 5, que ainda estão aprendendo',
+  'De Resp Creators, já no topo',
+  'Externa à SantaCreators',
+  'Sem vínculo com a empresa'
+], 0);
+
+addS('Gestor', 'Um feedback útil precisa conter:', [
+  'Pontos fortes, dificuldades, evolução, comportamento e desempenho',
+  'Apenas elogio curto para motivar',
+  'Somente crítica sem contexto',
+  'Uma frase genérica para economizar tempo'
+], 0);
+
+addS('Coordenação', 'O Coord enxerga a operação de forma:', [
+  'Completa, atravessando Social, Manager e Gestor',
+  'Limitada apenas à área de origem',
+  'Exclusiva de punições disciplinares',
+  'Voltada apenas a premiações VIP'
+], 0);
+
+addS('Coordenação', 'Quando falta alguém em uma área, o Coord deve:', [
+  'Assumir temporariamente sem centralizar para sempre',
+  'Cancelar a área até o responsável voltar',
+  'Fazer tudo sozinho permanentemente',
+  'Ignorar se não for sua área favorita'
+], 0);
+
+addS('Coordenação', 'O Coord não deve centralizar tudo porque o objetivo é:', [
+  'Fortalecer equipes, não substituir equipes permanentemente',
+  'Mostrar que só ele trabalha bem',
+  'Impedir Gestores de ensinar',
+  'Concentrar pontos em uma pessoa'
+], 0);
+
+addS('Coordenação', 'A diferença mais clara entre Gestor e Coord é:', [
+  'Gestor foca evolução do membro; Coord foca funcionamento da equipe',
+  'Gestor manda mais que Coord em eventos',
+  'Coord só registra e Gestor só pune',
+  'Não existe diferença prática'
+], 0);
+
+addS('Responsáveis', 'O Resp Líder acompanha principalmente:', [
+  'Liderança, desenvolvimento, registros e evolução da equipe',
+  'Apenas o próprio desempenho individual',
+  'Somente skins e comandos de F8',
+  'Apenas pagamentos de VIP'
+], 0);
+
+addS('Responsáveis', 'O Resp Líder não deve simplesmente executar tudo porque precisa:', [
+  'Ensinar, orientar, acompanhar e formar líderes',
+  'Evitar qualquer contato com a base',
+  'Ficar somente em call de diretoria',
+  'Delegar tudo sem acompanhar'
+], 0);
+
+addS('Responsáveis', 'O Resp Influ tem foco em:', [
+  'Estabilidade, disciplina, organização e funcionamento da gestão',
+  'Apenas cronograma visual de eventos',
+  'Somente criação de roupas e imagens',
+  'Substituir todos os Managers'
+], 0);
+
+addS('Responsáveis', 'O Resp Creators é responsável por:', [
+  'Supervisão completa, estratégia, premiações e decisões importantes',
+  'Apenas presença em evento de sábado',
+  'Somente registro de organizações',
+  'Função decorativa acima do Coord'
+], 0);
+
+addS('Tiers', 'O tier mede principalmente:', [
+  'Maturidade, liderança, autonomia, responsabilidade e visão de gestão',
+  'Quantidade de horas online sem qualidade',
+  'Apenas número de eventos vencidos',
+  'Somente cargo atual no Discord'
+], 0);
+
+addS('Tiers', 'Duas pessoas com o mesmo cargo podem ter tiers diferentes porque:', [
+  'Tier representa qualidade de liderança, não só cargo',
+  'O sistema sorteia tiers por antiguidade',
+  'Tier depende apenas de amizade com responsável',
+  'Cargo e tier são exatamente a mesma coisa'
+], 0);
+
+addS('Tiers', 'A ordem correta dos tiers é:', [
+  'Teste > T1 > T2 > T3 > T4 > T5',
+  'T5 > T1 > Teste > T3 > T2',
+  'T1 > Teste > T5 > T4 > T2',
+  'Coord > Creator > T1 > Resp'
+], 0);
+
+addS('Tiers', 'O T5 representa alguém com:', [
+  'Visão estratégica, autonomia completa e preparo para liderança máxima',
+  'Apenas mais pontos no mês atual',
+  'Permissão para ignorar registros',
+  'Cargo de entrada em teste'
+], 0);
+
+addS('Registros', 'Os dashboards existem para:', [
+  'Transformar registros em informações visuais de acompanhamento',
+  'Substituir completamente avaliação humana',
+  'Mostrar apenas quem está online no Discord',
+  'Guardar punições sem relação com produtividade'
+], 0);
+
+addS('Registros', 'O ranking geral deve ser entendido como:', [
+  'Indicador de contribuição e produtividade, sem substituir qualidade',
+  'Prova absoluta de quem deve ser promovido sempre',
+  'Sistema apenas estético sem utilidade',
+  'Lista de quem tem mais cargo'
+], 0);
+
+addS('Registros', 'Um evento bem executado costuma gerar:', [
+  'Pagamento, hall da fama, poderes, pontuação e dashboard',
+  'Apenas print do vencedor e fim',
+  'Somente convite de organização',
+  'Nenhum registro se todos estavam em call'
+], 0);
+
+addS('Registros', 'A liderança toma decisões melhores quando possui:', [
+  'Histórico, registros, números e dashboards',
+  'Opiniões soltas sem comprovação',
+  'Apenas mensagens privadas antigas',
+  'Impressões de quem fala mais alto'
+], 0);
+
+addS('Horários', 'O bate ponto atual da SantaCreators funciona em quais janelas?', [
+  '19:00 às 00:00 e 00:30 às 03:30',
+  '17:00 às 23:00 e 01:00 às 04:00',
+  '18:00 às 23:00 e 00:00 às 03:00',
+  'Somente 19:00 às 23:00'
+], 0);
+
+addS('Horários', 'Sobre eventos da SantaCreators, a regra atual deixou de ser:', [
+  'Um horário fixo simples de 19:00 para tudo',
+  'Uma operação com planejamento semanal',
+  'Uma agenda ligada às cidades da operação',
+  'Uma estrutura com registros e responsáveis'
+], 0);
+
+addS('Horários', 'Na operação atual, segunda-feira tem como cidade principal:', [
+  'Maresia',
+  'Grande',
+  'Santa',
+  'Nobre'
+], 0);
+
+addS('Horários', 'Na operação atual, terça-feira tem como cidade principal:', [
+  'Grande',
+  'Maresia',
+  'Santa',
+  'Nobre'
+], 0);
+
+addS('Horários', 'Na operação atual, quarta-feira tem como cidade principal:', [
+  'Santa',
+  'Nobre',
+  'Grande',
+  'Maresia'
+], 0);
+
+addS('Horários', 'Na operação atual, quinta, sexta e sábado concentram-se principalmente em:', [
+  'Nobre',
+  'Santa',
+  'Maresia',
+  'Grande'
+], 0);
+
+addS('Horários', 'A Nobre é tratada como centro operacional porque:', [
+  'Concentra eventos importantes, especialmente de retenção',
+  'É a única cidade onde existe SantaCreators',
+  'Não precisa de registros por ser principal',
+  'Substitui todas as demais cidades'
+], 0);
+
+addS('Horários', 'Quando a liderança não puder acompanhar a operação, deve:', [
+  'Justificar previamente no fluxo correto e dentro do prazo',
+  'Avisar apenas depois se alguém cobrar',
+  'Pedir para um membro comum esconder a falta',
+  'Ignorar se tiver feito pontos na semana'
+], 0);
+
+addS('Conduta', 'Em uma situação prática: a SantaCreators existe principalmente para quê?', [
+  'Ser apenas uma empresa de eventos com prédio próprio',
+  'Criar conteúdo, entretenimento, experiências e desenvolver pessoas',
+  'Reunir membros para conviver sem processo interno',
+  'Funcionar como uma staff informal da cidade'
+], 1);
+
+addS('Conduta', 'Em uma situação prática: qual interpretação mais correta sobre a frase “não é só mais uma empresa de RP”?', [
+  'A empresa possui menos regras por ser criativa',
+  'A empresa possui cultura, processo, desenvolvimento e responsabilidade',
+  'A empresa só aceita pessoas famosas ou influenciadores grandes',
+  'A empresa existe apenas para entregar premiações'
+], 1);
+
+addS('Conduta', 'Em uma situação prática: o que a empresa mais observa em alguém que quer crescer?', [
+  'Apenas quantidade de seguidores e clips postados',
+  'Participação, postura, responsabilidade e constância',
+  'Amizade com liderança e tempo parado em call',
+  'Saber todos os comandos antes de entrar'
+], 1);
+
+addS('Conduta', 'Em uma situação prática: uma pessoa talentosa, mas ausente e sem participação, tende a:', [
+  'Ser promovida mais rápido por ter talento natural',
+  'Evoluir menos que alguém presente e comprometido',
+  'Receber cargo por não precisar de acompanhamento',
+  'Entrar direto na gestaoinfluencer'
+], 1);
+
+addS('Organização', 'Em uma situação prática: o domingo operacional da SantaCreators serve principalmente para:', [
+  'Aplicar punições antigas e zerar todas as regras',
+  'Planejamento, revisão de cronogramas, organização e preparação',
+  'Fazer apenas eventos sem revisar nada',
+  'Cancelar demandas da semana anterior'
+], 1);
+
+addS('Organização', 'Em uma situação prática: a regra “se não foi registrado, não aconteceu” significa que:', [
+  'Só vale registrar quando alguém da liderança cobrar',
+  'O trabalho precisa de comprovação, histórico e documentação',
+  'Registro é opcional quando a tarefa foi bem feita',
+  'A fala em call substitui qualquer registro'
+], 1);
+
+addS('Organização', 'Em uma situação prática: por que a SantaCreators evita resolver assuntos oficiais apenas por DM?', [
+  'Porque DM nunca deve ser usada em nenhuma situação',
+  'Para manter transparência, histórico e evitar mal-entendidos',
+  'Porque apenas responsáveis podem conversar no privado',
+  'Porque registro só importa em casos de punição'
+], 1);
+
+addS('Organização', 'Em uma situação prática: quando existe um problema interno, o fluxo mais correto é:', [
+  'Pular direto para o Owner em qualquer situação simples',
+  'Procurar liderança direta, coordenação ou responsáveis conforme a necessidade',
+  'Resolver em conversa paralela sem deixar histórico',
+  'Comentar com terceiros até alguém resolver'
+], 1);
+
+addS('Imersão', 'Em uma situação prática: o que melhor define imersão dentro da SantaCreators?', [
+  'Falar o mínimo possível durante qualquer cena',
+  'Agir de forma coerente com o universo do personagem',
+  'Usar comandos de F8 para resolver cenas rapidamente',
+  'Evitar participar de RP com desconhecidos'
+], 1);
+
+addS('Imersão', 'Em uma situação prática: qual frase mantém melhor a imersão ao precisar sair de uma cena?', [
+  'Meu teclado parou e preciso reiniciar o PC',
+  'Vou meditar um pouco e já volto quando estiver melhor',
+  'Meu Discord bugou, espera eu reconectar',
+  'Vou no banheiro rapidinho, segura aí'
+], 1);
+
+addS('Imersão', 'Em uma situação prática: um comportamento técnico possível no jogo, mas incoerente no RP, é tratado como:', [
+  'Apenas estilo de gameplay',
+  'Anti-RP',
+  'Permissão administrativa automática',
+  'RP criativo sem limite'
+], 1);
+
+addS('Imersão', 'Em uma situação prática: se algo bugado acontecer em cena, a melhor postura é:', [
+  'Parar tudo e explicar o bug para todos',
+  'Contornar com criatividade sem trazer o off diretamente',
+  'Rir no personagem falando de Discord e teclado',
+  'Usar poder para corrigir sem registrar nada'
+], 1);
+
+addS('Uniforme', 'Em uma situação prática: dentro do prédio da SantaCreators, a regra atual exige:', [
+  'Qualquer peça escura parecida com uniforme',
+  'Jaqueta oficial da SantaCreators',
+  'Apenas estar com cargo no Discord',
+  'Uma peça da empresa, mesmo sem jaqueta'
+], 1);
+
+addS('Uniforme', 'Em uma situação prática: nos arredores da sede ou ao usar garagem, o membro deve:', [
+  'Usar obrigatoriamente o uniforme completo',
+  'Usar pelo menos uma peça oficial da empresa',
+  'Ficar identificado apenas se houver evento',
+  'Usar qualquer roupa desde que esteja em call'
+], 1);
+
+addS('Uniforme', 'Em uma situação prática: a falta de identificação perto da sede pode gerar advertência porque:', [
+  'Só atrapalha quando há transmissão ao vivo',
+  'Afeta imagem, organização e reconhecimento da empresa',
+  'Impede o sistema de contar pontos automaticamente',
+  'É proibido apenas para membros novos'
+], 1);
+
+addS('Uniforme', 'Em uma situação prática: o uniforme oficial representa principalmente:', [
+  'Vantagem hierárquica para mandar em outros players',
+  'Identidade, pertencimento e responsabilidade ao representar a empresa',
+  'Permissão para usar veículos em qualquer RP',
+  'Obrigação estética sem relação com cultura'
+], 1);
+
+addS('Veículos', 'Em uma situação prática: os veículos da SantaCreators devem ser usados para:', [
+  'Troca de tiro, assalto e ações pessoais rápidas',
+  'Eventos, operações e deslocamentos relacionados à empresa',
+  'Substituir qualquer garagem pessoal do membro',
+  'Emprestar para aliados de fora da empresa'
+], 1);
+
+addS('Veículos', 'Em uma situação prática: usar veículo da empresa em ação ilegal sem contexto adequado é problema porque:', [
+  'É permitido se o membro estiver sem uniforme',
+  'Expõe a imagem e desvia a finalidade do recurso',
+  'Só vira erro quando alguém grava em vídeo',
+  'É uma escolha individual sem efeito na empresa'
+], 1);
+
+addS('Veículos', 'Em uma situação prática: spawnar veículo no mundo padrão na frente de players é:', [
+  'Uma forma aceitável de agilizar eventos',
+  'Falha grave de conduta e abuso de poder',
+  'Permitido quando o veículo é da própria empresa',
+  'Apenas quebra leve se não houver combate'
+], 1);
+
+addS('Veículos', 'Em uma situação prática: ao usar recurso da empresa, a mentalidade correta é:', [
+  'Usar o máximo possível antes que outro use',
+  'Zelo, responsabilidade e cuidado com o patrimônio coletivo',
+  'Priorizar benefício pessoal se estiver com pressa',
+  'Pedir desculpa apenas se alguém perceber'
+], 1);
+
+addS('Baús', 'Em uma situação prática: a regra geral dos baús da empresa é:', [
+  'Retirar bastante para garantir estoque pessoal',
+  'Usar com consciência, controle e finalidade correta',
+  'Usar livremente se a pessoa tiver cargo alto',
+  'Pegar primeiro e justificar depois'
+], 1);
+
+addS('Baús', 'Em uma situação prática: o baú creators existe principalmente para:', [
+  'Consumo livre dos membros mais ativos',
+  'Doações e entregas ligadas à operação',
+  'Guardar itens pessoais de responsáveis',
+  'Venda particular sem divisão'
+], 1);
+
+addS('Baús', 'Em uma situação prática: no baú geral, uma retirada correta é aquela que:', [
+  'Garante estoque individual para a semana toda',
+  'Pega apenas o necessário e não prejudica os demais',
+  'Retira para revender e depois repor se lembrar',
+  'É feita sem pensar no coletivo'
+], 1);
+
+addS('Baús', 'Em uma situação prática: por que retirar do baú creators para uso pessoal é errado?', [
+  'Porque apenas novatos são proibidos de retirar',
+  'Porque desvia a finalidade de doações e entregas',
+  'Porque só pode retirar depois das 23:30',
+  'Porque o baú serve para lucro pessoal'
+], 1);
+
+addS('Poderes', 'Em uma situação prática: a filosofia correta sobre poderes é:', [
+  'Poder serve para facilitar a vida do membro',
+  'Poder é responsabilidade, não privilégio pessoal',
+  'Quem tem poder pode corrigir qualquer RP na hora',
+  'Poder substitui registro quando usado corretamente'
+], 1);
+
+addS('Poderes', 'Em uma situação prática: usar poder para vantagem própria ou de amigos é:', [
+  'Autonomia de gestão',
+  'Abuso de poder',
+  'Apoio informal permitido',
+  'Erro leve sem impacto'
+], 1);
+
+addS('Poderes', 'Em uma situação prática: quando houver dúvida sobre usar um poder, o correto é:', [
+  'Usar primeiro e explicar no registro',
+  'Perguntar antes e validar o contexto',
+  'Evitar registrar para não gerar confusão',
+  'Pedir para um amigo confirmar'
+], 1);
+
+addS('Poderes', 'Em uma situação prática: o registro de poderes existe para garantir:', [
+  'Apenas contagem automática de dinheiro',
+  'Transparência, controle e responsabilidade',
+  'Permissão para usar comandos fora da empresa',
+  'Substituição de qualquer alinhamento'
+], 1);
+
+addS('GI', 'Em uma situação prática: a gestaoinfluencer é melhor definida como:', [
+  'Staff da cidade voltada a punir jogadores',
+  'Núcleo interno administrativo da própria SantaCreators',
+  'Equipe separada que funciona independente da empresa',
+  'Cargo único entregue por formulário'
+], 1);
+
+addS('GI', 'Em uma situação prática: a entrada na gestaoinfluencer acontece por:', [
+  'Pedido direto em formulário público',
+  'Evolução, confiança, participação e convite',
+  'Tempo de Discord sem atuação prática',
+  'Indicação de amizade sem observação'
+], 1);
+
+addS('GI', 'Em uma situação prática: a missão final da gestaoinfluencer é:', [
+  'Distribuir cargos e poderes para quem pedir',
+  'Formar pessoas capazes de fortalecer a SantaCreators',
+  'Controlar a cidade como staff administrativa',
+  'Separar a gestão do restante da empresa'
+], 1);
+
+addS('GI', 'Em uma situação prática: possuir cargo na gestão não significa automaticamente:', [
+  'Ter responsabilidades maiores que antes',
+  'Ter acesso total a todas as permissões',
+  'Ser observado pela liderança',
+  'Precisar manter postura'
+], 1);
+
+addS('Hierarquia', 'Em uma situação prática: no painel oficial, o Nível 3 representa:', [
+  'Resp Líder',
+  'Creator',
+  'Coord Creators',
+  'Social Media e Manager'
+], 1);
+
+addS('Hierarquia', 'Em uma situação prática: no painel oficial, o Nível 2 reúne:', [
+  'Apenas Resp Influ e Resp Creators',
+  'Social Medias, Manager, Gestor e Coord',
+  'Somente Creator e Creator Líder',
+  'Todos os membros sem função'
+], 1);
+
+addS('Hierarquia', 'Em uma situação prática: no painel oficial, o Nível 1 representa:', [
+  'Base de entrada da empresa',
+  'Responsáveis da liderança operacional',
+  'Área exclusiva dos Managers',
+  'Equipe temporária de eventos'
+], 1);
+
+addS('Hierarquia', 'Em uma situação prática: o caminho natural de evolução é melhor representado por:', [
+  'Creator > Responsável > Manager > Social > Coord',
+  'Creator > Creator Líder > Social/Manager > Gestor > Coord > Responsáveis',
+  'Social > Creator > Gestor > Resp Creators',
+  'Manager > Creator > Resp Influ > Equipe Social'
+], 1);
+
+addS('Creator', 'Em uma situação prática: o Creator é importante porque:', [
+  'É apenas um cargo decorativo antes da gestão',
+  'Sustenta comunidade, movimentação, crescimento e retenção',
+  'Serve somente para preencher lista de membros',
+  'Recebe todas as permissões administrativas'
+], 1);
+
+addS('Creator', 'Em uma situação prática: o Creator não precisa entrar sabendo tudo, mas precisa:', [
+  'Cobrar promoção antes de participar',
+  'Demonstrar interesse, participação e vontade de aprender',
+  'Escolher cargo alto logo na entrada',
+  'Focar apenas em premiação'
+], 1);
+
+addS('Creator Líder', 'Em uma situação prática: o Creator Líder representa:', [
+  'Cargo máximo da equipe de eventos',
+  'Primeiro passo dentro da gestão e formação de liderança',
+  'Função externa sem ligação com Social/Manager',
+  'Cargo automático para quem faz live'
+], 1);
+
+addS('Creator Líder', 'Em uma situação prática: o Creator Líder é formado por quais bases?', [
+  'Gestor e Coordenação apenas',
+  'Equipe Social Medias e Equipe Manager',
+  'Resp Líder e Resp Influ',
+  'Staff e Marketing'
+], 1);
+
+addS('Social Médias', 'Em uma situação prática: a Social Media constrói a experiência porque cuida de:', [
+  'Apenas convites de líderes e facções',
+  'Eventos, cronogramas, premiações, hall da fama e registros',
+  'Punições da cidade e denúncias gerais',
+  'Somente roupas pessoais dos membros'
+], 1);
+
+addS('Social Médias', 'Em uma situação prática: a escolha dos eventos importa porque eles existem para:', [
+  'Distribuir prêmio sem estratégia',
+  'Movimentar cidades, gerar retenção e entretenimento',
+  'Aumentar cargos automaticamente',
+  'Substituir presença da liderança'
+], 1);
+
+addS('Social Médias', 'Em uma situação prática: a regra de repetição do cronograma impede repetir:', [
+  'Qualquer evento que já aconteceu no mês',
+  'Mesmo evento, mesma cidade e mesmo dia da semana anterior',
+  'Qualquer cidade usada por outra equipe',
+  'Qualquer premiação com VIP'
+], 1);
+
+addS('Social Médias', 'Em uma situação prática: após eventos, o registro de presença/poderes serve para:', [
+  'Apenas mostrar quem ganhou o evento',
+  'Criar histórico da atuação da equipe',
+  'Substituir pagamento e hall da fama',
+  'Evitar que Managers precisem registrar orgs'
+], 1);
+
+addS('Manager', 'Em uma situação prática: a missão central do Manager é:', [
+  'Criar sozinho todos os cronogramas',
+  'Garantir organizações presentes nos eventos',
+  'Aplicar punição em organização ausente',
+  'Montar hall da fama das cidades'
+], 1);
+
+addS('Manager', 'Em uma situação prática: o Manager deve confirmar participação com:', [
+  'Qualquer membro que responda rápido',
+  'Liderança oficial da organização',
+  'Terceiros que conhecem a facção',
+  'Apenas prints antigos de presença'
+], 1);
+
+addS('Manager', 'Em uma situação prática: registrar organização sem confirmação direta do líder é:', [
+  'Aceitável se muitos membros prometerem ir',
+  'Incorreto e fora do procedimento',
+  'Correto quando o evento está vazio',
+  'Permitido se for cidade Nobre'
+], 1);
+
+addS('Manager', 'Em uma situação prática: a relação correta entre Social Media e Manager é:', [
+  'Manager substitui Social quando há pouco contingente',
+  'Social cria o evento e Manager leva participantes',
+  'Social cuida apenas de imagem e Manager de tudo',
+  'São áreas rivais com objetivos opostos'
+], 1);
+
+addS('Gestor', 'Em uma situação prática: o Gestor existe principalmente para:', [
+  'Produzir tudo sozinho para ganhar pontos',
+  'Desenvolver pessoas em formação',
+  'Substituir permanentemente Coordenação',
+  'Aprovar premiação sem supervisão'
+], 1);
+
+addS('Gestor', 'Em uma situação prática: um Gestor obrigatoriamente veio de:', [
+  'Creator recém-entrado sem área',
+  'Social Media ou Manager Creators',
+  'Resp Influ ou Resp Creators',
+  'Qualquer staff externa'
+], 1);
+
+addS('Gestor', 'Em uma situação prática: o Gestor ensina principalmente membros em fase:', [
+  'De Resp Creators, já no topo',
+  'Inicial/GI 5, que ainda estão aprendendo',
+  'Externa à SantaCreators',
+  'Sem vínculo com a empresa'
+], 1);
+
+addS('Gestor', 'Em uma situação prática: um feedback útil precisa conter:', [
+  'Apenas elogio curto para motivar',
+  'Pontos fortes, dificuldades, evolução, comportamento e desempenho',
+  'Somente crítica sem contexto',
+  'Uma frase genérica para economizar tempo'
+], 1);
+
+addS('Coordenação', 'Em uma situação prática: o Coord enxerga a operação de forma:', [
+  'Limitada apenas à área de origem',
+  'Completa, atravessando Social, Manager e Gestor',
+  'Exclusiva de punições disciplinares',
+  'Voltada apenas a premiações VIP'
+], 1);
+
+addS('Coordenação', 'Em uma situação prática: quando falta alguém em uma área, o Coord deve:', [
+  'Cancelar a área até o responsável voltar',
+  'Assumir temporariamente sem centralizar para sempre',
+  'Fazer tudo sozinho permanentemente',
+  'Ignorar se não for sua área favorita'
+], 1);
+
+addS('Coordenação', 'Em uma situação prática: o Coord não deve centralizar tudo porque o objetivo é:', [
+  'Mostrar que só ele trabalha bem',
+  'Fortalecer equipes, não substituir equipes permanentemente',
+  'Impedir Gestores de ensinar',
+  'Concentrar pontos em uma pessoa'
+], 1);
+
+addS('Coordenação', 'Em uma situação prática: a diferença mais clara entre Gestor e Coord é:', [
+  'Gestor manda mais que Coord em eventos',
+  'Gestor foca evolução do membro; Coord foca funcionamento da equipe',
+  'Coord só registra e Gestor só pune',
+  'Não existe diferença prática'
+], 1);
+
+addS('Responsáveis', 'Em uma situação prática: o Resp Líder acompanha principalmente:', [
+  'Apenas o próprio desempenho individual',
+  'Liderança, desenvolvimento, registros e evolução da equipe',
+  'Somente skins e comandos de F8',
+  'Apenas pagamentos de VIP'
+], 1);
+
+addS('Responsáveis', 'Em uma situação prática: o Resp Líder não deve simplesmente executar tudo porque precisa:', [
+  'Evitar qualquer contato com a base',
+  'Ensinar, orientar, acompanhar e formar líderes',
+  'Ficar somente em call de diretoria',
+  'Delegar tudo sem acompanhar'
+], 1);
+
+addS('Responsáveis', 'Em uma situação prática: o Resp Influ tem foco em:', [
+  'Apenas cronograma visual de eventos',
+  'Estabilidade, disciplina, organização e funcionamento da gestão',
+  'Somente criação de roupas e imagens',
+  'Substituir todos os Managers'
+], 1);
+
+addS('Responsáveis', 'Em uma situação prática: o Resp Creators é responsável por:', [
+  'Apenas presença em evento de sábado',
+  'Supervisão completa, estratégia, premiações e decisões importantes',
+  'Somente registro de organizações',
+  'Função decorativa acima do Coord'
+], 1);
+
+addS('Tiers', 'Em uma situação prática: o tier mede principalmente:', [
+  'Quantidade de horas online sem qualidade',
+  'Maturidade, liderança, autonomia, responsabilidade e visão de gestão',
+  'Apenas número de eventos vencidos',
+  'Somente cargo atual no Discord'
+], 1);
+
+addS('Tiers', 'Em uma situação prática: duas pessoas com o mesmo cargo podem ter tiers diferentes porque:', [
+  'O sistema sorteia tiers por antiguidade',
+  'Tier representa qualidade de liderança, não só cargo',
+  'Tier depende apenas de amizade com responsável',
+  'Cargo e tier são exatamente a mesma coisa'
+], 1);
+
+addS('Tiers', 'Em uma situação prática: a ordem correta dos tiers é:', [
+  'T5 > T1 > Teste > T3 > T2',
+  'Teste > T1 > T2 > T3 > T4 > T5',
+  'T1 > Teste > T5 > T4 > T2',
+  'Coord > Creator > T1 > Resp'
+], 1);
+
+addS('Tiers', 'Em uma situação prática: o T5 representa alguém com:', [
+  'Apenas mais pontos no mês atual',
+  'Visão estratégica, autonomia completa e preparo para liderança máxima',
+  'Permissão para ignorar registros',
+  'Cargo de entrada em teste'
+], 1);
+
+addS('Registros', 'Em uma situação prática: os dashboards existem para:', [
+  'Substituir completamente avaliação humana',
+  'Transformar registros em informações visuais de acompanhamento',
+  'Mostrar apenas quem está online no Discord',
+  'Guardar punições sem relação com produtividade'
+], 1);
+
+addS('Registros', 'Em uma situação prática: o ranking geral deve ser entendido como:', [
+  'Prova absoluta de quem deve ser promovido sempre',
+  'Indicador de contribuição e produtividade, sem substituir qualidade',
+  'Sistema apenas estético sem utilidade',
+  'Lista de quem tem mais cargo'
+], 1);
+
+addS('Registros', 'Em uma situação prática: um evento bem executado costuma gerar:', [
+  'Apenas print do vencedor e fim',
+  'Pagamento, hall da fama, poderes, pontuação e dashboard',
+  'Somente convite de organização',
+  'Nenhum registro se todos estavam em call'
+], 1);
+
+addS('Registros', 'Em uma situação prática: a liderança toma decisões melhores quando possui:', [
+  'Opiniões soltas sem comprovação',
+  'Histórico, registros, números e dashboards',
+  'Apenas mensagens privadas antigas',
+  'Impressões de quem fala mais alto'
+], 1);
+
+addS('Horários', 'Em uma situação prática: o bate ponto atual da SantaCreators funciona em quais janelas?', [
+  '17:00 às 23:00 e 01:00 às 04:00',
+  '19:00 às 00:00 e 00:30 às 03:30',
+  '18:00 às 23:00 e 00:00 às 03:00',
+  'Somente 19:00 às 23:00'
+], 1);
+
+addS('Horários', 'Em uma situação prática: sobre eventos da SantaCreators, a regra atual deixou de ser:', [
+  'Uma operação com planejamento semanal',
+  'Um horário fixo simples de 19:00 para tudo',
+  'Uma agenda ligada às cidades da operação',
+  'Uma estrutura com registros e responsáveis'
+], 1);
+
+addS('Horários', 'Em uma situação prática: na operação atual, segunda-feira tem como cidade principal:', [
+  'Grande',
+  'Maresia',
+  'Santa',
+  'Nobre'
+], 1);
+
+addS('Horários', 'Em uma situação prática: na operação atual, terça-feira tem como cidade principal:', [
+  'Maresia',
+  'Grande',
+  'Santa',
+  'Nobre'
+], 1);
+
+addS('Horários', 'Em uma situação prática: na operação atual, quarta-feira tem como cidade principal:', [
+  'Nobre',
+  'Santa',
+  'Grande',
+  'Maresia'
+], 1);
+
+addS('Horários', 'Em uma situação prática: na operação atual, quinta, sexta e sábado concentram-se principalmente em:', [
+  'Santa',
+  'Nobre',
+  'Maresia',
+  'Grande'
+], 1);
+
+addS('Horários', 'Em uma situação prática: a Nobre é tratada como centro operacional porque:', [
+  'É a única cidade onde existe SantaCreators',
+  'Concentra eventos importantes, especialmente de retenção',
+  'Não precisa de registros por ser principal',
+  'Substitui todas as demais cidades'
+], 1);
+
+addS('Horários', 'Em uma situação prática: quando a liderança não puder acompanhar a operação, deve:', [
+  'Avisar apenas depois se alguém cobrar',
+  'Justificar previamente no fluxo correto e dentro do prazo',
+  'Pedir para um membro comum esconder a falta',
+  'Ignorar se tiver feito pontos na semana'
+], 1);
+
+addS('Conduta', 'Qual alternativa parece parecida, mas representa a conduta correta sobre este tema?', [
+  'Reunir membros para conviver sem processo interno',
+  'Ser apenas uma empresa de eventos com prédio próprio',
+  'Criar conteúdo, entretenimento, experiências e desenvolver pessoas',
+  'Funcionar como uma staff informal da cidade'
+], 2);
+
+addS('Conduta', 'Qual alternativa parece parecida, mas representa a conduta correta sobre este tema?', [
+  'A empresa só aceita pessoas famosas ou influenciadores grandes',
+  'A empresa possui menos regras por ser criativa',
+  'A empresa possui cultura, processo, desenvolvimento e responsabilidade',
+  'A empresa existe apenas para entregar premiações'
+], 2);
+
+addS('Conduta', 'Qual alternativa parece parecida, mas representa a conduta correta sobre este tema?', [
+  'Amizade com liderança e tempo parado em call',
+  'Apenas quantidade de seguidores e clips postados',
+  'Participação, postura, responsabilidade e constância',
+  'Saber todos os comandos antes de entrar'
+], 2);
+
+addS('Conduta', 'Qual alternativa parece parecida, mas representa a conduta correta sobre este tema?', [
+  'Receber cargo por não precisar de acompanhamento',
+  'Ser promovida mais rápido por ter talento natural',
+  'Evoluir menos que alguém presente e comprometido',
+  'Entrar direto na gestaoinfluencer'
+], 2);
+
+addS('Organização', 'Qual alternativa parece parecida, mas representa a conduta correta sobre este tema?', [
+  'Fazer apenas eventos sem revisar nada',
+  'Aplicar punições antigas e zerar todas as regras',
+  'Planejamento, revisão de cronogramas, organização e preparação',
+  'Cancelar demandas da semana anterior'
+], 2);
+
+addS('Organização', 'Qual alternativa parece parecida, mas representa a conduta correta sobre este tema?', [
+  'Registro é opcional quando a tarefa foi bem feita',
+  'Só vale registrar quando alguém da liderança cobrar',
+  'O trabalho precisa de comprovação, histórico e documentação',
+  'A fala em call substitui qualquer registro'
+], 2);
+
+addS('Organização', 'Qual alternativa parece parecida, mas representa a conduta correta sobre este tema?', [
+  'Porque apenas responsáveis podem conversar no privado',
+  'Porque DM nunca deve ser usada em nenhuma situação',
+  'Para manter transparência, histórico e evitar mal-entendidos',
+  'Porque registro só importa em casos de punição'
+], 2);
+
+addS('Organização', 'Qual alternativa parece parecida, mas representa a conduta correta sobre este tema?', [
+  'Resolver em conversa paralela sem deixar histórico',
+  'Pular direto para o Owner em qualquer situação simples',
+  'Procurar liderança direta, coordenação ou responsáveis conforme a necessidade',
+  'Comentar com terceiros até alguém resolver'
+], 2);
+
+addS('Imersão', 'Qual alternativa parece parecida, mas representa a conduta correta sobre este tema?', [
+  'Usar comandos de F8 para resolver cenas rapidamente',
+  'Falar o mínimo possível durante qualquer cena',
+  'Agir de forma coerente com o universo do personagem',
+  'Evitar participar de RP com desconhecidos'
+], 2);
+
+addS('Imersão', 'Qual alternativa parece parecida, mas representa a conduta correta sobre este tema?', [
+  'Meu Discord bugou, espera eu reconectar',
+  'Meu teclado parou e preciso reiniciar o PC',
+  'Vou meditar um pouco e já volto quando estiver melhor',
+  'Vou no banheiro rapidinho, segura aí'
+], 2);
+
+addS('Imersão', 'Qual alternativa parece parecida, mas representa a conduta correta sobre este tema?', [
+  'Permissão administrativa automática',
+  'Apenas estilo de gameplay',
+  'Anti-RP',
+  'RP criativo sem limite'
+], 2);
+
+addS('Imersão', 'Qual alternativa parece parecida, mas representa a conduta correta sobre este tema?', [
+  'Rir no personagem falando de Discord e teclado',
+  'Parar tudo e explicar o bug para todos',
+  'Contornar com criatividade sem trazer o off diretamente',
+  'Usar poder para corrigir sem registrar nada'
+], 2);
+
+addS('Uniforme', 'Qual alternativa parece parecida, mas representa a conduta correta sobre este tema?', [
+  'Apenas estar com cargo no Discord',
+  'Qualquer peça escura parecida com uniforme',
+  'Jaqueta oficial da SantaCreators',
+  'Uma peça da empresa, mesmo sem jaqueta'
+], 2);
+
+addS('Uniforme', 'Qual alternativa parece parecida, mas representa a conduta correta sobre este tema?', [
+  'Ficar identificado apenas se houver evento',
+  'Usar obrigatoriamente o uniforme completo',
+  'Usar pelo menos uma peça oficial da empresa',
+  'Usar qualquer roupa desde que esteja em call'
+], 2);
+
+addS('Uniforme', 'Qual alternativa parece parecida, mas representa a conduta correta sobre este tema?', [
+  'Impede o sistema de contar pontos automaticamente',
+  'Só atrapalha quando há transmissão ao vivo',
+  'Afeta imagem, organização e reconhecimento da empresa',
+  'É proibido apenas para membros novos'
+], 2);
+
+addS('Uniforme', 'Qual alternativa parece parecida, mas representa a conduta correta sobre este tema?', [
+  'Permissão para usar veículos em qualquer RP',
+  'Vantagem hierárquica para mandar em outros players',
+  'Identidade, pertencimento e responsabilidade ao representar a empresa',
+  'Obrigação estética sem relação com cultura'
+], 2);
+
+addS('Veículos', 'Qual alternativa parece parecida, mas representa a conduta correta sobre este tema?', [
+  'Substituir qualquer garagem pessoal do membro',
+  'Troca de tiro, assalto e ações pessoais rápidas',
+  'Eventos, operações e deslocamentos relacionados à empresa',
+  'Emprestar para aliados de fora da empresa'
+], 2);
+
+addS('Veículos', 'Qual alternativa parece parecida, mas representa a conduta correta sobre este tema?', [
+  'Só vira erro quando alguém grava em vídeo',
+  'É permitido se o membro estiver sem uniforme',
+  'Expõe a imagem e desvia a finalidade do recurso',
+  'É uma escolha individual sem efeito na empresa'
+], 2);
+
+addS('Veículos', 'Qual alternativa parece parecida, mas representa a conduta correta sobre este tema?', [
+  'Permitido quando o veículo é da própria empresa',
+  'Uma forma aceitável de agilizar eventos',
+  'Falha grave de conduta e abuso de poder',
+  'Apenas quebra leve se não houver combate'
+], 2);
+
+addS('Veículos', 'Qual alternativa parece parecida, mas representa a conduta correta sobre este tema?', [
+  'Priorizar benefício pessoal se estiver com pressa',
+  'Usar o máximo possível antes que outro use',
+  'Zelo, responsabilidade e cuidado com o patrimônio coletivo',
+  'Pedir desculpa apenas se alguém perceber'
+], 2);
+
+addS('Baús', 'Qual alternativa parece parecida, mas representa a conduta correta sobre este tema?', [
+  'Usar livremente se a pessoa tiver cargo alto',
+  'Retirar bastante para garantir estoque pessoal',
+  'Usar com consciência, controle e finalidade correta',
+  'Pegar primeiro e justificar depois'
+], 2);
+
+addS('Baús', 'Qual alternativa parece parecida, mas representa a conduta correta sobre este tema?', [
+  'Guardar itens pessoais de responsáveis',
+  'Consumo livre dos membros mais ativos',
+  'Doações e entregas ligadas à operação',
+  'Venda particular sem divisão'
+], 2);
+
+addS('Baús', 'Qual alternativa parece parecida, mas representa a conduta correta sobre este tema?', [
+  'Retira para revender e depois repor se lembrar',
+  'Garante estoque individual para a semana toda',
+  'Pega apenas o necessário e não prejudica os demais',
+  'É feita sem pensar no coletivo'
+], 2);
+
+addS('Baús', 'Qual alternativa parece parecida, mas representa a conduta correta sobre este tema?', [
+  'Porque só pode retirar depois das 23:30',
+  'Porque apenas novatos são proibidos de retirar',
+  'Porque desvia a finalidade de doações e entregas',
+  'Porque o baú serve para lucro pessoal'
+], 2);
+
+addS('Poderes', 'Qual alternativa parece parecida, mas representa a conduta correta sobre este tema?', [
+  'Quem tem poder pode corrigir qualquer RP na hora',
+  'Poder serve para facilitar a vida do membro',
+  'Poder é responsabilidade, não privilégio pessoal',
+  'Poder substitui registro quando usado corretamente'
+], 2);
+
+addS('Poderes', 'Qual alternativa parece parecida, mas representa a conduta correta sobre este tema?', [
+  'Apoio informal permitido',
+  'Autonomia de gestão',
+  'Abuso de poder',
+  'Erro leve sem impacto'
+], 2);
+
+addS('Poderes', 'Qual alternativa parece parecida, mas representa a conduta correta sobre este tema?', [
+  'Evitar registrar para não gerar confusão',
+  'Usar primeiro e explicar no registro',
+  'Perguntar antes e validar o contexto',
+  'Pedir para um amigo confirmar'
+], 2);
+
+addS('Poderes', 'Qual alternativa parece parecida, mas representa a conduta correta sobre este tema?', [
+  'Permissão para usar comandos fora da empresa',
+  'Apenas contagem automática de dinheiro',
+  'Transparência, controle e responsabilidade',
+  'Substituição de qualquer alinhamento'
+], 2);
+
+addS('GI', 'Qual alternativa parece parecida, mas representa a conduta correta sobre este tema?', [
+  'Equipe separada que funciona independente da empresa',
+  'Staff da cidade voltada a punir jogadores',
+  'Núcleo interno administrativo da própria SantaCreators',
+  'Cargo único entregue por formulário'
+], 2);
+
+addS('GI', 'Qual alternativa parece parecida, mas representa a conduta correta sobre este tema?', [
+  'Tempo de Discord sem atuação prática',
+  'Pedido direto em formulário público',
+  'Evolução, confiança, participação e convite',
+  'Indicação de amizade sem observação'
+], 2);
+
+addS('GI', 'Qual alternativa parece parecida, mas representa a conduta correta sobre este tema?', [
+  'Controlar a cidade como staff administrativa',
+  'Distribuir cargos e poderes para quem pedir',
+  'Formar pessoas capazes de fortalecer a SantaCreators',
+  'Separar a gestão do restante da empresa'
+], 2);
+
+addS('GI', 'Qual alternativa parece parecida, mas representa a conduta correta sobre este tema?', [
+  'Ser observado pela liderança',
+  'Ter responsabilidades maiores que antes',
+  'Ter acesso total a todas as permissões',
+  'Precisar manter postura'
+], 2);
+
+addS('Hierarquia', 'Qual alternativa parece parecida, mas representa a conduta correta sobre este tema?', [
+  'Coord Creators',
+  'Resp Líder',
+  'Creator',
+  'Social Media e Manager'
+], 2);
+
+addS('Hierarquia', 'Qual alternativa parece parecida, mas representa a conduta correta sobre este tema?', [
+  'Somente Creator e Creator Líder',
+  'Apenas Resp Influ e Resp Creators',
+  'Social Medias, Manager, Gestor e Coord',
+  'Todos os membros sem função'
+], 2);
+
+addS('Hierarquia', 'Qual alternativa parece parecida, mas representa a conduta correta sobre este tema?', [
+  'Área exclusiva dos Managers',
+  'Base de entrada da empresa',
+  'Responsáveis da liderança operacional',
+  'Equipe temporária de eventos'
+], 2);
+
+addS('Hierarquia', 'Qual alternativa parece parecida, mas representa a conduta correta sobre este tema?', [
+  'Social > Creator > Gestor > Resp Creators',
+  'Creator > Responsável > Manager > Social > Coord',
+  'Creator > Creator Líder > Social/Manager > Gestor > Coord > Responsáveis',
+  'Manager > Creator > Resp Influ > Equipe Social'
+], 2);
+
+addS('Creator', 'Qual alternativa parece parecida, mas representa a conduta correta sobre este tema?', [
+  'Serve somente para preencher lista de membros',
+  'É apenas um cargo decorativo antes da gestão',
+  'Sustenta comunidade, movimentação, crescimento e retenção',
+  'Recebe todas as permissões administrativas'
+], 2);
+
+addS('Creator', 'Qual alternativa parece parecida, mas representa a conduta correta sobre este tema?', [
+  'Escolher cargo alto logo na entrada',
+  'Cobrar promoção antes de participar',
+  'Demonstrar interesse, participação e vontade de aprender',
+  'Focar apenas em premiação'
+], 2);
+
+addS('Creator Líder', 'Qual alternativa parece parecida, mas representa a conduta correta sobre este tema?', [
+  'Função externa sem ligação com Social/Manager',
+  'Cargo máximo da equipe de eventos',
+  'Primeiro passo dentro da gestão e formação de liderança',
+  'Cargo automático para quem faz live'
+], 2);
+
+addS('Creator Líder', 'Qual alternativa parece parecida, mas representa a conduta correta sobre este tema?', [
+  'Resp Líder e Resp Influ',
+  'Gestor e Coordenação apenas',
+  'Equipe Social Medias e Equipe Manager',
+  'Staff e Marketing'
+], 2);
+
+addS('Social Médias', 'Qual alternativa parece parecida, mas representa a conduta correta sobre este tema?', [
+  'Punições da cidade e denúncias gerais',
+  'Apenas convites de líderes e facções',
+  'Eventos, cronogramas, premiações, hall da fama e registros',
+  'Somente roupas pessoais dos membros'
+], 2);
+
+addS('Social Médias', 'Qual alternativa parece parecida, mas representa a conduta correta sobre este tema?', [
+  'Aumentar cargos automaticamente',
+  'Distribuir prêmio sem estratégia',
+  'Movimentar cidades, gerar retenção e entretenimento',
+  'Substituir presença da liderança'
+], 2);
+
+addS('Social Médias', 'Qual alternativa parece parecida, mas representa a conduta correta sobre este tema?', [
+  'Qualquer cidade usada por outra equipe',
+  'Qualquer evento que já aconteceu no mês',
+  'Mesmo evento, mesma cidade e mesmo dia da semana anterior',
+  'Qualquer premiação com VIP'
+], 2);
+
+addS('Social Médias', 'Qual alternativa parece parecida, mas representa a conduta correta sobre este tema?', [
+  'Substituir pagamento e hall da fama',
+  'Apenas mostrar quem ganhou o evento',
+  'Criar histórico da atuação da equipe',
+  'Evitar que Managers precisem registrar orgs'
+], 2);
+
+addS('Manager', 'Qual alternativa parece parecida, mas representa a conduta correta sobre este tema?', [
+  'Aplicar punição em organização ausente',
+  'Criar sozinho todos os cronogramas',
+  'Garantir organizações presentes nos eventos',
+  'Montar hall da fama das cidades'
+], 2);
+
+addS('Manager', 'Qual alternativa parece parecida, mas representa a conduta correta sobre este tema?', [
+  'Terceiros que conhecem a facção',
+  'Qualquer membro que responda rápido',
+  'Liderança oficial da organização',
+  'Apenas prints antigos de presença'
+], 2);
+
+addS('Manager', 'Qual alternativa parece parecida, mas representa a conduta correta sobre este tema?', [
+  'Correto quando o evento está vazio',
+  'Aceitável se muitos membros prometerem ir',
+  'Incorreto e fora do procedimento',
+  'Permitido se for cidade Nobre'
+], 2);
+
+addS('Manager', 'Qual alternativa parece parecida, mas representa a conduta correta sobre este tema?', [
+  'Social cuida apenas de imagem e Manager de tudo',
+  'Manager substitui Social quando houver pouco contingente',
+  'Social cria o evento e Manager leva participantes',
+  'São áreas rivais com objetivos opostos'
+], 2);
 
 export const SC_QUIZ_BANK = Q;
