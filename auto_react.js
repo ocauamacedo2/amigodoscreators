@@ -194,7 +194,7 @@ function reactionMatchesEmoji(reaction, emoji) {
 
 async function reactToMessage(message, mode = "unknown") {
   if (!message?.guild) {
-    return { added: 0, alreadyMine: 0, noSlot: 0, failed: 0 };
+    return { added: 0, alreadyMine: 0, noSlot: 0, failed: 0, blocked: 0, ignored: 0 };
   }
 
   try {
@@ -229,6 +229,7 @@ async function reactToMessage(message, mode = "unknown") {
     noSlot: 0,
     failed: 0,
     blocked: 0,
+    ignored: 0,
   };
 
   for (const emoji of reactions) {
@@ -262,8 +263,6 @@ async function reactToMessage(message, mode = "unknown") {
           return;
         }
 
-        stats.failed++;
-
         if (
           msg.includes("Unknown Emoji") ||
           msg.includes("Missing Access") ||
@@ -277,11 +276,14 @@ async function reactToMessage(message, mode = "unknown") {
           msg.includes("30010") ||
           code === 30010
         ) {
+          stats.ignored++;
           return;
         }
 
+        stats.failed++;
+
         console.error(
-          `[AUTO_REACT] erro ao reagir msg=${message.id} canal=${message.channel?.id} modo=${mode} emoji=${emoji}:`,
+          `[AUTO_REACT] erro real ao reagir msg=${message.id} canal=${message.channel?.id} modo=${mode} emoji=${emoji}:`,
           err?.message || err
         );
       }
@@ -353,6 +355,7 @@ async function reactToMessage(message, mode = "unknown") {
     let noSlot = 0;
     let failed = 0;
     let blocked = 0;
+    let ignored = 0;
 
     console.log(`[AUTO_REACT] backfill ${sourceLabel} iniciado no canal ${channelId}. Limite: ${maxMessages}`);
 
@@ -384,6 +387,7 @@ async function reactToMessage(message, mode = "unknown") {
         noSlot += Number(stats?.noSlot || 0);
         failed += Number(stats?.failed || 0);
         blocked += Number(stats?.blocked || 0);
+        ignored += Number(stats?.ignored || 0);
 
         if ((stats?.added || 0) > 0 || (stats?.alreadyMine || 0) > 0) {
           processed++;
@@ -395,7 +399,7 @@ async function reactToMessage(message, mode = "unknown") {
       console.log(
         `[AUTO_REACT] backfill ${sourceLabel} canal ${channelId} em andamento. ` +
         `Vasculhadas: ${scanned} | Processadas: ${processed} | ` +
-        `Add: ${added} | Já minhas: ${alreadyMine} | Sem slot: ${noSlot} | Bloqueadas: ${blocked} | Falhas: ${failed}`
+`Add agora: ${added} | Já eram minhas: ${alreadyMine} | Sem slot: ${noSlot} | Bloqueadas: ${blocked} | Ignoradas: ${ignored} | Falhas reais: ${failed}`
       );
 
       lastId = ordered[0]?.id;
@@ -405,10 +409,10 @@ async function reactToMessage(message, mode = "unknown") {
     console.log(
       `[AUTO_REACT] backfill ${sourceLabel} canal ${channelId} concluído. ` +
       `Vasculhadas: ${scanned} | Processadas: ${processed} | ` +
-      `Add: ${added} | Já minhas: ${alreadyMine} | Sem slot: ${noSlot} | Bloqueadas: ${blocked} | Falhas: ${failed}`
+      `Add agora: ${added} | Já eram minhas: ${alreadyMine} | Sem slot: ${noSlot} | Bloqueadas: ${blocked} | Ignoradas: ${ignored} | Falhas reais: ${failed}`
     );
 
-    return { scanned, processed, added, alreadyMine, noSlot, failed, blocked };
+    return { scanned, processed, added, alreadyMine, noSlot, failed, blocked, ignored };
   }
 
   async function backfillChannels(channelIds, mode, options = {}) {
@@ -419,6 +423,7 @@ async function reactToMessage(message, mode = "unknown") {
     let totalNoSlot = 0;
     let totalFailed = 0;
     let totalBlocked = 0;
+    let totalIgnored = 0;
 
     console.log(`[AUTO_REACT] backfill em múltiplos canais iniciado. Canais: ${channelIds.join(", ")}`);
 
@@ -434,12 +439,13 @@ async function reactToMessage(message, mode = "unknown") {
       totalNoSlot += Number(result?.noSlot || 0);
       totalFailed += Number(result?.failed || 0);
       totalBlocked += Number(result?.blocked || 0);
+      totalIgnored += Number(result?.ignored || 0);
     }
 
     console.log(
       `[AUTO_REACT] backfill em múltiplos canais concluído. ` +
       `Vasculhadas: ${totalScanned} | Processadas: ${totalProcessed} | ` +
-      `Add: ${totalAdded} | Já minhas: ${totalAlreadyMine} | Sem slot: ${totalNoSlot} | Bloqueadas: ${totalBlocked} | Falhas: ${totalFailed}`
+     `Add agora: ${totalAdded} | Já eram minhas: ${totalAlreadyMine} | Sem slot: ${totalNoSlot} | Bloqueadas: ${totalBlocked} | Ignoradas: ${totalIgnored} | Falhas reais: ${totalFailed}`
     );
 
     return {
@@ -450,6 +456,7 @@ async function reactToMessage(message, mode = "unknown") {
       noSlot: totalNoSlot,
       failed: totalFailed,
       blocked: totalBlocked,
+      ignored: totalIgnored,
     };
   }
 
@@ -503,11 +510,12 @@ async function reactToMessage(message, mode = "unknown") {
         `✅ Backfill manual concluído em ${label}.\n` +
         `• Vasculhadas: **${result?.scanned ?? 0}**\n` +
         `• Processadas: **${result?.processed ?? 0}**\n` +
-        `• Reações adicionadas: **${result?.added ?? 0}**\n` +
-        `• Já eram minhas: **${result?.alreadyMine ?? 0}**\n` +
+        `• Reações adicionadas agora: **${result?.added ?? 0}**\n` +
+        `• Reações que já eram minhas: **${result?.alreadyMine ?? 0}**\n` +
         `• Sem espaço: **${result?.noSlot ?? 0}**\n` +
         `• Bloqueadas pelo Discord: **${result?.blocked ?? 0}**\n` +
-        `• Falhas: **${result?.failed ?? 0}**`
+        `• Ignoradas sem risco: **${result?.ignored ?? 0}**\n` +
+        `• Falhas reais: **${result?.failed ?? 0}**`
       );
     } catch (err) {
       console.error("[AUTO_REACT] erro no comando manual:", err);
