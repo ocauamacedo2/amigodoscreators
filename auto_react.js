@@ -53,6 +53,26 @@ export async function setupAutoReact(client) {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
+  async function safeReply(message, content) {
+    try {
+      return await message.reply(content);
+    } catch (err) {
+      const msg = String(err?.message || err);
+      const code = err?.code || err?.rawError?.code;
+
+      if (
+        msg.includes("Unknown message") ||
+        msg.includes("MESSAGE_REFERENCE_UNKNOWN_MESSAGE") ||
+        code === 50035 ||
+        code === 10008
+      ) {
+        return await message.channel.send(content).catch(() => null);
+      }
+
+      throw err;
+    }
+  }
+
   function wasRecentlyProcessed(messageId) {
     const now = Date.now();
     const last = processedMessageIds.get(messageId);
@@ -471,14 +491,15 @@ async function reactToMessage(message, mode = "unknown") {
       customMaxMessages = Math.max(1, Math.min(Number(amountRaw), 20000));
     }
 
-    await message.reply(`🔄 Iniciando backfill manual no ${label}...\n📦 Limite: **${customMaxMessages}** mensagens.`);
+    await safeReply(message, `🔄 Iniciando backfill manual no ${label}...\n📦 Limite: **${customMaxMessages}** mensagens.`);
 
     try {
       const result = Array.isArray(channelId)
         ? await backfillChannels(channelId, mode, { maxMessages: customMaxMessages, manual: true })
         : await backfillChannel(channelId, mode, { maxMessages: customMaxMessages, manual: true });
 
-      await message.reply(
+      await safeReply(
+        message,
         `✅ Backfill manual concluído em ${label}.\n` +
         `• Vasculhadas: **${result?.scanned ?? 0}**\n` +
         `• Processadas: **${result?.processed ?? 0}**\n` +
@@ -490,7 +511,7 @@ async function reactToMessage(message, mode = "unknown") {
       );
     } catch (err) {
       console.error("[AUTO_REACT] erro no comando manual:", err);
-      await message.reply("❌ Deu erro ao rodar o backfill manual.");
+      await safeReply(message, "❌ Deu erro ao rodar o backfill manual.");
     }
     return true;
   }
