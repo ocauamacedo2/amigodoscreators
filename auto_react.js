@@ -499,6 +499,56 @@ async function reactToMessage(message, mode = "unknown") {
 
     const parts = content.split(/\s+/);
     const targetRaw = String(parts[1] || "").toLowerCase();
+
+    if (["msg", "mensagem", "message"].includes(targetRaw)) {
+      const rawTarget = parts[2];
+      const parsed = parseDiscordMessageTarget(rawTarget, message.channel.id);
+
+      if (!parsed) {
+        await safeReply(message, "⚠️ Usa assim: `!reagirantigas msg ID_DA_MENSAGEM` ou `!reagirantigas msg LINK_DA_MENSAGEM`");
+        return true;
+      }
+
+      const targetChannel = await client.channels.fetch(parsed.channelId).catch(() => null);
+
+      if (!targetChannel?.messages?.fetch) {
+        await safeReply(message, "❌ Não consegui acessar o canal dessa mensagem.");
+        return true;
+      }
+
+      const targetMessage = await targetChannel.messages.fetch(parsed.messageId).catch(() => null);
+
+      if (!targetMessage) {
+        await safeReply(message, "❌ Não consegui encontrar essa mensagem.");
+        return true;
+      }
+
+      const hasMedia = hasMediaContent(targetMessage);
+      const hasReaction = (targetMessage.reactions?.cache?.size || 0) > 0;
+
+      if (!hasMedia && !hasReaction) {
+        await safeReply(message, "⚠️ Essa mensagem não parece ter mídia nem reações para empilhar.");
+        return true;
+      }
+
+      const result = await reactToMessage(targetMessage, "manual-old-single");
+
+      await safeReply(
+        message,
+        `✅ Backfill manual aplicado na mensagem específica.\n` +
+        `• Canal: **${parsed.channelId}**\n` +
+        `• Mensagem: **${parsed.messageId}**\n` +
+        `• Reações adicionadas agora: **${result?.added ?? 0}**\n` +
+        `• Reações que o bot já tinha colocado: **${result?.alreadyMine ?? 0}**\n` +
+        `• Sem espaço para emoji novo: **${result?.noSlot ?? 0}**\n` +
+        `• Bloqueadas pelo Discord: **${result?.blocked ?? 0}**\n` +
+        `• Ignoradas sem risco: **${result?.ignored ?? 0}**\n` +
+        `• Falhas reais: **${result?.failed ?? 0}**`
+      );
+
+      return true;
+    }
+
     const amountRaw = parts[2];
 
     let channelId = null;
@@ -506,9 +556,9 @@ async function reactToMessage(message, mode = "unknown") {
     let label = null;
 
     if (["fotos", "foto", "media", "midia"].includes(targetRaw)) {
-      channelId = MEDIA_CHANNEL_IDS;
+      channelId = MANUAL_MEDIA_BACKFILL_CHANNEL_IDS;
       mode = "media";
-      label = "todos os canais de fotos/vídeos";
+      label = "todos os canais de fotos/vídeos e canal geral";
     } else if (["geral", "all"].includes(targetRaw)) {
       channelId = ALL_MESSAGES_CHANNEL_ID;
       mode = "all";
