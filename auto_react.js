@@ -192,6 +192,23 @@ function reactionMatchesEmoji(reaction, emoji) {
   return reaction?.emoji?.name === emoji;
 }
 
+async function reactionHasMe(reaction, clientUserId) {
+  try {
+    if (!reaction || !clientUserId) return false;
+
+    // Se o cache já diz que sim, confiamos para evitar fetch desnecessário
+    if (reaction.me === true) return true;
+
+    // Caso contrário (especialmente em msgs antigas), fazemos a busca real dos usuários
+    const users = await reaction.users.fetch().catch(() => null);
+    if (users?.has?.(clientUserId)) return true;
+
+    return false;
+  } catch {
+    return false;
+  }
+}
+
 async function reactToMessage(message, mode = "unknown") {
   if (!message?.guild) {
     return { added: 0, alreadyMine: 0, noSlot: 0, failed: 0, blocked: 0, ignored: 0 };
@@ -239,7 +256,9 @@ async function reactToMessage(message, mode = "unknown") {
           reactionMatchesEmoji(r, emoji)
         );
 
-        if (alreadyThere?.me) {
+        const botAlreadyReacted = await reactionHasMe(alreadyThere, message.client?.user?.id);
+
+        if (botAlreadyReacted) {
           stats.alreadyMine++;
           return;
         }
@@ -247,6 +266,12 @@ async function reactToMessage(message, mode = "unknown") {
         if (message.reactions.cache.size >= 20 && !alreadyThere) {
           stats.noSlot++;
           return;
+        }
+
+        if (alreadyThere && !botAlreadyReacted) {
+          if (mode.includes("manual") || mode.includes("old")) {
+            console.log(`[AUTO_REACT] stack antigo: msg=${message.id} canal=${message.channel?.id} emoji=${emoji} já existia, mas o bot ainda não tinha reagido. Tentando reagir por cima...`);
+          }
         }
 
         await message.react(emoji);
@@ -508,14 +533,15 @@ async function reactToMessage(message, mode = "unknown") {
       await safeReply(
         message,
         `✅ Backfill manual concluído em ${label}.\n` +
-        `• Vasculhadas: **${result?.scanned ?? 0}**\n` +
-        `• Processadas: **${result?.processed ?? 0}**\n` +
+        `• Mensagens vasculhadas: **${result?.scanned ?? 0}**\n` +
+        `• Mensagens encontradas para reação: **${result?.processed ?? 0}**\n` +
         `• Reações adicionadas agora: **${result?.added ?? 0}**\n` +
-        `• Reações que já eram minhas: **${result?.alreadyMine ?? 0}**\n` +
-        `• Sem espaço: **${result?.noSlot ?? 0}**\n` +
+        `• Reações que o bot já tinha colocado: **${result?.alreadyMine ?? 0}**\n` +
+        `• Sem espaço para emoji novo: **${result?.noSlot ?? 0}**\n` +
         `• Bloqueadas pelo Discord: **${result?.blocked ?? 0}**\n` +
         `• Ignoradas sem risco: **${result?.ignored ?? 0}**\n` +
-        `• Falhas reais: **${result?.failed ?? 0}**`
+        `• Falhas reais: **${result?.failed ?? 0}**\n\n` +
+        `ℹ️ Se “adicionadas agora” ficar em **0** e “já tinha colocado” ficar alto, significa que o bot já tinha reagido nessas mensagens antigas.`
       );
     } catch (err) {
       console.error("[AUTO_REACT] erro no comando manual:", err);
