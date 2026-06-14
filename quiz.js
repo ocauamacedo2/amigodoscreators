@@ -471,15 +471,34 @@ async function scq_buildChartAttachment({ labels, data, title, color = 'rgb(145,
       const fill = color.replace('rgb', 'rgba').replace(')', ',0.7)');
       const cfg = {
         type: 'bar',
-        data: { labels, datasets: [{ data, backgroundColor: fill, borderColor: color, borderWidth: 1, borderRadius: 8 }] },
+        data: {
+          labels,
+          datasets: [{
+            label: title,
+            data,
+            backgroundColor: fill,
+            borderColor: color,
+            borderWidth: 1,
+            borderRadius: 8
+          }]
+        },
         options: {
           indexAxis: 'y',
           plugins: {
             legend: { display: false },
             title: { display: true, text: title, color: '#E6EDF3' },
-            datalabels: { anchor: 'end', align: 'left', color: '#fff' }
+            datalabels: { anchor: 'end', align: 'right', color: '#fff' }
           },
-          scales: { x: { grid: { color: 'rgba(255,255,255,0.05)' } }, y: { grid: { display: false } } }
+          scales: {
+            x: {
+              beginAtZero: true,
+              min: 0,
+              grid: { color: 'rgba(255,255,255,0.05)' }
+            },
+            y: {
+              grid: { display: false }
+            }
+          }
         }
       };
       const res = await fetch('https://quickchart.io/chart', {
@@ -543,18 +562,18 @@ const embedA = scq_buildEmbed({
   footer: 'Ranking atualizado em tempo real • Reset automático domingo 00:00'
 });
         embedA.image = { url: `attachment://${chartA.name}` };
-        const embedI = scq_buildEmbed({
+const embedI = scq_buildEmbed({
   title: '🔥 Ranking — Top Interações',
   description: [
-    scq_getWeeklyPrizeBlock(),
-    '',
     '🔥 **TOP INTERAÇÕES DA SEMANA**',
-    'Esse painel mostra quem mais participou dos quizzes.',
     '',
-    scq_getPreviousTop3Block()
+    'Esse painel mostra quem mais participou dos quizzes.',
+    'Aqui não vale premiação, é apenas acompanhamento de movimentação.',
+    '',
+    '📊 **Premiação oficial fica somente no Ranking Semanal — Top Acertos.**'
   ].join('\n'),
   color: 0xF39C12,
-  footer: 'Participação também conta presença e movimentação no quiz.'
+  footer: 'Ranking de interações • Apenas acompanhamento interno'
 });
         embedI.image = { url: `attachment://${chartI.name}` };
 
