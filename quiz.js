@@ -42,6 +42,15 @@ export async function setupQuiz(client) {
     const SC_QUIZ_DATA_PATH          = './sc_quiz_data.json';
     const SC_QUIZ_POINTS_RIGHT       = 1;
 
+const SC_QUIZ_WEEKLY_REWARDS = [
+  { pos: 1, label: 'TOP 1', reward: '1 VIP' },
+  { pos: 2, label: 'TOP 2', reward: '15KK' },
+  { pos: 3, label: 'TOP 3', reward: '10KK' },
+];
+
+const SC_QUIZ_WEEKLY_RESET_HOUR = 0; // Domingo 00:00
+const SC_QUIZ_WEEKLY_RESET_MINUTE_LIMIT = 3; // janela segura 00:00 até 00:03
+
     const SC_RT_EVERY_MINUTES        = 30; // Frequência do relâmpago
     const SC_RT_WINDOW_START_HOUR    = 12;
     const SC_RT_WINDOW_END_HOUR      = 23;
@@ -53,9 +62,11 @@ export async function setupQuiz(client) {
     let SC_QUIZ_STATE = {
       leaderboard: {},
       activeQuizMessages: [],
-      stickyRankingMsgIdAcertos: null,
-      stickyRankingMsgIdInteracoes: null,
-      participantsByMsg: {},
+stickyRankingMsgIdAcertos: null,
+stickyRankingMsgIdInteracoes: null,
+previousWeeklyTop3: [],
+lastWeeklyResetKey: null,
+participantsByMsg: {},
       lastScheduleDayKey: null,
       __todaySchedule: [],
       creatorsCleanupMessageIds: [],
@@ -108,8 +119,10 @@ export async function setupQuiz(client) {
         lastScheduleDayKey: null,
         __todaySchedule: [],
         // Mantém apenas os IDs das mensagens fixas para não perder o canal
-        stickyRankingMsgIdAcertos: SC_QUIZ_STATE.stickyRankingMsgIdAcertos || null,
-        stickyRankingMsgIdInteracoes: SC_QUIZ_STATE.stickyRankingMsgIdInteracoes || null,
+stickyRankingMsgIdAcertos: SC_QUIZ_STATE.stickyRankingMsgIdAcertos || null,
+stickyRankingMsgIdInteracoes: SC_QUIZ_STATE.stickyRankingMsgIdInteracoes || null,
+previousWeeklyTop3: SC_QUIZ_STATE.previousWeeklyTop3 || [],
+lastWeeklyResetKey: SC_QUIZ_STATE.lastWeeklyResetKey || null,
       };
     }
 
@@ -308,6 +321,126 @@ async function scq_finalizeRound(channel, messageId) {
   }
 }
 
+
+function scq_getWeeklyPrizeBlock() {
+  return [
+    '━━━━━━━━━━━━━━━━━━━━━━',
+    '🏆 **PREMIAÇÃO SEMANAL — SANTA CREATORS**',
+    '',
+    '🥇 **TOP 1** → **1 VIP**',
+    '🥈 **TOP 2** → **15KK**',
+    '🥉 **TOP 3** → **10KK**',
+    '',
+    '⏳ **Prazo:** até **sábado 23:59**',
+    '🔄 **Reset:** domingo **00:00**',
+    '👑 Os vencedores aparecem no ranking e recebem as premiações.',
+    '━━━━━━━━━━━━━━━━━━━━━━'
+  ].join('\n');
+}
+
+function scq_getPreviousTop3Block() {
+  const previous = Array.isArray(SC_QUIZ_STATE.previousWeeklyTop3)
+    ? SC_QUIZ_STATE.previousWeeklyTop3
+    : [];
+
+  if (!previous.length) {
+    return '🏛️ **Top 3 anterior:** _ainda não existe histórico salvo._';
+  }
+
+  return [
+    '🏛️ **TOP 3 DA SEMANA ANTERIOR**',
+    ...previous.map((p, i) => {
+      const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉';
+      return `${medal} **${p.name || p.userId}** — ✅ ${p.acertos || 0} acertos | 🔥 ${p.interacoes || 0} interações | 🎁 ${p.reward}`;
+    })
+  ].join('\n');
+}
+
+function scq_getCurrentWeekKeyBRT() {
+  const now = new Date();
+  const brt = new Date(now.getTime() - (3 * 60 * 60 * 1000));
+  const year = brt.getUTCFullYear();
+  const month = String(brt.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(brt.getUTCDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function scq_isWeeklyResetWindowBRT() {
+  const now = new Date();
+  const brt = new Date(now.getTime() - (3 * 60 * 60 * 1000));
+
+  const dayOfWeek = brt.getUTCDay(); // 0 = domingo
+  const hour = brt.getUTCHours();
+  const minute = brt.getUTCMinutes();
+
+  return (
+    dayOfWeek === 0 &&
+    hour === SC_QUIZ_WEEKLY_RESET_HOUR &&
+    minute <= SC_QUIZ_WEEKLY_RESET_MINUTE_LIMIT
+  );
+}
+
+async function scq_tryWeeklyAutoReset(guild) {
+  try {
+    if (!guild) return;
+    if (!scq_isWeeklyResetWindowBRT()) return;
+
+    const resetKey = scq_getCurrentWeekKeyBRT();
+
+    if (SC_QUIZ_STATE.lastWeeklyResetKey === resetKey) return;
+
+    const entries = Object.entries(SC_QUIZ_STATE.leaderboard || {})
+      .sort((a, b) =>
+        b[1].acertos - a[1].acertos ||
+        b[1].interacoes - a[1].interacoes ||
+        a[1].erros - b[1].erros
+      )
+      .slice(0, 3);
+
+    const previousTop3 = [];
+
+    for (let i = 0; i < entries.length; i++) {
+      const [uid, data] = entries[i];
+      const member = await guild.members.fetch(uid).catch(() => null);
+      const reward = SC_QUIZ_WEEKLY_REWARDS[i]?.reward || 'Sem premiação';
+
+      previousTop3.push({
+        userId: uid,
+        name: member?.displayName || uid,
+        acertos: data.acertos || 0,
+        erros: data.erros || 0,
+        interacoes: data.interacoes || 0,
+        reward,
+        savedAt: Date.now(),
+        resetKey
+      });
+    }
+
+    SC_QUIZ_STATE.previousWeeklyTop3 = previousTop3;
+    SC_QUIZ_STATE.leaderboard = {};
+    SC_QUIZ_STATE.lastWeeklyResetKey = resetKey;
+
+    scq_save();
+
+    await scq_renderRankingSticky();
+
+    await scq_log(scq_buildEmbed({
+      title: '🏆 Ranking Semanal Encerrado',
+      description: [
+        scq_getWeeklyPrizeBlock(),
+        '',
+        scq_getPreviousTop3Block(),
+        '',
+        '🔄 O ranking semanal foi zerado automaticamente para iniciar uma nova disputa.'
+      ].join('\n'),
+      color: 0xFFD700
+    }));
+  } catch (e) {
+    console.error('[SC_QUIZ] Erro no reset semanal automático:', e);
+  }
+}
+
+
 function scq_startDailyCleanupTimer(channel, messageId) {
   const activeDaily = SC_QUIZ_STATE.activeQuizMessages.find(x => x.id === messageId);
   if (!activeDaily) return;
@@ -389,15 +522,40 @@ async function scq_buildChartAttachment({ labels, data, title, color = 'rgb(145,
         const chartA = await scq_buildChartAttachment({ labels: labelsA, data: byA.map(e => e[1].acertos), title: 'Top Acertos', color: 'rgb(46, 204, 113)' });
         const chartI = await scq_buildChartAttachment({ labels: labelsI, data: byI.map(e => e[1].interacoes), title: 'Top Interações', color: 'rgb(243, 156, 18)' });
 
-        const descA = (await Promise.all(byA.map(async ([uid, d], i) => {
-          const name = await scq_userDisplayNameSafe(channel.guild, uid, uid);
-          const medal = i===0?'🥇':i===1?'🥈':i===2?'🥉':`${i+1}.`;
-          return `${medal} **${name}** — ✅ ${d.acertos} | 🔥 ${d.interacoes}`;
-        }))).join('\n') || '_Sem dados_';
+       const descA = (await Promise.all(byA.map(async ([uid, d], i) => {
+  const name = await scq_userDisplayNameSafe(channel.guild, uid, uid);
+  const medal = i===0?'🥇':i===1?'🥈':i===2?'🥉':`${i+1}.`;
+  const reward = i < 3 ? ` | 🎁 ${SC_QUIZ_WEEKLY_REWARDS[i]?.reward}` : '';
+  return `${medal} **${name}** — ✅ ${d.acertos} | ❌ ${d.erros} | 🔥 ${d.interacoes}${reward}`;
+}))).join('\n') || '_Sem dados_';
 
-        const embedA = scq_buildEmbed({ title: '🏆 Ranking — Top Acertos', description: descA, color: 0x2ECC71 });
+const embedA = scq_buildEmbed({
+  title: '🏆 Ranking Semanal — Quiz SantaCreators',
+  description: [
+    scq_getWeeklyPrizeBlock(),
+    '',
+    '📊 **DISPUTA ATUAL**',
+    descA,
+    '',
+    scq_getPreviousTop3Block()
+  ].join('\n'),
+  color: 0x9B59B6,
+  footer: 'Ranking atualizado em tempo real • Reset automático domingo 00:00'
+});
         embedA.image = { url: `attachment://${chartA.name}` };
-        const embedI = scq_buildEmbed({ title: '🔥 Ranking — Top Interações', description: 'Atualizado em tempo real.', color: 0xF39C12 });
+        const embedI = scq_buildEmbed({
+  title: '🔥 Ranking — Top Interações',
+  description: [
+    scq_getWeeklyPrizeBlock(),
+    '',
+    '🔥 **TOP INTERAÇÕES DA SEMANA**',
+    'Esse painel mostra quem mais participou dos quizzes.',
+    '',
+    scq_getPreviousTop3Block()
+  ].join('\n'),
+  color: 0xF39C12,
+  footer: 'Participação também conta presença e movimentação no quiz.'
+});
         embedI.image = { url: `attachment://${chartI.name}` };
 
         const resetRow = new ActionRowBuilder().addComponents(
@@ -418,7 +576,7 @@ async function scq_buildChartAttachment({ labels, data, title, color = 'rgb(145,
           return m;
         };
 
-        const msgA = await findRankingMsg(SC_QUIZ_STATE.stickyRankingMsgIdAcertos, 'Top Acertos');
+        const msgA = await findRankingMsg(SC_QUIZ_STATE.stickyRankingMsgIdAcertos, 'Ranking Semanal');
         if (msgA) {
           await msgA.edit({ embeds: [embedA], files: [chartA] }).catch(() => null);
           SC_QUIZ_STATE.stickyRankingMsgIdAcertos = msgA.id;
@@ -453,13 +611,17 @@ async function scq_buildChartAttachment({ labels, data, title, color = 'rgb(145,
       const embed = scq_buildEmbed({
         title: '🎯 QUIZ DIÁRIO — Vale Pontos!',
         description: [
-          `> Responda **por REPLY** para participar.`,
-          `> +**${SC_QUIZ_EXTRA_DM_QUESTIONS}** perguntas no PV para quem interagir.`,
-          '',
-          `**${q.texto}**`,
-          '',
-          q.opcoes.map(x => `• ${x}`).join('\n')
-        ].join('\n'),
+  scq_getWeeklyPrizeBlock(),
+  '',
+  '🎯 **COMO PARTICIPAR**',
+  `> Responda **por REPLY** para participar.`,
+  `> +**${SC_QUIZ_EXTRA_DM_QUESTIONS}** perguntas no PV para quem interagir.`,
+  '',
+  '🧠 **PERGUNTA DA RODADA**',
+  `**${q.texto}**`,
+  '',
+  q.opcoes.map(x => `• ${x}`).join('\n')
+].join('\n'),
         image: GIF_QUIIZ_URL,
         footer: 'Responda por reply nesta mensagem.'
       });
@@ -495,13 +657,17 @@ async function scq_buildChartAttachment({ labels, data, title, color = 'rgb(145,
 
       const embed = scq_buildEmbed({
         title: '⚡ PERGUNTA RELÂMPAGO!',
-        description: [
-          `O primeiro que acertar **A/B/C/D** aqui no chat ganha o ponto!`,
-          '',
-          `**${q.texto}**`,
-          '',
-          q.opcoes.map(x => `• ${x}`).join('\n')
-        ].join('\n'),
+description: [
+  scq_getWeeklyPrizeBlock(),
+  '',
+  '⚡ **MODO RELÂMPAGO**',
+  `O primeiro que acertar **A/B/C/D** aqui no chat ganha o ponto!`,
+  '',
+  '🧠 **PERGUNTA DA RODADA**',
+  `**${q.texto}**`,
+  '',
+  q.opcoes.map(x => `• ${x}`).join('\n')
+].join('\n'),
         image: GIF_QUIIZ_URL,
         footer: 'Modo relâmpago'
       });
@@ -616,7 +782,15 @@ scq_updateLeaderboard(message.author.id, right ? 1 : 0, right ? 0 : 1);
   const winMsg = await message.channel.send({
     embeds: [scq_buildEmbed({
       title: '🏁 Vencedor!',
-      description: `<@${message.author.id}> acertou primeiro! +${SC_QUIZ_POINTS_RIGHT}${rankInfo}\n\n🧹 Esta pergunta será limpa automaticamente em **5 minutos**.`,
+description: [
+  `🎉 <@${message.author.id}> acertou primeiro!`,
+  `✅ **+${SC_QUIZ_POINTS_RIGHT} ponto** no ranking semanal.`,
+  '',
+  scq_getWeeklyPrizeBlock(),
+  rankInfo,
+  '',
+  '🧹 Esta pergunta será limpa automaticamente em **5 minutos**.'
+].join('\n'),
       color: 0x2ECC71,
       thumbnail: message.author.displayAvatarURL()
     })],
@@ -671,9 +845,21 @@ scq_updateLeaderboard(message.author.id, right ? 1 : 0, right ? 0 : 1);
           content: right ? `🌟 Mandou bem, <@${message.author.id}>!` : `💔 Poxa, <@${message.author.id}>...`,
           embeds: [scq_buildEmbed({ 
             title: right ? '✅ Resposta Correta!' : '❌ Resposta Incorreta', 
-            description: right 
-              ? `Você acertou no chat! Agora termine o desafio que te enviei no PV. 🚀${rankInfo}` 
-              : `Você errou no chat, mas não desanime! Ainda pode recuperar pontuando nas perguntas que te mandei no PV! 💪${rankInfo}`, 
+description: right 
+  ? [
+      'Você acertou no chat! 🚀',
+      'Agora termine o desafio que te enviei no PV.',
+      '',
+      scq_getWeeklyPrizeBlock(),
+      rankInfo
+    ].join('\n')
+  : [
+      'Você errou no chat, mas não desanime! 💪',
+      'Ainda pode recuperar pontuando nas perguntas que te mandei no PV!',
+      '',
+      scq_getWeeklyPrizeBlock(),
+      rankInfo
+    ].join('\n'),
             color: right ? 0x2ECC71 : 0xE74C3C,
             thumbnail: message.author.displayAvatarURL()
           })] 
@@ -761,8 +947,13 @@ function startTickers() {
 
   async function scq_autoTick() {
     try {
-      const now = Date.now();
-      const dk = scq_dayKey();
+const now = Date.now();
+const dk = scq_dayKey();
+
+const rankingChannel = await client.channels.fetch(SC_QUIZ_RANKING_CHANNEL_ID).catch(() => null);
+if (rankingChannel?.guild) {
+  await scq_tryWeeklyAutoReset(rankingChannel.guild);
+}
 
       if (
         SC_QUIZ_STATE.lastScheduleDayKey !== dk ||
@@ -869,7 +1060,22 @@ function startTickers() {
             if (!channel) return;
             await scq_clearCreatorsTrackedMessages(channel);
 
-            const embed = scq_buildEmbed({ title: '⚡ RELÂMPAGO MANUAL', description: `**${q.texto}**\n\n${q.opcoes.join('\n')}`, image: GIF_QUIIZ_URL });
+            const embed = scq_buildEmbed({
+  title: '⚡ RELÂMPAGO MANUAL',
+  description: [
+    scq_getWeeklyPrizeBlock(),
+    '',
+    '⚡ **MODO RELÂMPAGO MANUAL**',
+    'O primeiro que acertar **A/B/C/D** aqui no chat ganha o ponto!',
+    '',
+    '🧠 **PERGUNTA DA RODADA**',
+    `**${q.texto}**`,
+    '',
+    q.opcoes.map(x => `• ${x}`).join('\n')
+  ].join('\n'),
+  image: GIF_QUIIZ_URL,
+  footer: 'Relâmpago manual • Vale ponto no ranking semanal'
+});
             const sent = await channel.send({ content: `<@&${SC_MENTION_ROLES[0]}>`, embeds: [embed] });
             SC_QUIZ_STATE.rt.active = {
   messageId: sent.id,
