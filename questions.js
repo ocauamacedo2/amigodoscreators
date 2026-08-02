@@ -456,17 +456,17 @@ addS('Advertência', 'Má conduta envolve:', [
 ], 1);
 
 addS('Advertência', 'Para cargos Coord.+, Resp. Líder e Resp. Influ, a presença nos eventos da operação é:', [
-  'Obrigatória no acompanhamento da operação, respeitando cronograma atual e justificativa quando necessário',
-  'Obrigatória apenas em evento fixo das 19:00',
+  'Obrigatória no acompanhamento da operação, respeitando o cronograma atual e justificativa quando necessário',
+  'Obrigatória apenas nos eventos realizados às 23:30',
   'Facultativa se a pessoa tiver feito pontos na semana',
   'Necessária somente quando houver premiação em dinheiro'
 ], 0);
 
-addS('Advertência', 'Caso não possa comparecer ao evento das 19:00, é obrigatório:', [
-  'Registrar ausência até 18:30 com justificativa',
-  'Informar ausência antes do horário-limite',
-  'Formalizar justificativa antes do evento',
-  'Avisar no fluxo correto dentro do prazo'
+addS('Advertência', 'Caso não possa comparecer a um evento obrigatório, é necessário:', [
+  'Registrar a ausência com justificativa dentro do prazo oficial',
+  'Informar somente depois do evento',
+  'Explicar apenas na próxima reunião',
+  'Avisar qualquer membro por mensagem privada sem realizar registro'
 ], 0);
 
 addS('Advertência', 'Falta sem presença e sem justificativa dentro do prazo gera:', [
@@ -538,19 +538,19 @@ addS('Social Médias', 'A principal função da Social Médias é:', [
   'Coordenar a parte operacional dos eventos da equipe'
 ], 1);
 
-addS('Social Médias', 'Os eventos da SantaCreators acontecem em quais dias?', [
-  'Segunda a sábado',
-  'De segunda até sábado',
-  'Ao longo da semana, exceto domingo',
-  'Seis dias por semana, sem domingo'
+addS('Social Médias', 'Os eventos fixos da SantaCreators acontecem em quais dias?', [
+  'De segunda-feira a domingo',
+  'Somente de segunda a sábado',
+  'Apenas de quinta a domingo',
+  'Somente nos dias úteis'
 ], 0);
 
-addS('Social Médias', 'Na operação atual, qual opção descreve melhor os horários dos eventos?', [
-  'Um horário fixo de 19:00 para todos os dias',
-  'Uma agenda fixa apenas às 20:00',
-  'Horários definidos por cronograma, com 21:00, 23:00, 23:30, 00:00 e 01:00 conforme a operação',
-  'Somente eventos de madrugada sem cronograma'
-], 2);
+addS('Social Médias', 'Na operação fixa atual, qual opção descreve corretamente os horários dos eventos?', [
+  'Todos os eventos acontecem somente às 22:00',
+  'Há eventos às 21:00 e às 23:30 conforme o dia e a cidade',
+  'Todos os eventos acontecem somente às 23:30',
+  'Os horários são escolhidos sem cronograma'
+], 1);
 
 addS('Social Médias', 'O cronograma da semana deve ser organizado em qual dia?', [
   'Domingo',
@@ -1539,18 +1539,18 @@ addS('Advertência', 'Má conduta pode envolver:', [
   'Só quebra de uniforme'
 ], 0);
 
-addS('Advertência', 'Para Coord.+, Resp. Líder e Resp. Influ, os eventos das 19:00 são:', [
-  'Facultativos',
-  'Obrigatórios',
-  'Opcionais with aviso depois',
-  'Necessários apenas na sexta'
+addS('Advertência', 'Para Coord.+, Resp. Líder e Resp. Influ, os eventos obrigatórios da operação são:', [
+  'Facultativos em qualquer situação',
+  'Obrigatórios, salvo ausência justificada no fluxo correto',
+  'Opcionais com aviso somente depois',
+  'Necessários apenas na sexta-feira'
 ], 1);
 
-addS('Advertência', 'Se não puder comparecer ao evento das 19:00, o correto é:', [
-  'Avisar depois do evento',
-  'Registrar ausência até 18:30 com justificativa',
-  'Explicar na próxima call',
-  'Mandar DM para qualquer membro'
+addS('Advertência', 'Se não puder comparecer a um evento obrigatório, o correto é:', [
+  'Avisar apenas depois do evento',
+  'Registrar a ausência com justificativa dentro do prazo oficial',
+  'Explicar somente na próxima call',
+  'Mandar DM para qualquer membro e não registrar'
 ], 1);
 
 addS('Advertência', 'Falta sem presença e sem justificativa dentro do prazo gera:', [
@@ -1618,19 +1618,19 @@ addS('Social Médias', 'A função principal da Social Médias é:', [
   'Cuidar do baú geral'
 ], 1);
 
-addS('Social Médias', 'Os eventos da SantaCreators acontecem:', [
+addS('Social Médias', 'Os eventos fixos da SantaCreators acontecem:', [
   'De segunda a sábado',
   'Somente de terça a sexta',
   'Todos os dias da semana',
   'Apenas no fim de semana'
-], 0);
+], 2);
 
-addS('Social Médias', 'O horário padrão dos eventos é:', [
+addS('Social Médias', 'Qual é o principal horário fixo dos eventos da SantaCreators?', [
   '18:00',
   '20:00',
-  '19:00',
+  '23:00',
   '21:00'
-], 2);
+], 3);
 
 addS('Social Médias', 'O cronograma da semana deve ser organizado em:', [
   'Segunda',
@@ -1884,7 +1884,12 @@ addS('Conduta', 'Se você não tem certeza se uma piada vai ofender, você deve:
 addS('Conduta', 'O primeiro deslize grave de desrespeito ou preconceito resulta em:', ['Advertência 1/3', 'Expulsão direta sem segunda chance', 'Conversa de 1 hora', 'Perda de 5 pontos'], 1);
 
 // --- PRESENÇA E LIDERANÇA ---
-addS('Organização', 'Quem tem disponibilidade OBRIGATÓRIA nos eventos das 19:00?', ['Apenas os novatos', 'Coord.+, Resp. Líder e Resp. Influ', 'Toda a empresa sem exceção', 'Apenas o Social Médias'], 1);
+addS('Organização', 'Quem tem disponibilidade obrigatória nos eventos da operação?', [
+  'Apenas os novatos',
+  'Coord.+, Resp. Líder e Resp. Influ',
+  'Toda a empresa sem exceção',
+  'Apenas o Social Médias'
+], 1);
 addS('Organização', 'Qual o prazo limite para registrar ausência justificável?', ['Até o início do evento', 'Até às 18:30 do dia do evento', 'Até 1 hora depois do evento', 'Qualquer hora do dia'], 1);
 addS('Organização', 'Não comparecer e não justificar no prazo gera qual penalidade?', ['Apenas um aviso', 'ADV 1/3 permanente e -5 pontos', 'Suspensão de 2 dias', 'Nada, se for a primeira vez'], 1);
 addS('Organização', 'O que acontece ao acumular 3/3 advertências?', ['Resetam as ADVs', 'Reavaliação da permanência e posição na equipe', 'Ganha um bônus de consolação', 'Fica 1 semana sem poder'], 1);
@@ -1956,7 +1961,12 @@ addS('Imersão', 'Dizer "Meu e-mail bugou" substitui imersivamente:', ['"Meu PC 
 addS('Conduta', 'A SantaCreators prioriza membros que:', ['Causam polêmica', 'Estão dispostos a crescer, respeitar e ter parceria', 'Jogam sozinhos', 'Têm muitos seguidores'], 1);
 addS('Comandos', 'O comando "rec" é usado via:', ['F1', 'F8', 'T (Chat)', 'F10'], 1);
 addS('Comandos', 'O comando "sangue" limpa:', ['A sede', 'A roupa suja de sangue', 'O carro', 'As mãos'], 1);
-addS('Conduta', 'A regra de disponibilidade obrigatória às 19:00 serve para:', ['Ocupar o tempo do membro', 'Sustentar a base da operação semanal da empresa', 'Testar a paciência da equipe', 'Ganhar visualização no YouTube'], 1);
+addS('Conduta', 'A regra de disponibilidade obrigatória nos eventos serve para:', [
+  'Ocupar o tempo do membro',
+  'Sustentar a base da operação semanal da empresa',
+  'Testar a paciência da equipe',
+  'Ganhar visualização no YouTube'
+], 1);
 addS('Organização', 'O registro de ausência até 18:30 é uma prova de:', ['Burocracia', 'Comprometimento e organização', 'Falta de liberdade', 'Controle de staff'], 1);
 addS('Conduta', 'Ao atingir 3/3 ADVs, o membro pode ser:', ['Promovido', 'Desligado ou rebaixado após reavaliação', 'Suspenso por 5 minutos', 'Convidado para uma festa'], 1);
 addS('Conduta', 'O primeiro passo ao ter dúvidas sobre conduta é:', ['Fazer o que der na telha', 'Procurar alguém da liderança', 'Perguntar no chat geral da cidade', 'Ignorar a dúvida'], 1);
@@ -3363,11 +3373,1400 @@ addS('Manager', 'Qual alternativa parece parecida, mas representa a conduta corr
   'Permitido se for cidade Nobre'
 ], 2);
 
-addS('Manager', 'Qual alternativa parece parecida, mas representa a conduta correta sobre este tema?', [
-  'Social cuida apenas de imagem e Manager de tudo',
-  'Manager substitui Social quando houver pouco contingente',
-  'Social cria o evento e Manager leva participantes',
-  'São áreas rivais com objetivos opostos'
-], 2);
+// ===================================================================
+// 500 PERGUNTAS — EVENTOS DA SANTA CREATORS
+// ===================================================================
+
+const SC_EVENT_QUESTION_VARIATIONS = [
+  (f) => `Qual alternativa está correta sobre ${f.assunto}?`,
+  (f) => `De acordo com as regras dos eventos, o que é correto sobre ${f.assunto}?`,
+  (f) => `No quiz da Santa Creators, como deve ser respondida esta questão sobre ${f.assunto}?`,
+  (f) => `Considerando o cronograma e as regras atuais, qual informação sobre ${f.assunto} está correta?`,
+  (f) => `Qual opção descreve corretamente ${f.assunto}?`
+];
+
+const SC_EVENT_FACTS = [
+  {
+    categoria: 'Eventos — Agenda',
+    assunto: 'a segunda-feira às 21:00',
+    correta: 'O evento ocorre na Cidade Maresia',
+    erradas: [
+      'O evento ocorre na Cidade Grande',
+      'O evento ocorre na Cidade Santa',
+      'O evento ocorre na Cidade Nobre'
+    ]
+  },
+  {
+    categoria: 'Eventos — Agenda',
+    assunto: 'o evento de segunda-feira às 21:00',
+    correta: 'É o Maresia do Crime',
+    erradas: [
+      'É o Nobre do Crime',
+      'É o Santa do Crime',
+      'É o Grande do Crime'
+    ]
+  },
+  {
+    categoria: 'Eventos — Agenda',
+    assunto: 'a segunda-feira às 23:30',
+    correta: 'O evento ocorre na Cidade Grande',
+    erradas: [
+      'O evento ocorre na Cidade Nobre',
+      'O evento ocorre na Cidade Santa',
+      'O evento ocorre na Cidade Maresia'
+    ]
+  },
+  {
+    categoria: 'Eventos — Agenda',
+    assunto: 'o evento de segunda-feira às 23:30',
+    correta: 'É a Missão Pântano na Cidade Grande',
+    erradas: [
+      'É a Missão Rosa na Cidade Nobre',
+      'É o Santa do Crime na Cidade Santa',
+      'É o Maresia do Crime na Cidade Maresia'
+    ]
+  },
+  {
+    categoria: 'Eventos — Agenda',
+    assunto: 'a terça-feira às 21:00',
+    correta: 'O evento ocorre na Cidade Santa',
+    erradas: [
+      'O evento ocorre na Cidade Grande',
+      'O evento ocorre na Cidade Nobre',
+      'O evento ocorre na Cidade Maresia'
+    ]
+  },
+  {
+    categoria: 'Eventos — Agenda',
+    assunto: 'o evento de terça-feira às 21:00',
+    correta: 'É a Missão Pântano na Cidade Santa',
+    erradas: [
+      'É a Missão Rosa na Cidade Nobre',
+      'É o Grande do Crime na Cidade Grande',
+      'É o Maresia do Crime na Cidade Maresia'
+    ]
+  },
+  {
+    categoria: 'Eventos — Agenda',
+    assunto: 'a terça-feira às 23:30',
+    correta: 'O evento ocorre na Cidade Grande',
+    erradas: [
+      'O evento ocorre na Cidade Santa',
+      'O evento ocorre na Cidade Nobre',
+      'O evento ocorre na Cidade Maresia'
+    ]
+  },
+  {
+    categoria: 'Eventos — Agenda',
+    assunto: 'o evento de terça-feira às 23:30',
+    correta: 'É o Grande do Crime',
+    erradas: [
+      'É o Nobre do Crime',
+      'É o Santa do Crime',
+      'É o Maresia do Crime'
+    ]
+  },
+  {
+    categoria: 'Eventos — Agenda',
+    assunto: 'a quarta-feira às 21:00',
+    correta: 'O evento ocorre na Cidade Santa',
+    erradas: [
+      'O evento ocorre na Cidade Grande',
+      'O evento ocorre na Cidade Nobre',
+      'O evento ocorre na Cidade Maresia'
+    ]
+  },
+  {
+    categoria: 'Eventos — Agenda',
+    assunto: 'o evento de quarta-feira às 21:00',
+    correta: 'É o Santa do Crime',
+    erradas: [
+      'É o Grande do Crime',
+      'É o Nobre do Crime',
+      'É o Maresia do Crime'
+    ]
+  },
+  {
+    categoria: 'Eventos — Agenda',
+    assunto: 'a quarta-feira às 23:30',
+    correta: 'O evento ocorre na Cidade Maresia',
+    erradas: [
+      'O evento ocorre na Cidade Santa',
+      'O evento ocorre na Cidade Grande',
+      'O evento ocorre na Cidade Nobre'
+    ]
+  },
+  {
+    categoria: 'Eventos — Agenda',
+    assunto: 'o Socializar da agenda fixa',
+    correta: 'Acontece na quarta-feira às 23:30, na Cidade Maresia',
+    erradas: [
+      'Acontece na segunda-feira às 21:00, na Cidade Santa',
+      'Acontece na sexta-feira às 23:30, na Cidade Grande',
+      'Acontece no domingo às 21:00, na Cidade Nobre'
+    ]
+  },
+  {
+    categoria: 'Eventos — Agenda',
+    assunto: 'a quinta-feira às 21:00',
+    correta: 'O evento ocorre na Cidade Nobre',
+    erradas: [
+      'O evento ocorre na Cidade Grande',
+      'O evento ocorre na Cidade Santa',
+      'O evento ocorre na Cidade Maresia'
+    ]
+  },
+  {
+    categoria: 'Eventos — Agenda',
+    assunto: 'o evento fixo de quinta-feira',
+    correta: 'É a Missão Rosa com dois veículos',
+    erradas: [
+      'É a Missão Rosa Bônus com quatro veículos',
+      'É o Nobre do Crime',
+      'É a Missão Pântano'
+    ]
+  },
+  {
+    categoria: 'Eventos — Agenda',
+    assunto: 'a sexta-feira às 21:00',
+    correta: 'O evento ocorre na Cidade Nobre',
+    erradas: [
+      'O evento ocorre na Cidade Grande',
+      'O evento ocorre na Cidade Santa',
+      'O evento ocorre na Cidade Maresia'
+    ]
+  },
+  {
+    categoria: 'Eventos — Agenda',
+    assunto: 'o evento fixo de sexta-feira',
+    correta: 'É a Missão Pântano na Cidade Nobre',
+    erradas: [
+      'É a Missão Rosa Bônus',
+      'É o Nobre do Crime',
+      'É o Grande do Crime'
+    ]
+  },
+  {
+    categoria: 'Eventos — Agenda',
+    assunto: 'o sábado às 21:00',
+    correta: 'O Nobre do Crime acontece na Cidade Nobre',
+    erradas: [
+      'O Grande do Crime acontece na Cidade Grande',
+      'O Santa do Crime acontece na Cidade Santa',
+      'O Maresia do Crime acontece na Cidade Maresia'
+    ]
+  },
+  {
+    categoria: 'Eventos — Agenda',
+    assunto: 'o evento fixo de sábado',
+    correta: 'É o Nobre do Crime',
+    erradas: [
+      'É a Missão Pântano',
+      'É a Missão Rosa de dois veículos',
+      'É o Socializar'
+    ]
+  },
+  {
+    categoria: 'Eventos — Agenda',
+    assunto: 'o domingo às 21:00',
+    correta: 'A Missão Rosa Bônus ocorre na Cidade Nobre',
+    erradas: [
+      'A Missão Pântano ocorre na Cidade Grande',
+      'O Santa do Crime ocorre na Cidade Santa',
+      'O Socializar ocorre na Cidade Maresia'
+    ]
+  },
+  {
+    categoria: 'Eventos — Agenda',
+    assunto: 'a Missão Rosa de domingo',
+    correta: 'Possui quatro veículos rosa',
+    erradas: [
+      'Possui somente um veículo rosa',
+      'Possui dois veículos rosa',
+      'Não possui veículos rosa'
+    ]
+  },
+  {
+    categoria: 'Eventos — Agenda',
+    assunto: 'a Missão Rosa de quinta-feira',
+    correta: 'Possui dois veículos rosa',
+    erradas: [
+      'Possui quatro veículos rosa',
+      'Possui seis veículos rosa',
+      'Não possui veículos rosa'
+    ]
+  },
+  {
+    categoria: 'Eventos — Agenda',
+    assunto: 'os eventos das 23:30 de segunda e terça',
+    correta: 'Acontecem na Cidade Grande',
+    erradas: [
+      'Acontecem na Cidade Nobre',
+      'Acontecem na Cidade Santa',
+      'Acontecem na Cidade Maresia'
+    ]
+  },
+  {
+    categoria: 'Eventos — Agenda',
+    assunto: 'o horário fixo da Cidade Grande',
+    correta: 'É 23:30, na segunda e na terça-feira',
+    erradas: [
+      'É 21:00, na quinta e na sexta-feira',
+      'É 19:00, em todos os dias',
+      'É 00:00, no sábado e no domingo'
+    ]
+  },
+  {
+    categoria: 'Eventos — Agenda',
+    assunto: 'o horário fixo da Cidade Santa',
+    correta: 'É 21:00, na terça e na quarta-feira',
+    erradas: [
+      'É 23:30, na segunda e na terça-feira',
+      'É 19:00, no sábado e no domingo',
+      'É 00:00, na quinta e na sexta-feira'
+    ]
+  },
+  {
+    categoria: 'Eventos — Agenda',
+    assunto: 'os horários da Cidade Maresia',
+    correta: 'São alternados entre 21:00 e 23:30',
+    erradas: [
+      'São sempre às 19:00',
+      'São sempre às 23:30',
+      'São sempre à 01:00'
+    ]
+  },
+  {
+    categoria: 'Eventos — Agenda',
+    assunto: 'os eventos de quinta a domingo',
+    correta: 'Acontecem às 21:00 na Cidade Nobre',
+    erradas: [
+      'Acontecem às 23:30 na Cidade Grande',
+      'Acontecem às 19:00 na Cidade Santa',
+      'Acontecem à 01:00 na Cidade Maresia'
+    ]
+  },
+  {
+    categoria: 'Eventos — Agenda',
+    assunto: 'os horários das 23:30 entre quinta e domingo',
+    correta: 'Não existem na agenda fixa informada',
+    erradas: [
+      'Existem todos os dias na Cidade Grande',
+      'Existem somente no sábado',
+      'Existem somente no domingo'
+    ]
+  },
+  {
+    categoria: 'Eventos — Identidade',
+    assunto: 'a proposta dos eventos da Santa Creators',
+    correta: 'Criar experiências interativas, dinâmicas e diferentes',
+    erradas: [
+      'Copiar exatamente as ações normais da cidade',
+      'Realizar somente corridas sem interação',
+      'Fazer eventos sem regras ou organização'
+    ]
+  },
+  {
+    categoria: 'Eventos — Identidade',
+    assunto: 'a experiência buscada nos eventos',
+    correta: 'Deve ser divertida, interessante e interativa',
+    erradas: [
+      'Deve ser repetitiva e previsível',
+      'Deve excluir a interação dos participantes',
+      'Deve acontecer sem dinâmica ou objetivo'
+    ]
+  },
+  {
+    categoria: 'Evento — Crime',
+    assunto: 'a entrada nos eventos do tipo Crime',
+    correta: 'Os participantes entram no Mundo Royale pelo F8',
+    erradas: [
+      'Os participantes entram apenas pelo F3',
+      'Os participantes devem entrar pelo hospital',
+      'Os participantes entram automaticamente pela garagem'
+    ]
+  },
+  {
+    categoria: 'Evento — Crime',
+    assunto: 'o limite de entrada nos eventos do tipo Crime das 21:00',
+    correta: 'A orientação é entrar no Mundo Royale até 20:50',
+    erradas: [
+      'A orientação é entrar somente depois das 21:10',
+      'A orientação é entrar até 19:00',
+      'Não existe preparação antes do evento'
+    ]
+  },
+  {
+    categoria: 'Evento — Crime',
+    assunto: 'o limite de entrada no Grande do Crime',
+    correta: 'A orientação é entrar no Mundo Royale até 23:20',
+    erradas: [
+      'A orientação é entrar até 20:50',
+      'A orientação é entrar depois de 00:00',
+      'A orientação é entrar somente às 22:00'
+    ]
+  },
+  {
+    categoria: 'Evento — Crime',
+    assunto: 'o início do combate nos eventos do tipo Crime',
+    correta: 'É proibido matar antes do FF',
+    erradas: [
+      'O combate começa assim que cada pessoa entra',
+      'É permitido matar durante a organização inicial',
+      'O combate começa dez minutos antes do horário'
+    ]
+  },
+  {
+    categoria: 'Evento — Crime',
+    assunto: 'VDM e RDM nos eventos do tipo Crime',
+    correta: 'São permitidos durante o combate liberado',
+    erradas: [
+      'São sempre proibidos durante todo o evento',
+      'Apenas o VDM é permitido',
+      'Apenas o RDM é permitido'
+    ]
+  },
+  {
+    categoria: 'Evento — Crime',
+    assunto: 'as armas nos eventos do tipo Crime',
+    correta: 'Todas as armas de fogo estão liberadas',
+    erradas: [
+      'Somente armas brancas são permitidas',
+      'Nenhuma arma pode ser utilizada',
+      'Somente pistolas sem munição são permitidas'
+    ]
+  },
+  {
+    categoria: 'Evento — Crime',
+    assunto: 'as binds nos eventos do tipo Crime',
+    correta: 'As binds são liberadas',
+    erradas: [
+      'As binds são proibidas em todas as fases',
+      'Somente a administração pode usar bind',
+      'Bind causa eliminação automática'
+    ]
+  },
+  {
+    categoria: 'Evento — Crime',
+    assunto: 'o uso de drogas nos eventos do tipo Crime',
+    correta: 'As drogas são liberadas',
+    erradas: [
+      'Todas as drogas são proibidas',
+      'Somente água pode ser utilizada',
+      'O uso de qualquer droga encerra a participação'
+    ]
+  },
+  {
+    categoria: 'Evento — Crime',
+    assunto: 'a regra após morrer nos eventos do tipo Crime',
+    correta: 'Quem morreu não pode voltar',
+    erradas: [
+      'Quem morreu pode retornar imediatamente',
+      'Quem morreu retorna após cinco minutos',
+      'Quem morreu pode voltar usando outro veículo'
+    ]
+  },
+  {
+    categoria: 'Evento — Crime',
+    assunto: 'os veículos nos eventos do tipo Crime',
+    correta: 'Somente os veículos pessoais dos participantes podem ser usados',
+    erradas: [
+      'Qualquer veículo spawnado é permitido',
+      'Somente veículos policiais podem ser usados',
+      'Nenhum participante pode usar seu próprio veículo'
+    ]
+  },
+  {
+    categoria: 'Evento — Crime',
+    assunto: 'o momento de guardar os veículos nos eventos do tipo Crime',
+    correta: 'Os veículos são guardados no final',
+    erradas: [
+      'Os veículos são guardados antes do FF',
+      'Os veículos são apagados no início',
+      'Os veículos devem ser abandonados fora da safe'
+    ]
+  },
+  {
+    categoria: 'Evento — Crime',
+    assunto: 'a movimentação pelos prédios nos eventos do tipo Crime',
+    correta: 'É permitido utilizar teto, chão e elevadores',
+    erradas: [
+      'É permitido permanecer somente no chão',
+      'Elevadores sempre causam desclassificação',
+      'É proibido entrar em qualquer prédio'
+    ]
+  },
+  {
+    categoria: 'Evento — Crime',
+    assunto: 'a participação individual ou em grupo',
+    correta: 'É possível jogar sozinho ou em grupo',
+    erradas: [
+      'Somente grupos de dez pessoas podem participar',
+      'Somente jogadores individuais podem participar',
+      'A participação em grupo é sempre proibida'
+    ]
+  },
+  {
+    categoria: 'Evento — Crime',
+    assunto: 'a condição de vitória nos eventos do tipo Crime',
+    correta: 'Os últimos jogadores vivos vencem',
+    erradas: [
+      'Vence quem entrar primeiro no mundo',
+      'Vence quem tiver o veículo mais caro',
+      'Vence quem sair da safe primeiro'
+    ]
+  },
+  {
+    categoria: 'Evento — Crime',
+    assunto: 'a safe nos eventos do tipo Crime',
+    correta: 'A safe fecha durante o evento',
+    erradas: [
+      'A safe permanece aberta para sempre',
+      'Não existe limite de combate',
+      'A safe só abre depois que o evento termina'
+    ]
+  },
+  {
+    categoria: 'Evento — Crime',
+    assunto: 'a toxicidade e o abuso de bugs',
+    correta: 'São proibidos',
+    erradas: [
+      'São liberados após o FF',
+      'São permitidos para quem estiver sozinho',
+      'São incentivados pela organização'
+    ]
+  },
+  {
+    categoria: 'Evento — Missão Pântano',
+    assunto: 'o terreno principal da Missão Pântano',
+    correta: 'A batalha acontece na região do pântano',
+    erradas: [
+      'A batalha acontece somente em prédios',
+      'A batalha acontece em uma pista de corrida',
+      'A batalha acontece dentro de navios'
+    ]
+  },
+  {
+    categoria: 'Evento — Missão Pântano',
+    assunto: 'as armas da Missão Pântano',
+    correta: 'Todas as armas de fogo são liberadas',
+    erradas: [
+      'Somente lanternas são permitidas',
+      'Somente tacos de golfe são permitidos',
+      'Armas de fogo são proibidas'
+    ]
+  },
+  {
+    categoria: 'Evento — Missão Pântano',
+    assunto: 'o uso de veículos na Missão Pântano',
+    correta: 'É proibido utilizar veículos',
+    erradas: [
+      'É obrigatório utilizar motocicletas',
+      'Somente helicópteros são permitidos',
+      'Qualquer veículo pessoal é permitido'
+    ]
+  },
+  {
+    categoria: 'Evento — Missão Pântano',
+    assunto: 'o deslocamento durante a Missão Pântano',
+    correta: 'O trajeto deve ser realizado inteiramente a pé',
+    erradas: [
+      'O trajeto deve ser feito de navio',
+      'O trajeto deve ser feito de motocicleta',
+      'O trajeto deve ser feito em carros pessoais'
+    ]
+  },
+  {
+    categoria: 'Evento — Missão Pântano',
+    assunto: 'o perímetro da Missão Pântano',
+    correta: 'Quem ultrapassar o perímetro fica fora da guerra',
+    erradas: [
+      'Quem ultrapassar o perímetro vence automaticamente',
+      'O perímetro pode ser ignorado',
+      'Sair do pântano concede uma vida extra'
+    ]
+  },
+  {
+    categoria: 'Evento — Missão Pântano',
+    assunto: 'a roupa na Missão Pântano',
+    correta: 'Trocar ou alterar a roupa pode causar eliminação',
+    erradas: [
+      'Trocar de roupa é obrigatório durante o combate',
+      'Cada eliminação exige uma roupa diferente',
+      'A roupa não possui relação com as regras'
+    ]
+  },
+  {
+    categoria: 'Evento — Missão Pântano',
+    assunto: 'as equipes na Missão Pântano',
+    correta: 'Os participantes podem formar equipes e lutar com aliados',
+    erradas: [
+      'É proibido conversar com qualquer aliado',
+      'Todos devem lutar obrigatoriamente sozinhos',
+      'Somente a administração pode formar equipes'
+    ]
+  },
+  {
+    categoria: 'Evento — Missão Pântano',
+    assunto: 'a estratégia de terreno da Missão Pântano',
+    correta: 'É possível usar a lama, a escuridão e esconderijos',
+    erradas: [
+      'É obrigatório permanecer em uma estrada iluminada',
+      'É proibido se esconder',
+      'Todos devem permanecer no mesmo ponto'
+    ]
+  },
+  {
+    categoria: 'Evento — Missão Rosa',
+    assunto: 'o objetivo principal da Missão Rosa',
+    correta: 'Sobreviver próximo a um dos veículos rosa',
+    erradas: [
+      'Destruir todos os veículos rosa',
+      'Levar o veículo rosa até uma garagem',
+      'Vender o veículo rosa durante o evento'
+    ]
+  },
+  {
+    categoria: 'Evento — Missão Rosa',
+    assunto: 'a entrada nos veículos rosa',
+    correta: 'É proibido entrar nos veículos',
+    erradas: [
+      'É obrigatório dirigir os veículos',
+      'Somente o líder da tropa pode entrar',
+      'É permitido fugir com os veículos'
+    ]
+  },
+  {
+    categoria: 'Evento — Missão Rosa',
+    assunto: 'o uso dos veículos rosa como proteção',
+    correta: 'Eles podem ser usados como cover, defesa ou distração',
+    erradas: [
+      'Eles devem ser usados como transporte',
+      'Eles não podem ser aproximados',
+      'Eles precisam ser destruídos antes da final'
+    ]
+  },
+  {
+    categoria: 'Evento — Missão Rosa',
+    assunto: 'carregar outro jogador',
+    correta: 'É proibido carregar outro jogador',
+    erradas: [
+      'É obrigatório carregar um aliado',
+      'É permitido carregar somente o líder',
+      'Carregar concede vantagem na pontuação'
+    ]
+  },
+  {
+    categoria: 'Evento — Missão Rosa',
+    assunto: 'o comando ou ação de carregar',
+    correta: 'Usar /carregar, forçar no H ou explorar bug causa desclassificação',
+    erradas: [
+      'Usar /carregar é obrigatório na fase final',
+      'Forçar no H concede imunidade',
+      'Explorar bug é permitido perto dos veículos'
+    ]
+  },
+  {
+    categoria: 'Evento — Missão Rosa',
+    assunto: 'a adrenalina',
+    correta: 'A adrenalina é proibida',
+    erradas: [
+      'A adrenalina é obrigatória',
+      'Somente a adrenalina pode ser usada',
+      'A adrenalina define o vencedor'
+    ]
+  },
+  {
+    categoria: 'Evento — Missão Rosa',
+    assunto: 'as demais drogas e binds',
+    correta: 'Bind e drogas podem ser usados, exceto adrenalina',
+    erradas: [
+      'Bind e todas as drogas são proibidos',
+      'Somente adrenalina é permitida',
+      'Apenas a administração pode usar drogas'
+    ]
+  },
+  {
+    categoria: 'Evento — Missão Rosa',
+    assunto: 'as imagens no Fotogram',
+    correta: 'Podem revelar pistas sobre a localização dos veículos',
+    erradas: [
+      'Servem apenas para anunciar a premiação',
+      'Eliminam automaticamente quem visualizá-las',
+      'Não possuem relação com o evento'
+    ]
+  },
+  {
+    categoria: 'Evento — Missão Rosa',
+    assunto: 'a formação de tropas',
+    correta: 'Os participantes podem organizar estratégias com suas organizações',
+    erradas: [
+      'É proibido participar com a organização',
+      'Somente jogadores sem organização podem jogar',
+      'A comunicação entre aliados causa eliminação'
+    ]
+  },
+  {
+    categoria: 'Evento — Missão Rosa',
+    assunto: 'o horário normal de encerramento',
+    correta: 'O evento busca terminar por volta das 22:00, sem atrasos',
+    erradas: [
+      'O evento termina obrigatoriamente às 19:00',
+      'O evento dura apenas cinco minutos',
+      'O evento termina sempre depois da meia-noite'
+    ]
+  },
+  {
+    categoria: 'Evento — Missão Rosa',
+    assunto: 'a duração aproximada',
+    correta: 'A duração é de aproximadamente uma hora quando não há atrasos',
+    erradas: [
+      'A duração é de aproximadamente dez minutos',
+      'A duração é sempre de quatro horas',
+      'Não existe previsão de duração'
+    ]
+  },
+  {
+    categoria: 'Evento — Missão Rosa',
+    assunto: 'a definição de quem recebe a premiação da tropa',
+    correta: 'A tropa precisa entrar em consenso',
+    erradas: [
+      'A administração escolhe uma pessoa aleatoriamente',
+      'O veículo escolhe automaticamente o ganhador',
+      'A premiação é obrigatoriamente dividida com todos'
+    ]
+  },
+  {
+    categoria: 'Evento — Missão Rosa',
+    assunto: 'as versões do evento',
+    correta: 'Pode haver versão com armas brancas ou com armas de fogo',
+    erradas: [
+      'O evento permite somente armas de fogo em todas as edições',
+      'O evento permite somente armas brancas em todas as edições',
+      'O evento nunca permite qualquer tipo de arma'
+    ]
+  },
+  {
+    categoria: 'Evento — Missão Rosa',
+    assunto: 'a edição com armas brancas',
+    correta: 'Todas as armas brancas ficam liberadas',
+    erradas: [
+      'Somente armas de fogo ficam liberadas',
+      'Nenhuma arma fica liberada',
+      'Somente veículos podem causar dano'
+    ]
+  },
+  {
+    categoria: 'Evento — Missão Rosa',
+    assunto: 'a edição com armas de fogo',
+    correta: 'Todas as armas de fogo ficam liberadas',
+    erradas: [
+      'Somente armas brancas ficam liberadas',
+      'Somente lanternas ficam liberadas',
+      'Nenhuma arma pode ser utilizada'
+    ]
+  },
+  {
+    categoria: 'Evento — Socializar',
+    assunto: 'o acesso ao Socializar',
+    correta: 'O convite pode ser feito pelo F3',
+    erradas: [
+      'O acesso é exclusivamente pelo hospital',
+      'O acesso depende de comprar um veículo',
+      'O acesso acontece somente pelo F8 Mundo Royale'
+    ]
+  },
+  {
+    categoria: 'Evento — Socializar',
+    assunto: 'a proposta do Socializar',
+    correta: 'Promover interação, diversão e desafios temáticos',
+    erradas: [
+      'Realizar apenas uma troca de tiros sem objetivo',
+      'Impedir a comunicação entre participantes',
+      'Funcionar somente como corrida de veículos'
+    ]
+  },
+  {
+    categoria: 'Evento — Socializar',
+    assunto: 'a edição inspirada em Round 6',
+    correta: 'Possui atividades inspiradas no universo de Round 6',
+    erradas: [
+      'É uma batalha exclusivamente naval',
+      'É uma corrida de motocicletas',
+      'É um evento sem tema definido'
+    ]
+  },
+  {
+    categoria: 'Evento — Socializar',
+    assunto: 'a importância da comunicação',
+    correta: 'A comunicação pode ajudar o participante a vencer',
+    erradas: [
+      'A comunicação é proibida durante todo o evento',
+      'Quem falar é eliminado imediatamente',
+      'Somente a administração pode se comunicar'
+    ]
+  },
+  {
+    categoria: 'Evento — Naval Creators',
+    assunto: 'o objetivo do Naval Creators',
+    correta: 'Dominar os mares e ser a última equipe viva',
+    erradas: [
+      'Chegar primeiro ao topo de um prédio',
+      'Encontrar veículos rosa pela cidade',
+      'Sobreviver dentro de um presídio'
+    ]
+  },
+  {
+    categoria: 'Evento — Naval Creators',
+    assunto: 'a bind da equipe',
+    correta: 'Deve ser enviada no ticket da organização até 20:30',
+    erradas: [
+      'Deve ser enviada depois do evento',
+      'Deve ser enviada somente no chat geral',
+      'Não é necessário enviar bind'
+    ]
+  },
+  {
+    categoria: 'Evento — Naval Creators',
+    assunto: 'o local de preparação',
+    correta: 'Os participantes devem caminhar até o Píer Sul',
+    erradas: [
+      'Os participantes devem ir até o hospital',
+      'Os participantes devem permanecer na praça',
+      'Os participantes devem ir até o presídio'
+    ]
+  },
+  {
+    categoria: 'Evento — Naval Creators',
+    assunto: 'os veículos utilizados',
+    correta: 'Cada equipe utiliza o navio entregue pela administração',
+    erradas: [
+      'Cada equipe utiliza seus carros pessoais',
+      'Cada participante deve levar uma motocicleta',
+      'Somente aeronaves podem ser utilizadas'
+    ]
+  },
+  {
+    categoria: 'Evento — Naval Creators',
+    assunto: 'o uso de outro veículo',
+    correta: 'É proibido usar outro veículo além do navio fornecido',
+    erradas: [
+      'Qualquer veículo aquático pode ser roubado',
+      'Carros pessoais podem substituir o navio',
+      'Helicópteros são obrigatórios'
+    ]
+  },
+  {
+    categoria: 'Evento — Naval Creators',
+    assunto: 'a rotação antes do FF',
+    correta: 'É proibido rotacionar antes do FF',
+    erradas: [
+      'É obrigatório rotacionar antes do FF',
+      'A rotação libera uma vida extra',
+      'Somente a equipe vencedora pode rotacionar'
+    ]
+  },
+  {
+    categoria: 'Evento — Naval Creators',
+    assunto: 'o combate liberado',
+    correta: 'Armas de fogo, bind e combate corporal são permitidos',
+    erradas: [
+      'Somente lanternas são permitidas',
+      'Nenhum tipo de combate é permitido',
+      'Somente veículos podem causar dano'
+    ]
+  },
+  {
+    categoria: 'Evento — Naval Creators',
+    assunto: 'os itens de regeneração',
+    correta: 'Metanfetamina, baseados, bandagens e energéticos são permitidos',
+    erradas: [
+      'Todos os itens de regeneração são proibidos',
+      'Somente adrenalina é permitida',
+      'Apenas água pode ser utilizada'
+    ]
+  },
+  {
+    categoria: 'Evento — Free Fire Creators',
+    assunto: 'o cenário do Free Fire Creators',
+    correta: 'A batalha acontece no topo dos prédios',
+    erradas: [
+      'A batalha acontece dentro de navios',
+      'A batalha acontece no pântano',
+      'A batalha acontece em uma pista subterrânea'
+    ]
+  },
+  {
+    categoria: 'Evento — Free Fire Creators',
+    assunto: 'o F3 de preparação',
+    correta: 'A divulgação informa uma janela entre 20:30 e 21:00',
+    erradas: [
+      'A janela ocorre somente depois das 23:30',
+      'A preparação começa à 01:00',
+      'Não existe convite pelo F3'
+    ]
+  },
+  {
+    categoria: 'Evento — Free Fire Creators',
+    assunto: 'o combate antes da safe',
+    correta: 'É proibido atirar antes de a safe iniciar',
+    erradas: [
+      'O combate começa imediatamente ao entrar',
+      'É obrigatório eliminar alguém durante a preparação',
+      'Atirar antes da safe concede pontos extras'
+    ]
+  },
+  {
+    categoria: 'Evento — Free Fire Creators',
+    assunto: 'a formação de equipes',
+    correta: 'É possível formar equipes ou jogar sozinho',
+    erradas: [
+      'Todos devem jogar obrigatoriamente sozinhos',
+      'Somente organizações completas podem participar',
+      'Equipes são proibidas'
+    ]
+  },
+  {
+    categoria: 'Evento — Free Fire Creators',
+    assunto: 'os paraquedas',
+    correta: 'São entregues pela organização',
+    erradas: [
+      'São proibidos durante todo o evento',
+      'Devem ser comprados de outro participante',
+      'Somente o vencedor recebe paraquedas'
+    ]
+  },
+  {
+    categoria: 'Evento — Free Fire Creators',
+    assunto: 'o fechamento da safe',
+    correta: 'A safe fecha gradualmente e força os confrontos',
+    erradas: [
+      'A safe aumenta até cobrir a cidade inteira',
+      'A safe não muda durante o evento',
+      'A safe é removida antes do combate'
+    ]
+  },
+  {
+    categoria: 'Evento — Pegando Fogo',
+    assunto: 'a roupa dos participantes',
+    correta: 'Todos utilizam roupa de bombeiro',
+    erradas: [
+      'Todos utilizam roupa de astronauta',
+      'Todos utilizam roupa policial',
+      'Cada pessoa deve usar roupa social'
+    ]
+  },
+  {
+    categoria: 'Evento — Pegando Fogo',
+    assunto: 'a arma dos participantes',
+    correta: 'A luta ocorre somente com chave inglesa',
+    erradas: [
+      'A luta ocorre somente com fuzil',
+      'A luta ocorre somente com lanterna',
+      'A luta ocorre somente com arco e flecha'
+    ]
+  },
+  {
+    categoria: 'Evento — Pegando Fogo',
+    assunto: 'a atuação da equipe Santa Creators',
+    correta: 'A equipe pode ficar espalhada pelo mapa e eliminar participantes',
+    erradas: [
+      'A equipe não pode interferir de nenhuma maneira',
+      'A equipe deve permanecer fora da cidade',
+      'A equipe participa somente como espectadora'
+    ]
+  },
+  {
+    categoria: 'Evento — Pegando Fogo',
+    assunto: 'a safe',
+    correta: 'Geralmente fecha na região dos Bombeiros',
+    erradas: [
+      'Fecha obrigatoriamente no Píer Sul',
+      'Fecha dentro de um navio',
+      'Não existe safe'
+    ]
+  },
+  {
+    categoria: 'Evento — Pegando Fogo',
+    assunto: 'a fase final',
+    correta: 'Os sobreviventes fazem um mata-mata até restarem três campeões',
+    erradas: [
+      'Todos os sobreviventes vencem sem confronto',
+      'A fase final é uma corrida de barcos',
+      'A fase final termina com dez vencedores'
+    ]
+  },
+  {
+    categoria: 'Evento — Rebelião Creators',
+    assunto: 'o objetivo principal',
+    correta: 'Encontrar e libertar o Creator preso',
+    erradas: [
+      'Destruir todos os veículos rosa',
+      'Chegar ao topo de um prédio',
+      'Vencer uma corrida de motocicletas'
+    ]
+  },
+  {
+    categoria: 'Evento — Rebelião Creators',
+    assunto: 'o local do Creator sequestrado',
+    correta: 'Ele está em uma das dez torres do presídio',
+    erradas: [
+      'Ele está em um dos navios do Píer Sul',
+      'Ele está em um veículo rosa',
+      'Ele está no topo de um prédio'
+    ]
+  },
+  {
+    categoria: 'Evento — Rebelião Creators',
+    assunto: 'as armas de fogo',
+    correta: 'São proibidas',
+    erradas: [
+      'São obrigatórias',
+      'Somente fuzis são permitidos',
+      'Somente pistolas são permitidas'
+    ]
+  },
+  {
+    categoria: 'Evento — Rebelião Creators',
+    assunto: 'o combate permitido',
+    correta: 'Armas brancas e combate corporal são permitidos',
+    erradas: [
+      'Somente armas de fogo são permitidas',
+      'Nenhum combate é permitido',
+      'Somente veículos podem causar dano'
+    ]
+  },
+  {
+    categoria: 'Evento — Rebelião Creators',
+    assunto: 'o uso de veículos',
+    correta: 'É proibido',
+    erradas: [
+      'É obrigatório',
+      'Somente tanques podem ser usados',
+      'Somente motocicletas podem ser usadas'
+    ]
+  },
+  {
+    categoria: 'Evento — Sobre Pressão',
+    assunto: 'o espaço de combate',
+    correta: 'Os participantes ficam sobre uma única prancha',
+    erradas: [
+      'Os participantes ficam dentro de vários navios',
+      'Os participantes ficam em torres do presídio',
+      'Os participantes ficam em veículos rosa'
+    ]
+  },
+  {
+    categoria: 'Evento — Sobre Pressão',
+    assunto: 'a arma disponível',
+    correta: 'Somente Karambit é permitida',
+    erradas: [
+      'Somente fuzil é permitido',
+      'Somente chave inglesa é permitida',
+      'Somente arma de fogo é permitida'
+    ]
+  },
+  {
+    categoria: 'Evento — Sobre Pressão',
+    assunto: 'o uso de binds',
+    correta: 'É proibido',
+    erradas: [
+      'É obrigatório',
+      'É permitido somente para fugir da prancha',
+      'Define automaticamente o vencedor'
+    ]
+  },
+  {
+    categoria: 'Evento — Sobre Pressão',
+    assunto: 'a cocaína',
+    correta: 'Pode ser utilizada para aumentar a velocidade',
+    erradas: [
+      'É proibida em qualquer situação',
+      'Serve para entrar em veículos',
+      'Substitui a Karambit'
+    ]
+  },
+  {
+    categoria: 'Evento — Sobre Pressão',
+    assunto: 'a quantidade de vencedores',
+    correta: 'Restam três competidores vencedores',
+    erradas: [
+      'Resta somente uma organização inteira',
+      'Restam dez vencedores',
+      'Todos vencem automaticamente'
+    ]
+  },
+  {
+    categoria: 'Evento — SantaCaos',
+    assunto: 'a arma entregue aos participantes',
+    correta: 'Um taco de golfe',
+    erradas: [
+      'Um fuzil',
+      'Uma chave inglesa',
+      'Uma arma de choque'
+    ]
+  },
+  {
+    categoria: 'Evento — SantaCaos',
+    assunto: 'os anti-heróis',
+    correta: 'Usam Karambit e possuem superpulos',
+    erradas: [
+      'Usam somente navios',
+      'Não podem atacar os participantes',
+      'Permanecem parados durante o evento'
+    ]
+  },
+  {
+    categoria: 'Evento — SantaCaos',
+    assunto: 'atacar um anti-herói',
+    correta: 'É proibido e pode fazer o participante ser eliminado com arma de fogo',
+    erradas: [
+      'É obrigatório para ganhar',
+      'Concede imunidade até o final',
+      'Transforma o participante em administrador'
+    ]
+  },
+  {
+    categoria: 'Evento — SantaCaos',
+    assunto: 'o uso de veículos',
+    correta: 'É proibido entrar em veículos',
+    erradas: [
+      'É obrigatório usar veículos',
+      'Somente veículos voadores podem ser usados',
+      'Entrar em veículo concede vitória'
+    ]
+  },
+  {
+    categoria: 'Evento — Fuga Espacial',
+    assunto: 'o objetivo principal',
+    correta: 'Esconder-se e sobreviver aos astronautas',
+    erradas: [
+      'Destruir os navios no píer',
+      'Encontrar veículos rosa',
+      'Vencer uma corrida de motos'
+    ]
+  },
+  {
+    categoria: 'Evento — Fuga Espacial',
+    assunto: 'o período antes do FF',
+    correta: 'Os participantes devem se esconder',
+    erradas: [
+      'Os participantes devem atirar nos astronautas',
+      'Os participantes devem entrar em veículos',
+      'Os participantes devem sair do bunker'
+    ]
+  },
+  {
+    categoria: 'Evento — Fuga Espacial',
+    assunto: 'a lanterna',
+    correta: 'Pode ser utilizada apenas para defesa',
+    erradas: [
+      'É proibida em qualquer situação',
+      'Deve ser usada para atacar os astronautas',
+      'Serve para dirigir veículos'
+    ]
+  },
+  {
+    categoria: 'Evento — Fuga Espacial',
+    assunto: 'atingir um astronauta',
+    correta: 'É proibido e pode causar eliminação com bala',
+    erradas: [
+      'É obrigatório para avançar',
+      'Concede uma vida extra',
+      'Libera o uso de veículos'
+    ]
+  },
+  {
+    categoria: 'Evento — Karambit Wars',
+    assunto: 'a divisão dos participantes',
+    correta: 'São formados dois times com a mesma quantidade de jogadores',
+    erradas: [
+      'Todos formam um único time invencível',
+      'Não existe divisão de participantes',
+      'São formados dez times obrigatoriamente'
+    ]
+  },
+  {
+    categoria: 'Evento — Karambit Wars',
+    assunto: 'o local do combate',
+    correta: 'Um labirinto gigante',
+    erradas: [
+      'Um navio no Píer Sul',
+      'Uma ponte em chamas',
+      'Uma prancha pequena'
+    ]
+  },
+  {
+    categoria: 'Evento — Karambit Wars',
+    assunto: 'a arma utilizada',
+    correta: 'Todos lutam com Karambit',
+    erradas: [
+      'Todos lutam com fuzis',
+      'Todos lutam com chave inglesa',
+      'Todos lutam com taco de golfe'
+    ]
+  },
+  {
+    categoria: 'Evento — Karambit Wars',
+    assunto: 'os itens de regeneração',
+    correta: 'São proibidos',
+    erradas: [
+      'São obrigatórios',
+      'Somente adrenalina é permitida',
+      'Bandagens devem ser usadas a cada minuto'
+    ]
+  },
+  {
+    categoria: 'Evento — Karambit Wars',
+    assunto: 'a traição do próprio time',
+    correta: 'Não existe regra impedindo a traição',
+    erradas: [
+      'É impossível atacar alguém do próprio time',
+      'Causa banimento automático do servidor',
+      'Somente a administração pode trair'
+    ]
+  },
+  {
+    categoria: 'Evento — Karambit Wars',
+    assunto: 'o encerramento da partida',
+    correta: 'O jogo termina quando restam três jogadores vivos',
+    erradas: [
+      'O jogo termina quando restam dez jogadores',
+      'O jogo termina quando um time entra no labirinto',
+      'Todos vencem ao mesmo tempo'
+    ]
+  },
+  {
+    categoria: 'Evento — Santa Cross',
+    assunto: 'o objetivo principal',
+    correta: 'Chegar com vida à favela no final do percurso',
+    erradas: [
+      'Dominar um navio',
+      'Encontrar um veículo rosa',
+      'Permanecer dentro de uma torre'
+    ]
+  },
+  {
+    categoria: 'Evento — Santa Cross',
+    assunto: 'as motocicletas',
+    correta: 'São limitadas e ficam um pouco à frente do ponto inicial',
+    erradas: [
+      'São ilimitadas e entregues a todos',
+      'São proibidas durante todo o evento',
+      'Devem ser levadas pelos participantes'
+    ]
+  },
+  {
+    categoria: 'Evento — Santa Cross',
+    assunto: 'a disputa inicial pelas motocicletas',
+    correta: 'Pode ocorrer usando somente o soco inglês fornecido',
+    erradas: [
+      'Pode ocorrer usando qualquer fuzil',
+      'Não existe disputa pelas motocicletas',
+      'Deve ocorrer usando veículos pessoais'
+    ]
+  },
+  {
+    categoria: 'Evento — Santa Cross',
+    assunto: 'as armas de fogo antes das motocicletas',
+    correta: 'São proibidas',
+    erradas: [
+      'São obrigatórias',
+      'Somente fuzis são permitidos',
+      'Seu uso concede uma motocicleta'
+    ]
+  },
+  {
+    categoria: 'Evento — Santa Cross',
+    assunto: 'a roupa oficial',
+    correta: 'É proibido trocar de roupa durante o evento',
+    erradas: [
+      'É obrigatório trocar de roupa a cada etapa',
+      'A roupa pode ser alterada livremente',
+      'Somente o vencedor usa roupa oficial'
+    ]
+  },
+  {
+    categoria: 'Evento — Santa Apocalipse',
+    assunto: 'o objetivo principal',
+    correta: 'Cruzar a ponte e chegar vivo ao final do túnel',
+    erradas: [
+      'Encontrar um Creator preso',
+      'Dominar um navio',
+      'Permanecer perto de um veículo rosa'
+    ]
+  },
+  {
+    categoria: 'Evento — Santa Apocalipse',
+    assunto: 'o percurso',
+    correta: 'Deve ser realizado inteiramente a pé pela ponte',
+    erradas: [
+      'Deve ser realizado em motocicletas',
+      'Deve ser realizado de navio',
+      'Pode ser realizado por qualquer atalho'
+    ]
+  },
+  {
+    categoria: 'Evento — Santa Apocalipse',
+    assunto: 'a arma permitida aos participantes',
+    correta: 'Karambit',
+    erradas: [
+      'Fuzil',
+      'Chave inglesa',
+      'Taco de golfe'
+    ]
+  },
+  {
+    categoria: 'Evento — Santa Apocalipse',
+    assunto: 'as drogas e binds',
+    correta: 'Qualquer droga e qualquer bind podem ser utilizados',
+    erradas: [
+      'Todas as drogas e binds são proibidas',
+      'Somente adrenalina é proibida e nenhuma bind pode ser usada',
+      'Apenas a administração pode usar drogas'
+    ]
+  },
+  {
+    categoria: 'Evento — Santa Apocalipse',
+    assunto: 'os poderes',
+    correta: 'São proibidos',
+    erradas: [
+      'São obrigatórios',
+      'Podem ser usados para pular a ponte',
+      'Garantem vitória automática'
+    ]
+  },
+  {
+    categoria: 'Evento — Santa Apocalipse',
+    assunto: 'carregar outro participante',
+    correta: 'É proibido e causa desclassificação',
+    erradas: [
+      'É obrigatório',
+      'É permitido para qualquer pessoa',
+      'Concede uma vida extra'
+    ]
+  },
+  {
+    categoria: 'Evento — Esconde-Esconde',
+    assunto: 'o local do Esconde-Esconde do Presídio',
+    correta: 'A Prisão da Cidade Maresia',
+    erradas: [
+      'O Píer Sul da Cidade Nobre',
+      'O pântano da Cidade Grande',
+      'Os prédios da Cidade Santa'
+    ]
+  },
+  {
+    categoria: 'Evento — Esconde-Esconde',
+    assunto: 'o objetivo dos participantes',
+    correta: 'Encontrar esconderijos e sobreviver aos caçadores',
+    erradas: [
+      'Destruir todos os veículos',
+      'Vencer uma corrida de navios',
+      'Atacar astronautas com armas de fogo'
+    ]
+  },
+  {
+    categoria: 'Evento — Resgate ao Macedo',
+    assunto: 'o objetivo principal',
+    correta: 'Resgatar o Macedo vivo',
+    erradas: [
+      'Eliminar o Macedo',
+      'Abandonar o Macedo no local',
+      'Levar o Macedo até o pântano para lutar'
+    ]
+  },
+  {
+    categoria: 'Evento — Resgate ao Macedo',
+    assunto: 'matar o Macedo',
+    correta: 'É proibido',
+    erradas: [
+      'É obrigatório',
+      'Concede premiação dobrada',
+      'É permitido depois do resgate'
+    ]
+  },
+  {
+    categoria: 'Evento — Resgate ao Macedo',
+    assunto: 'os carros voadores',
+    correta: 'São proibidos',
+    erradas: [
+      'São obrigatórios',
+      'Somente líderes podem utilizá-los',
+      'Devem ser usados para carregar o Macedo'
+    ]
+  },
+  {
+    categoria: 'Evento — Resgate ao Macedo',
+    assunto: 'o bate-bate de veículos',
+    correta: 'É proibido',
+    erradas: [
+      'É obrigatório',
+      'É o objetivo principal',
+      'É permitido somente perto do Macedo'
+    ]
+  }
+];
+
+const SC_EVENT_FACTS_TO_USE = SC_EVENT_FACTS.slice(0, 100);
+
+if (SC_EVENT_FACTS_TO_USE.length !== 100) {
+  throw new Error(
+    `[QUIZ EVENTOS] O banco precisa possuir pelo menos 100 assuntos, mas possui ${SC_EVENT_FACTS.length}.`
+  );
+}
+
+if (SC_EVENT_QUESTION_VARIATIONS.length !== 5) {
+  throw new Error(
+    `[QUIZ EVENTOS] O gerador precisa possuir exatamente 5 variações, mas possui ${SC_EVENT_QUESTION_VARIATIONS.length}.`
+  );
+}
+
+for (const fact of SC_EVENT_FACTS_TO_USE) {
+  if (!fact || typeof fact !== 'object') {
+    throw new Error('[QUIZ EVENTOS] Foi encontrado um assunto inválido.');
+  }
+
+  if (!fact.categoria || !fact.assunto || !fact.correta) {
+    throw new Error(
+      `[QUIZ EVENTOS] Um assunto está incompleto: ${JSON.stringify(fact)}`
+    );
+  }
+
+  if (!Array.isArray(fact.erradas) || fact.erradas.length !== 3) {
+    throw new Error(
+      `[QUIZ EVENTOS] O assunto "${fact.assunto}" precisa possuir exatamente três alternativas incorretas.`
+    );
+  }
+
+  const alternativas = [
+    fact.correta,
+    fact.erradas[0],
+    fact.erradas[1],
+    fact.erradas[2]
+  ];
+
+  for (const criarTexto of SC_EVENT_QUESTION_VARIATIONS) {
+    addS(
+      fact.categoria,
+      criarTexto(fact),
+      alternativas,
+      0
+    );
+  }
+}
+
+const SC_EVENT_TOTAL_QUESTIONS =
+  SC_EVENT_FACTS_TO_USE.length * SC_EVENT_QUESTION_VARIATIONS.length;
+
+if (SC_EVENT_TOTAL_QUESTIONS !== 500) {
+  throw new Error(
+    `[QUIZ EVENTOS] Era esperado gerar 500 perguntas, mas foram geradas ${SC_EVENT_TOTAL_QUESTIONS}.`
+  );
+}
+
+console.log(
+  `[QUIZ EVENTOS] ${SC_EVENT_TOTAL_QUESTIONS} perguntas de eventos adicionadas com sucesso.`
+);
 
 export const SC_QUIZ_BANK = Q;
