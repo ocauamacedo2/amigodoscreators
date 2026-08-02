@@ -295,30 +295,35 @@ lastWeeklyResetKey: SC_QUIZ_STATE.lastWeeklyResetKey || null,
     const recent = await channel.messages.fetch({ limit: 100 }).catch(() => null);
     if (!recent) return;
 
-    const shouldDeleteQuizMessage = (msg) => {
-      if (!msg || msg.author?.id !== client.user?.id) return false;
-      if (idsToDelete.has(msg.id)) return false;
+const shouldDeleteQuizMessage = (msg) => {
+  if (!msg || msg.author?.id !== client.user?.id) return false;
+  if (idsToDelete.has(msg.id)) return false;
 
-      const embed = msg.embeds?.[0] || null;
-      const title = String(embed?.title || '').toLowerCase();
-      const footer = String(embed?.footer?.text || '').toLowerCase();
-      const desc = String(embed?.description || '').toLowerCase();
-      const content = String(msg.content || '').toLowerCase();
+  const embed = msg.embeds?.[0] || null;
+  const title = String(embed?.title || '').toLowerCase();
+  const footer = String(embed?.footer?.text || '').toLowerCase();
+  const desc = String(embed?.description || '').toLowerCase();
+  const content = String(msg.content || '').toLowerCase();
 
-      const text = `${title}\n${footer}\n${desc}\n${content}`;
+  const text = `${title}\n${footer}\n${desc}\n${content}`;
 
-      return (
-        text.includes('quiz diário') ||
-        text.includes('pergunta relâmpago') ||
-        text.includes('relâmpago manual') ||
-        text.includes('modo relâmpago') ||
-        text.includes('resposta correta') ||
-        text.includes('resposta incorreta') ||
-        text.includes('vencedor') ||
-        text.includes('você já participou desta rodada') ||
-        text.includes('errou! próxima tentativa livre')
-      );
-    };
+  // Nunca apaga as homenagens semanais dos campeões.
+  if (footer.includes('sc_quiz_weekly_champions::')) {
+    return false;
+  }
+
+  return (
+    text.includes('quiz diário') ||
+    text.includes('pergunta relâmpago') ||
+    text.includes('relâmpago manual') ||
+    text.includes('modo relâmpago') ||
+    text.includes('resposta correta') ||
+    text.includes('resposta incorreta') ||
+    text.includes('vencedor') ||
+    text.includes('você já participou desta rodada') ||
+    text.includes('errou! próxima tentativa livre')
+  );
+};
 
     for (const msg of recent.values()) {
       if (shouldDeleteQuizMessage(msg)) {
@@ -530,6 +535,203 @@ async function scq_sendWeeklyPaymentsToBridge(guild, previousTop3, resetKey) {
   }
 }
 
+// ===================================================================
+// HOMENAGEM PERMANENTE — CAMPEÕES SEMANAIS DO QUIZ
+// ===================================================================
+
+async function scq_postWeeklyWinnersCelebration(
+  guild,
+  previousTop3,
+  resetKey
+) {
+  if (!guild) return null;
+  if (!Array.isArray(previousTop3) || previousTop3.length === 0) return null;
+
+  const creatorsChannel = await client.channels
+    .fetch(SC_QUIZ_CREATORS_CHANNEL_ID)
+    .catch(() => null);
+
+  if (!creatorsChannel?.isTextBased()) {
+    console.error(
+      `[SC_QUIZ] Canal Creators ${SC_QUIZ_CREATORS_CHANNEL_ID} não encontrado para publicar os campeões.`
+    );
+
+    return null;
+  }
+
+  const winnerProfiles = [];
+
+  for (let index = 0; index < previousTop3.length; index++) {
+    const winner = previousTop3[index];
+    const rewardConfig = SC_QUIZ_WEEKLY_REWARDS[index];
+
+    if (!winner?.userId || !rewardConfig) continue;
+
+    const member = await guild.members
+      .fetch(winner.userId)
+      .catch(() => null);
+
+    const user = member?.user || await client.users
+      .fetch(winner.userId)
+      .catch(() => null);
+
+    const displayName =
+      member?.displayName ||
+      user?.globalName ||
+      user?.username ||
+      winner.name ||
+      winner.userId;
+
+    const avatarUrl =
+      user?.displayAvatarURL({
+        extension: 'png',
+        size: 512,
+        forceStatic: false,
+      }) ||
+      guild.iconURL({
+        extension: 'png',
+        size: 512,
+        forceStatic: false,
+      }) ||
+      null;
+
+    winnerProfiles.push({
+      ...winner,
+      index,
+      member,
+      user,
+      displayName,
+      avatarUrl,
+      rewardConfig,
+    });
+  }
+
+  if (!winnerProfiles.length) return null;
+
+  const mentions = winnerProfiles
+    .map((winner) => `<@${winner.userId}>`)
+    .join(' ');
+
+  const celebrationDate = scq_formatDateBRT(Date.now());
+
+  const mainEmbed = {
+    color: 0xFFD700,
+    title: '🏆✨ CAMPEÕES SEMANAIS DO QUIZ SANTA CREATORS ✨🏆',
+    description: [
+      'A meia-noite chegou, uma nova disputa começou e chegou a hora de celebrar quem brilhou na semana que terminou! 🎊',
+      '',
+      'Cada resposta, tentativa e participação ajudou a movimentar o nosso Quiz. Hoje, três nomes conquistaram seu lugar no pódio com conhecimento, presença e constância. 🧠⚡',
+      '',
+      '💜 **Parabéns aos nossos campeões semanais!**',
+      '',
+      winnerProfiles
+        .map((winner) => {
+          const medal =
+            winner.index === 0
+              ? '🥇'
+              : winner.index === 1
+                ? '🥈'
+                : '🥉';
+
+          return `${medal} <@${winner.userId}> — **${winner.rewardConfig.reward}**`;
+        })
+        .join('\n'),
+      '',
+      '🌟 Que essa conquista seja combustível para continuar participando, aprendendo e deixando o próximo ranking ainda mais disputado.',
+      '',
+      '🔄 **O placar foi zerado e uma nova semana acaba de começar.**',
+      'Será que teremos novos nomes no pódio ou os campeões vão defender suas coroas? 👑',
+    ].join('\n'),
+    thumbnail: {
+      url:
+        guild.iconURL({
+          extension: 'png',
+          size: 512,
+          forceStatic: false,
+        }) ||
+        winnerProfiles[0]?.avatarUrl ||
+        undefined,
+    },
+    footer: {
+      text: `SC_QUIZ_WEEKLY_CHAMPIONS::${resetKey} • Resultado de ${celebrationDate}`,
+    },
+    timestamp: new Date().toISOString(),
+  };
+
+  const winnerEmbeds = winnerProfiles.map((winner) => {
+    const medal =
+      winner.index === 0
+        ? '🥇'
+        : winner.index === 1
+          ? '🥈'
+          : '🥉';
+
+    const title =
+      winner.index === 0
+        ? '🥇 TOP 1 — O GRANDE CAMPEÃO DA SEMANA'
+        : winner.index === 1
+          ? '🥈 TOP 2 — DESTAQUE DA SEMANA'
+          : '🥉 TOP 3 — PÓDIO CONQUISTADO';
+
+    const color =
+      winner.index === 0
+        ? 0xFFD700
+        : winner.index === 1
+          ? 0xC0C0C0
+          : 0xCD7F32;
+
+    return {
+      color,
+      title,
+      description: [
+        `${medal} <@${winner.userId}>`,
+        '',
+        `👤 **Nome:** ${winner.displayName}`,
+        `✅ **Acertos:** ${Number(winner.acertos || 0)}`,
+        `❌ **Erros:** ${Number(winner.erros || 0)}`,
+        `🔥 **Interações:** ${Number(winner.interacoes || 0)}`,
+        `🎁 **Premiação:** ${winner.rewardConfig.reward}`,
+        '',
+        winner.index === 0
+          ? '👑 Uma semana de destaque absoluto. O topo agora tem nome!'
+          : winner.index === 1
+            ? '🌟 Uma campanha incrível que garantiu um lugar de honra no pódio!'
+            : '🚀 Persistência e participação recompensadas com uma grande conquista!',
+      ].join('\n'),
+      thumbnail: winner.avatarUrl
+        ? {
+            url: winner.avatarUrl,
+          }
+        : undefined,
+      footer: {
+        text: `${winner.rewardConfig.label} • Quiz Santa Creators`,
+      },
+      timestamp: new Date().toISOString(),
+    };
+  });
+
+  const sentMessage = await creatorsChannel.send({
+    content: [
+      '🎉 **PALMAS PARA O NOSSO PÓDIO SEMANAL!** 🎉',
+      mentions,
+    ].join('\n'),
+    embeds: [
+      mainEmbed,
+      ...winnerEmbeds,
+    ],
+    allowedMentions: {
+      users: winnerProfiles.map((winner) => winner.userId),
+      parse: [],
+    },
+  });
+
+  console.log(
+    `[SC_QUIZ] Homenagem semanal publicada: ${sentMessage.id}`
+  );
+
+  return sentMessage;
+}
+
 async function scq_tryWeeklyAutoReset(guild) {
   try {
     if (!guild) return;
@@ -580,6 +782,19 @@ await scq_sendWeeklyPaymentsToBridge(
   );
 });
 
+// Publica a homenagem permanente no canal Creators.
+// Essa mensagem não entra na lista de limpeza dos quizzes.
+await scq_postWeeklyWinnersCelebration(
+  guild,
+  previousTop3,
+  resetKey
+).catch((error) => {
+  console.error(
+    '[SC_QUIZ] Erro ao publicar homenagem semanal:',
+    error
+  );
+});
+
 SC_QUIZ_STATE.leaderboard = {};
 SC_QUIZ_STATE.lastWeeklyResetKey = resetKey;
 
@@ -587,17 +802,17 @@ scq_save();
 
 await scq_renderRankingSticky();
 
-    await scq_log(scq_buildEmbed({
-      title: '🏆 Ranking Semanal Encerrado',
-      description: [
-        scq_getWeeklyPrizeBlock(),
-        '',
-        scq_getPreviousTop3Block(),
-        '',
-        '🔄 O ranking semanal foi zerado automaticamente para iniciar uma nova disputa.'
-      ].join('\n'),
-      color: 0xFFD700
-    }));
+await scq_log(scq_buildEmbed({
+  title: '🏆 Ranking Semanal Encerrado',
+  description: [
+    scq_getWeeklyPrizeBlock(),
+    '',
+    scq_getPreviousTop3Block(),
+    '',
+    '🔄 O ranking semanal foi zerado automaticamente para iniciar uma nova disputa.'
+  ].join('\n'),
+  color: 0xFFD700
+}));
   } catch (e) {
     console.error('[SC_QUIZ] Erro no reset semanal automático:', e);
   }
