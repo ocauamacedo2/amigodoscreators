@@ -8,6 +8,7 @@
 // • Logs detalhados em canal próprio (quem responder, certo/errado, etc.).
 
 import fs from 'node:fs';
+import crypto from 'node:crypto';
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, Events } from 'discord.js';
 import { SC_QUIZ_BANK } from './questions.js';
 
@@ -43,13 +44,54 @@ export async function setupQuiz(client) {
     const SC_QUIZ_POINTS_RIGHT       = 1;
 
 const SC_QUIZ_WEEKLY_REWARDS = [
-  { pos: 1, label: 'TOP 1', reward: '1 VIP' },
-  { pos: 2, label: 'TOP 2', reward: '15KK' },
-  { pos: 3, label: 'TOP 3', reward: '10KK' },
+  {
+    pos: 1,
+    label: 'TOP 1',
+    reward: '1 VIP + 100KK',
+    payments: [
+      {
+        tipo: 'VIP Staff',
+        premiacao: '1 VIP',
+      },
+      {
+        tipo: 'Dinheiro',
+        premiacao: '100KK',
+      },
+    ],
+  },
+  {
+    pos: 2,
+    label: 'TOP 2',
+    reward: '100KK',
+    payments: [
+      {
+        tipo: 'Dinheiro',
+        premiacao: '100KK',
+      },
+    ],
+  },
+  {
+    pos: 3,
+    label: 'TOP 3',
+    reward: '50KK',
+    payments: [
+      {
+        tipo: 'Dinheiro',
+        premiacao: '50KK',
+      },
+    ],
+  },
 ];
 
 const SC_QUIZ_WEEKLY_RESET_HOUR = 0; // Domingo 00:00
 const SC_QUIZ_WEEKLY_RESET_MINUTE_LIMIT = 3; // janela segura 00:00 até 00:03
+
+// Canal usado para comunicação entre o bot do Quiz e o bot de Pagamentos.
+const SC_QUIZ_PAYMENT_BRIDGE_CHANNEL_ID = '1518707314901651576';
+
+// Esta mesma senha deve existir no .env dos dois bots.
+const SC_QUIZ_PAYMENT_BRIDGE_SECRET =
+  String(process.env.SC_QUIZ_PAYMENT_BRIDGE_SECRET || '').trim();
 
     const SC_RT_EVERY_MINUTES        = 30; // Frequência do relâmpago
     const SC_RT_WINDOW_START_HOUR    = 12;
@@ -327,9 +369,9 @@ function scq_getWeeklyPrizeBlock() {
     '━━━━━━━━━━━━━━━━━━━━━━',
     '🏆 **PREMIAÇÃO SEMANAL — SANTA CREATORS**',
     '',
-    '🥇 **TOP 1** → **1 VIP**',
-    '🥈 **TOP 2** → **15KK**',
-    '🥉 **TOP 3** → **10KK**',
+    '🥇 **TOP 1** → **1 VIP + 100KK**',
+    '🥈 **TOP 2** → **100KK**',
+    '🥉 **TOP 3** → **50KK**',
     '',
     '⏳ **Prazo:** até **sábado 23:59**',
     '🔄 **Reset:** domingo **00:00**',
@@ -369,7 +411,7 @@ function scq_isWeeklyResetWindowBRT() {
   const now = new Date();
   const brt = new Date(now.getTime() - (3 * 60 * 60 * 1000));
 
-  const dayOfWeek = brt.getUTCDay(); // 0 = domingo
+  const dayOfWeek = brt.getUTCDay();
   const hour = brt.getUTCHours();
   const minute = brt.getUTCMinutes();
 
@@ -378,6 +420,114 @@ function scq_isWeeklyResetWindowBRT() {
     hour === SC_QUIZ_WEEKLY_RESET_HOUR &&
     minute <= SC_QUIZ_WEEKLY_RESET_MINUTE_LIMIT
   );
+}
+
+// ===================================================================
+// PONTE AUTOMÁTICA — QUIZ → BOT DE PAGAMENTOS
+// ===================================================================
+
+function scq_formatDateBRT(timestamp = Date.now()) {
+  return new Intl.DateTimeFormat('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  }).format(new Date(timestamp));
+}
+
+function scq_signPaymentPayload(payloadText) {
+  if (!SC_QUIZ_PAYMENT_BRIDGE_SECRET) {
+    throw new Error(
+      'SC_QUIZ_PAYMENT_BRIDGE_SECRET não foi configurada no .env do bot do Quiz.'
+    );
+  }
+
+  return crypto
+    .createHmac('sha256', SC_QUIZ_PAYMENT_BRIDGE_SECRET)
+    .update(payloadText)
+    .digest('hex');
+}
+
+async function scq_sendWeeklyPaymentsToBridge(guild, previousTop3, resetKey) {
+  if (!guild) return;
+
+  if (!SC_QUIZ_PAYMENT_BRIDGE_SECRET) {
+    console.error(
+      '[SC_QUIZ_PAYMENT_BRIDGE] A senha SC_QUIZ_PAYMENT_BRIDGE_SECRET não foi configurada.'
+    );
+    return;
+  }
+
+  const bridgeChannel = await client.channels
+    .fetch(SC_QUIZ_PAYMENT_BRIDGE_CHANNEL_ID)
+    .catch(() => null);
+
+  if (!bridgeChannel?.isTextBased()) {
+    console.error(
+      `[SC_QUIZ_PAYMENT_BRIDGE] Canal ${SC_QUIZ_PAYMENT_BRIDGE_CHANNEL_ID} não encontrado.`
+    );
+    return;
+  }
+
+  const creationTimestamp = Date.now();
+  const creationDate = scq_formatDateBRT(creationTimestamp);
+
+  for (let index = 0; index < previousTop3.length; index++) {
+    const winner = previousTop3[index];
+    const rewardConfig = SC_QUIZ_WEEKLY_REWARDS[index];
+
+    if (!winner?.userId || !rewardConfig) continue;
+
+    const member = await guild.members.fetch(winner.userId).catch(() => null);
+
+    const payload = {
+      version: 1,
+      source: 'santa_creators_quiz',
+      eventName: 'Quizz Santa Creators',
+      eventDate: creationDate,
+      createdAt: creationTimestamp,
+      resetKey,
+      position: rewardConfig.pos,
+      positionLabel: rewardConfig.label,
+      rewardText: rewardConfig.reward,
+      payments: rewardConfig.payments,
+      discordUserId: winner.userId,
+      displayName:
+        member?.displayName ||
+        winner.name ||
+        winner.userId,
+      username:
+        member?.user?.username ||
+        winner.name ||
+        winner.userId,
+      acertos: Number(winner.acertos || 0),
+      erros: Number(winner.erros || 0),
+      interacoes: Number(winner.interacoes || 0),
+    };
+
+    const payloadText = JSON.stringify(payload);
+    const signature = scq_signPaymentPayload(payloadText);
+    const payloadBase64 = Buffer.from(payloadText, 'utf8').toString('base64');
+
+    await bridgeChannel.send({
+      content: [
+        `🏆 <@${winner.userId}>`,
+        '',
+        `**${rewardConfig.label} — Quizz Santa Creators**`,
+        `🎁 Premiação: **${rewardConfig.reward}**`,
+        `📅 Data de criação: **${creationDate}**`,
+        '',
+        '```SC_QUIZ_PAYMENT_BRIDGE_V1',
+        payloadBase64,
+        signature,
+        '```',
+      ].join('\n'),
+      allowedMentions: {
+        users: [winner.userId],
+        parse: [],
+      },
+    });
+  }
 }
 
 async function scq_tryWeeklyAutoReset(guild) {
@@ -416,13 +566,26 @@ async function scq_tryWeeklyAutoReset(guild) {
       });
     }
 
-    SC_QUIZ_STATE.previousWeeklyTop3 = previousTop3;
-    SC_QUIZ_STATE.leaderboard = {};
-    SC_QUIZ_STATE.lastWeeklyResetKey = resetKey;
+SC_QUIZ_STATE.previousWeeklyTop3 = previousTop3;
 
-    scq_save();
+// Envia o Top 3 para o bot de pagamentos antes de zerar o ranking.
+await scq_sendWeeklyPaymentsToBridge(
+  guild,
+  previousTop3,
+  resetKey
+).catch((error) => {
+  console.error(
+    '[SC_QUIZ_PAYMENT_BRIDGE] Erro ao enviar premiações:',
+    error
+  );
+});
 
-    await scq_renderRankingSticky();
+SC_QUIZ_STATE.leaderboard = {};
+SC_QUIZ_STATE.lastWeeklyResetKey = resetKey;
+
+scq_save();
+
+await scq_renderRankingSticky();
 
     await scq_log(scq_buildEmbed({
       title: '🏆 Ranking Semanal Encerrado',
