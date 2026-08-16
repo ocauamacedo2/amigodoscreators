@@ -229,12 +229,23 @@ dotenv.config();
 const __dirname = path.dirname(new URL(import.meta.url).pathname);
 
 // ——— CONFIG ———
-let VOICE_CHANNEL_ID = (process.env.VOICE_CHANNEL_ID || '1415386915137388664').trim();
-const TEXT_CHANNEL_ID  = (process.env.TEXT_CHANNEL_ID  || '1381597720007151698').trim();
+
+// =====================================================
+// CALL PADRÃO DO AMIGO DOS CREATORS - CIDADE MALTA
+// =====================================================
+// 👨┃Creators
+const DEFAULT_VOICE_CHANNEL_ID = '1379643427980836914';
+
+// A call salva manualmente através de /forcarcall ou +joincall
+// poderá substituir esse valor depois que o state for carregado.
+let VOICE_CHANNEL_ID = DEFAULT_VOICE_CHANNEL_ID;
+
+const TEXT_CHANNEL_ID  = (process.env.TEXT_CHANNEL_ID || '1381597720007151698').trim();
 
 const CHECK_INTERVAL_MS = 60_000;            // checagem de presença no canal de voz
 const LEAVE_DELAY_MS    = 4 * 60 * 1000;     // 4 minutos
 const AUTO_DELETE_MS    = 30 * 60 * 1000;    // 30 minutos (apagamento automático)
+
 // Quem pode usar o comando manual !forcarcall.
 // Administradores também podem usar automaticamente.
 const FORCE_CALL_USER_IDS = new Set([
@@ -278,18 +289,46 @@ function saveState() {
 // =====================================================
 // RESTAURA A ÚLTIMA CALL VÁLIDA APÓS REINICIAR
 // =====================================================
+
+// ID antigo que não pertence à Cidade Malta.
+// Se estiver salvo no call_bot_state.json, ele será ignorado.
+const LEGACY_INVALID_VOICE_CHANNEL_ID = '1415386915137388664';
+
 if (
   state.voiceChannelId &&
   /^\d{17,20}$/.test(
     String(state.voiceChannelId)
   )
 ) {
-  VOICE_CHANNEL_ID =
+  const savedVoiceChannelId =
     String(state.voiceChannelId);
 
-  console.log(
-    `[voice] call persistida carregada: ${VOICE_CHANNEL_ID}`
-  );
+  if (
+    savedVoiceChannelId ===
+    LEGACY_INVALID_VOICE_CHANNEL_ID
+  ) {
+    console.warn(
+      `[voice] call persistida antiga ignorada: ${savedVoiceChannelId}`
+    );
+
+    state.voiceChannelId = null;
+
+    saveState();
+
+    VOICE_CHANNEL_ID =
+      DEFAULT_VOICE_CHANNEL_ID;
+
+    console.log(
+      `[voice] usando call padrão da Cidade Malta: ${VOICE_CHANNEL_ID}`
+    );
+  } else {
+    VOICE_CHANNEL_ID =
+      savedVoiceChannelId;
+
+    console.log(
+      `[voice] call persistida carregada: ${VOICE_CHANNEL_ID}`
+    );
+  }
 }
 // ——— HELPERS ———
 function pick(a){ return Array.isArray(a) && a.length ? a[Math.floor(Math.random()*a.length)] : ''; }
@@ -778,22 +817,21 @@ async function findVoiceChannel() {
     return cached;
   }
 
-  // 2. Busca direta global
-  try {
-    const fetched = await client.channels.fetch(
-      VOICE_CHANNEL_ID,
-      { force: true }
-    );
+// 2. Busca direta global
+try {
+  const fetched = await client.channels.fetch(
+    VOICE_CHANNEL_ID,
+    { force: true }
+  );
 
-    if (fetched) {
-      return fetched;
-    }
-  } catch (e) {
-    console.warn(
-      `[voice] busca global do canal ${VOICE_CHANNEL_ID} falhou:`,
-      e?.message || e
-    );
+  if (fetched) {
+    return fetched;
   }
+} catch (e) {
+  logVoiceError(
+    `Busca global do canal ${VOICE_CHANNEL_ID} falhou: ${e?.message || e}`
+  );
+}
 
   // 3. Procura dentro de todos os servidores onde o bot está
   for (const [, guild] of client.guilds.cache) {
