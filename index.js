@@ -229,13 +229,12 @@ dotenv.config();
 const __dirname = path.dirname(new URL(import.meta.url).pathname);
 
 // ——— CONFIG ———
-const VOICE_CHANNEL_ID = (process.env.VOICE_CHANNEL_ID || '1415386915137388664').trim();
+let VOICE_CHANNEL_ID = (process.env.VOICE_CHANNEL_ID || '1415386915137388664').trim();
 const TEXT_CHANNEL_ID  = (process.env.TEXT_CHANNEL_ID  || '1381597720007151698').trim();
 
 const CHECK_INTERVAL_MS = 60_000;            // checagem de presença no canal de voz
 const LEAVE_DELAY_MS    = 4 * 60 * 1000;     // 4 minutos
 const AUTO_DELETE_MS    = 30 * 60 * 1000;    // 30 minutos (apagamento automático)
-
 // Quem pode usar o comando manual !forcarcall.
 // Administradores também podem usar automaticamente.
 const FORCE_CALL_USER_IDS = new Set([
@@ -248,19 +247,50 @@ if (!TOKEN) throw new Error('DISCORD_TOKEN/TOKEN ausente no .env');
 
 // ——— ESTADO EM DISCO ———
 const DB_PATH = path.join(__dirname, 'call_bot_state.json');
+
 const state = (() => {
-  try { return JSON.parse(fs.readFileSync(DB_PATH, 'utf8')); }
-  catch {
+  try {
+    return JSON.parse(
+      fs.readFileSync(DB_PATH, 'utf8')
+    );
+  } catch {
     return {
       lastJoinMessageDay: {},
       pendingLeave: {},
-      lastByType: {},     // última msg por "tipo" (statusReturn, kickNotice, etc.)
-      pendingDeletes: [], // [{channelId, id, deleteAt}]
+      lastByType: {},
+      pendingDeletes: [],
+
+      // Última call válida escolhida manualmente.
+      voiceChannelId: null,
     };
   }
 })();
-function saveState(){ try{ fs.writeFileSync(DB_PATH, JSON.stringify(state, null, 2)); }catch{} }
 
+function saveState() {
+  try {
+    fs.writeFileSync(
+      DB_PATH,
+      JSON.stringify(state, null, 2)
+    );
+  } catch {}
+}
+
+// =====================================================
+// RESTAURA A ÚLTIMA CALL VÁLIDA APÓS REINICIAR
+// =====================================================
+if (
+  state.voiceChannelId &&
+  /^\d{17,20}$/.test(
+    String(state.voiceChannelId)
+  )
+) {
+  VOICE_CHANNEL_ID =
+    String(state.voiceChannelId);
+
+  console.log(
+    `[voice] call persistida carregada: ${VOICE_CHANNEL_ID}`
+  );
+}
 // ——— HELPERS ———
 function pick(a){ return Array.isArray(a) && a.length ? a[Math.floor(Math.random()*a.length)] : ''; }
 function dayKey(d=new Date()){ return d.toISOString().slice(0,10); }
@@ -515,6 +545,19 @@ let lastVoiceErrorLogAt = 0;
 // Intervalo mínimo entre logs iguais de erro.
 const VOICE_ERROR_LOG_COOLDOWN_MS = 60_000;
 
+// =====================================================
+// CONTROLES DE ESTABILIDADE / RECONEXÃO
+// Baseado no sistema estável do outro bot.
+// =====================================================
+const VOICE_RECONNECT_DELAY_MS = 8_000;
+const VOICE_CONNECT_COOLDOWN_MS = 10_000;
+const VOICE_STABILIZE_TIMEOUT_MS = 60_000;
+
+let voiceLastConnectAttempt = 0;
+let voiceReconnectTimer = null;
+let voiceBoundConnection = null;
+let voiceIntentionalDestroy = false;
+
 function logVoiceError(message) {
   const now = Date.now();
 
@@ -522,6 +565,207 @@ function logVoiceError(message) {
     lastVoiceErrorLogAt = now;
     console.error('[voice] erro ao conectar:', message);
   }
+}
+
+// =====================================================
+// HELPERS DE RECONEXÃO ESTÁVEL
+// =====================================================
+function clearVoiceReconnectTimer() {
+  if (voiceReconnectTimer) {
+    clearTimeout(voiceReconnectTimer);
+    voiceReconnectTimer = null;
+  }
+}
+
+function scheduleVoiceReconnect(
+  delay = VOICE_RECONNECT_DELAY_MS,
+  reason = 'sem motivo'
+) {
+  if (voiceReconnectTimer) {
+    return;
+  }
+
+  console.warn(
+    `[voice] reconexão agendada em ${delay}ms | motivo: ${reason}`
+  );
+
+  voiceReconnectTimer = setTimeout(async () => {
+    voiceReconnectTimer = null;
+
+    await connectToVoice({
+      reason
+    });
+  }, delay);
+}
+
+function cleanupVoiceBoundConnection() {
+  if (!voiceBoundConnection) {
+    return;
+  }
+
+  try {
+    if (voiceBoundConnection.__amigoStateChange) {
+      voiceBoundConnection.off(
+        'stateChange',
+        voiceBoundConnection.__amigoStateChange
+      );
+    }
+
+    if (voiceBoundConnection.__amigoError) {
+      voiceBoundConnection.off(
+        'error',
+        voiceBoundConnection.__amigoError
+      );
+    }
+  } catch {}
+
+  voiceBoundConnection.__amigoStateChange = null;
+  voiceBoundConnection.__amigoError = null;
+
+  voiceBoundConnection = null;
+}
+
+async function destroyVoiceConnectionSafely(
+  connection,
+  waitMs = 1500
+) {
+  if (!connection) {
+    return;
+  }
+
+  voiceIntentionalDestroy = true;
+
+  try {
+    connection.destroy();
+  } catch {}
+
+  await new Promise(resolve =>
+    setTimeout(resolve, waitMs)
+  );
+
+  voiceIntentionalDestroy = false;
+}
+
+function bindVoiceConnectionEvents(connection) {
+  if (!connection) {
+    return;
+  }
+
+  if (voiceBoundConnection === connection) {
+    return;
+  }
+
+  cleanupVoiceBoundConnection();
+
+  voiceBoundConnection = connection;
+
+  const onStateChange = async (
+    oldState,
+    newState
+  ) => {
+    if (
+      newState.status !== VoiceConnectionStatus.Signalling &&
+      newState.status !== VoiceConnectionStatus.Connecting
+    ) {
+      console.log(
+        `[voice] stateChange: ${oldState.status} -> ${newState.status}`
+      );
+    }
+
+    if (
+      newState.status === VoiceConnectionStatus.Ready
+    ) {
+      clearVoiceReconnectTimer();
+      return;
+    }
+
+    if (
+      newState.status ===
+      VoiceConnectionStatus.Disconnected
+    ) {
+      try {
+        await Promise.race([
+          entersState(
+            connection,
+            VoiceConnectionStatus.Signalling,
+            8_000
+          ),
+          entersState(
+            connection,
+            VoiceConnectionStatus.Connecting,
+            8_000
+          ),
+        ]);
+
+        console.log(
+          '[voice] conexão iniciou recuperação natural após Disconnected.'
+        );
+
+        return;
+      } catch {
+        if (voiceIntentionalDestroy) {
+          return;
+        }
+
+        console.warn(
+          '[voice] desconectado sem recuperação natural.'
+        );
+
+        scheduleVoiceReconnect(
+          8_000,
+          'Disconnected sem recuperação'
+        );
+
+        return;
+      }
+    }
+
+    if (
+      newState.status ===
+      VoiceConnectionStatus.Destroyed
+    ) {
+      if (voiceIntentionalDestroy) {
+        return;
+      }
+
+      scheduleVoiceReconnect(
+        8_000,
+        'VoiceConnection Destroyed'
+      );
+    }
+  };
+
+  const onError = error => {
+    console.error(
+      '[voice] erro na conexão de voz:',
+      error
+    );
+
+    if (voiceIntentionalDestroy) {
+      return;
+    }
+
+    scheduleVoiceReconnect(
+      8_000,
+      'erro na VoiceConnection'
+    );
+  };
+
+  connection.__amigoStateChange =
+    onStateChange;
+
+  connection.__amigoError =
+    onError;
+
+  connection.on(
+    'stateChange',
+    onStateChange
+  );
+
+  connection.on(
+    'error',
+    onError
+  );
 }
 
 // Procura o canal de voz primeiro globalmente e,
@@ -576,35 +820,40 @@ async function findVoiceChannel() {
   return null;
 }
 
-async function connectToVoice({ force = false } = {}) {
-  // Se já existe uma tentativa acontecendo, não inicia outra.
+async function connectToVoice({
+  force = false,
+  reason = 'automático'
+} = {}) {
+  // =====================================================
+  // EVITA CONEXÕES DUPLICADAS
+  // =====================================================
   if (voiceConnecting) {
-    console.log('[voice] já existe uma tentativa de conexão em andamento.');
     return false;
   }
 
+  const now = Date.now();
+
+  if (
+    !force &&
+    now - voiceLastConnectAttempt <
+      VOICE_CONNECT_COOLDOWN_MS
+  ) {
+    return false;
+  }
+
+  voiceLastConnectAttempt = now;
   voiceConnecting = true;
 
   try {
-    const channel = await findVoiceChannel();
+    // =====================================================
+    // LOCALIZA A CALL CONFIGURADA
+    // =====================================================
+    const channel =
+      await findVoiceChannel();
 
     if (!channel) {
-      console.error(
-        `[voice] NÃO FOI POSSÍVEL LOCALIZAR O CANAL ${VOICE_CHANNEL_ID}.`
-      );
-
-      console.error(
-        '[voice] Servidores onde o bot está atualmente:'
-      );
-
-      for (const [, guild] of client.guilds.cache) {
-        console.error(
-          `[voice] - ${guild.name} (${guild.id})`
-        );
-      }
-
-      console.error(
-        '[voice] Confira se VOICE_CHANNEL_ID está correto e se o bot pertence ao servidor desse canal.'
+      logVoiceError(
+        `Canal ${VOICE_CHANNEL_ID} não encontrado ou sem acesso para o bot.`
       );
 
       return false;
@@ -615,148 +864,308 @@ async function connectToVoice({ force = false } = {}) {
       channel.type === ChannelType.GuildStageVoice;
 
     if (!isVoice) {
-      console.error(
-        `[voice] O ID ${VOICE_CHANNEL_ID} foi encontrado, mas corresponde ao canal #${channel.name}, que NÃO é um canal de voz.`
+      logVoiceError(
+        `O canal ${VOICE_CHANNEL_ID} existe, mas não é um canal de voz válido.`
       );
 
       return false;
     }
 
-    console.log(
-      `[voice] canal localizado: #${channel.name} (${channel.id}) | servidor: ${channel.guild.name} (${channel.guild.id})`
-    );
+    const guild = channel.guild;
 
     const me =
-      channel.guild.members.me ||
-      await channel.guild.members.fetchMe().catch(() => null);
+      guild.members.me ||
+      await guild.members
+        .fetch(client.user.id)
+        .catch(() => null);
 
     if (!me) {
-      console.error(
-        `[voice] Não foi possível localizar o próprio bot dentro do servidor ${channel.guild.name} (${channel.guild.id}).`
+      logVoiceError(
+        `Não foi possível localizar o bot no servidor ${guild.id}.`
       );
 
       return false;
     }
 
-    const permissions = channel.permissionsFor(me);
+    // =====================================================
+    // CONFERE AS PERMISSÕES REAIS
+    // =====================================================
+    const permissions =
+      channel.permissionsFor(me);
 
     if (!permissions) {
-      console.error(
-        `[voice] Não foi possível verificar as permissões do bot em #${channel.name}.`
+      logVoiceError(
+        `Não foi possível verificar as permissões em #${channel.name}.`
       );
 
       return false;
     }
 
     const canView =
-      permissions.has(PermissionsBitField.Flags.ViewChannel);
+      permissions.has(
+        PermissionsBitField.Flags.ViewChannel
+      );
 
     const canConnect =
-      permissions.has(PermissionsBitField.Flags.Connect);
+      permissions.has(
+        PermissionsBitField.Flags.Connect
+      );
 
     const canSpeak =
-      permissions.has(PermissionsBitField.Flags.Speak);
+      permissions.has(
+        PermissionsBitField.Flags.Speak
+      );
 
     console.log(
-      `[voice] permissões em #${channel.name}: Ver=${canView} | Conectar=${canConnect} | Falar=${canSpeak}`
+      `[voice] canal: #${channel.name} (${channel.id}) | servidor: ${guild.name} (${guild.id})`
+    );
+
+    console.log(
+      `[voice] permissões: Ver=${canView} | Conectar=${canConnect} | Falar=${canSpeak}`
     );
 
     if (!canView) {
-      console.error(
-        `[voice] BLOQUEADO: o bot não possui "Ver canal" em #${channel.name}.`
+      logVoiceError(
+        `O bot não possui "Ver canal" em #${channel.name}.`
       );
 
       return false;
     }
 
     if (!canConnect) {
-      console.error(
-        `[voice] BLOQUEADO: o bot não possui "Conectar" em #${channel.name}.`
+      logVoiceError(
+        `O bot não possui "Conectar" em #${channel.name}.`
       );
 
       return false;
     }
 
-    let conn = getVoiceConnection(channel.guild.id);
+    // =====================================================
+    // ANALISA A CONEXÃO ATUAL
+    // =====================================================
+    let connection =
+      getVoiceConnection(guild.id);
 
-    // Se foi solicitado retorno forçado,
-    // destrói a conexão antiga antes de criar uma nova.
-    if (force && conn) {
-      console.log(
-        '[voice] modo FORÇADO: destruindo conexão antiga antes de reconectar...'
+    const botChannelId =
+      me.voice?.channelId ?? null;
+
+    const connectionStatus =
+      connection?.state?.status ?? null;
+
+    const connectionChannelId =
+      connection?.joinConfig?.channelId ?? null;
+
+    // =====================================================
+    // JÁ ESTÁ COMPLETAMENTE CONECTADO
+    // =====================================================
+    if (
+      !force &&
+      connection &&
+      connectionChannelId === channel.id &&
+      botChannelId === channel.id
+    ) {
+      bindVoiceConnectionEvents(
+        connection
       );
 
-      try {
-        conn.destroy();
-      } catch {}
+      if (
+        connectionStatus ===
+        VoiceConnectionStatus.Ready
+      ) {
+        clearVoiceReconnectTimer();
 
-      conn = null;
+        return true;
+      }
 
-      // Pequeno intervalo para o Discord registrar a desconexão anterior.
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      if (
+        connectionStatus ===
+          VoiceConnectionStatus.Signalling ||
+        connectionStatus ===
+          VoiceConnectionStatus.Connecting
+      ) {
+        // A conexão ainda está estabilizando.
+        // Não destrói prematuramente.
+        return true;
+      }
     }
 
-    // Se há uma conexão em outro canal,
-    // remove para conectar no canal correto.
+    // =====================================================
+    // FORCE = DESTRÓI E RECRIA
+    // =====================================================
     if (
-      conn &&
-      conn.joinConfig?.channelId !== channel.id
+      force &&
+      connection
     ) {
       console.log(
-        `[voice] conexão antiga encontrada no canal ${conn.joinConfig?.channelId}. Recriando no canal correto...`
+        '[voice] modo forçado: destruindo conexão anterior...'
       );
 
-      try {
-        conn.destroy();
-      } catch {}
+      await destroyVoiceConnectionSafely(
+        connection,
+        1500
+      );
 
-      conn = null;
-
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      connection = null;
     }
 
-    if (!conn) {
-      console.log(
-        `[voice] tentando entrar em #${channel.name}...`
-      );
+    // =====================================================
+    // CONEXÃO ANTIGA INVÁLIDA
+    // =====================================================
+    if (connection) {
+      const sameTarget =
+        connectionChannelId === channel.id;
 
-      conn = joinVoiceChannel({
+      const ready =
+        connectionStatus ===
+        VoiceConnectionStatus.Ready;
+
+      const botAlreadyThere =
+        botChannelId === channel.id;
+
+      if (
+        sameTarget &&
+        ready &&
+        !botAlreadyThere
+      ) {
+        console.warn(
+          '[voice] conexão interna Ready, mas o Discord não mostra o bot na call. Limpando conexão antiga.'
+        );
+
+        await destroyVoiceConnectionSafely(
+          connection,
+          1500
+        );
+
+        connection = null;
+      } else if (
+        !sameTarget ||
+        connectionStatus ===
+          VoiceConnectionStatus.Destroyed
+      ) {
+        console.warn(
+          `[voice] conexão anterior inválida (${connectionStatus ?? 'sem status'}). Limpando.`
+        );
+
+        await destroyVoiceConnectionSafely(
+          connection,
+          1500
+        );
+
+        connection = null;
+      } else if (
+        sameTarget &&
+        botAlreadyThere &&
+        (
+          connectionStatus ===
+            VoiceConnectionStatus.Signalling ||
+          connectionStatus ===
+            VoiceConnectionStatus.Connecting
+        )
+      ) {
+        bindVoiceConnectionEvents(
+          connection
+        );
+
+        return true;
+      }
+    }
+
+    // =====================================================
+    // CRIA NOVA CONEXÃO
+    // =====================================================
+    console.log(
+      `[voice] tentando entrar em #${channel.name} | motivo: ${reason}`
+    );
+
+    const newConnection =
+      joinVoiceChannel({
         channelId: channel.id,
-        guildId: channel.guild.id,
-        adapterCreator: channel.guild.voiceAdapterCreator,
+        guildId: guild.id,
+        adapterCreator:
+          guild.voiceAdapterCreator,
         selfDeaf: false,
         selfMute: false,
+
+        // Igual ao sistema estável do outro bot.
+        group: 'default',
       });
-    }
+
+    bindVoiceConnectionEvents(
+      newConnection
+    );
 
     try {
       await entersState(
-        conn,
+        newConnection,
         VoiceConnectionStatus.Ready,
-        15_000
+
+        // O outro sistema dá mais tempo para estabilizar.
+        VOICE_STABILIZE_TIMEOUT_MS
       );
+
+      console.log(
+        `[voice] ✅ conectado e estável em #${channel.name} (${channel.id})`
+      );
+
+      clearVoiceReconnectTimer();
+
+      return true;
     } catch (e) {
-      try {
-        conn.destroy();
-      } catch {}
+      const currentBotChannelId =
+        guild.members.me?.voice?.channelId ??
+        null;
 
-      console.error(
-        `[voice] conexão criada, mas não chegou ao estado READY: ${e?.message || e}`
-      );
+      const currentConnectionChannelId =
+        newConnection?.joinConfig
+          ?.channelId ?? null;
 
-      return false;
+      // Em alguns casos o VoiceConnection não chega em READY,
+      // mas o Gateway confirma que o bot já está dentro.
+      if (
+        e?.name === 'AbortError' ||
+        e?.code === 'ABORT_ERR'
+      ) {
+        if (
+          currentBotChannelId === channel.id &&
+          currentConnectionChannelId ===
+            channel.id
+        ) {
+          console.warn(
+            '[voice] conexão não marcou Ready, mas o bot já está confirmado dentro da call.'
+          );
+
+          return true;
+        }
+
+        console.warn(
+          '[voice] tentativa não estabilizou dentro do prazo.'
+        );
+
+        scheduleVoiceReconnect(
+          20_000,
+          'join não estabilizou'
+        );
+
+        return false;
+      }
+
+      throw e;
     }
-
-    console.log(
-      `[voice] ✅ conectado com sucesso em #${channel.name} (${channel.id})`
-    );
-
-    return true;
   } catch (e) {
     console.error(
-      '[voice] erro inesperado ao conectar:',
+      '[voice] erro em connectToVoice:',
       e?.message || e
     );
+
+    if (
+      e?.name !== 'AbortError' &&
+      e?.code !== 'ABORT_ERR'
+    ) {
+      scheduleVoiceReconnect(
+        20_000,
+        'falha no connectToVoice'
+      );
+    }
 
     return false;
   } finally {
@@ -996,40 +1405,434 @@ client.on(Events.MessageCreate, async (message) => {
       return;
     }
 
-    console.log(
-      `[voice-command] ✅ BOT CONECTADO em #${targetChannel.name} (${targetChannel.id})`
-    );
+   console.log(
+  `[voice-command] ✅ BOT CONECTADO em #${targetChannel.name} (${targetChannel.id})`
+);
 
-    await message.channel.send({
-      content:
-        `✅ Entrei em **${targetChannel.name}** com sucesso! 🎧\n` +
-        `ID correto da call: \`${targetChannel.id}\``
-    }).catch(() => {});
+// =====================================================
+// MEMORIZA ESSA CALL COMO A CALL AUTOMÁTICA
+// =====================================================
+VOICE_CHANNEL_ID = targetChannel.id;
+
+state.voiceChannelId = targetChannel.id;
+
+saveState();
+
+console.log(
+  `[voice-command] 💾 call salva para reconexão automática: ${targetChannel.id}`
+);
+
+await message.channel.send({
+  content:
+    `✅ Entrei em **${targetChannel.name}** com sucesso! 🎧\n` +
+    `ID correto da call: \`${targetChannel.id}\`\n` +
+    `💾 Essa call agora foi salva para reconexão automática.`
+}).catch(() => {});
   } catch (e) {
     console.error(
       '[voice-command] erro inesperado:',
       e?.message || e
     );
 
-    await message.channel.send({
+        await message.channel.send({
       content:
         `❌ Não consegui entrar em **${targetChannel.name}**.\n` +
         `Erro: \`${e?.message || 'erro desconhecido'}\``
     }).catch(() => {});
   }
 });
+
+// =====================================================
+// SLASH COMMAND: /forcarcall
+// Entra na call atual do usuário e memoriza a call.
+// =====================================================
+client.on(
+  Events.InteractionCreate,
+  async (interaction) => {
+    if (!interaction.isChatInputCommand()) {
+      return;
+    }
+
+    if (
+      interaction.commandName !== 'forcarcall'
+    ) {
+      return;
+    }
+
+    console.log(
+      `[voice-slash] /forcarcall recebido de ${interaction.user.tag} (${interaction.user.id})`
+    );
+
+    if (!interaction.guild) {
+      await interaction.reply({
+        content:
+          '❌ Esse comando só pode ser usado dentro de um servidor.',
+        ephemeral: true,
+      }).catch(() => {});
+
+      return;
+    }
+
+    const member =
+      await interaction.guild.members
+        .fetch(interaction.user.id)
+        .catch(() => null);
+
+    if (!member) {
+      await interaction.reply({
+        content:
+          '❌ Não consegui localizar você dentro do servidor.',
+        ephemeral: true,
+      }).catch(() => {});
+
+      return;
+    }
+
+    const isAuthorizedUser =
+      FORCE_CALL_USER_IDS.has(
+        interaction.user.id
+      );
+
+    const isAdministrator =
+      member.permissions.has(
+        PermissionsBitField.Flags.Administrator
+      );
+
+    if (
+      !isAuthorizedUser &&
+      !isAdministrator
+    ) {
+      await interaction.reply({
+        content:
+          '❌ Você não tem permissão para usar `/forcarcall`.',
+        ephemeral: true,
+      }).catch(() => {});
+
+      return;
+    }
+
+    // =================================================
+    // PEGA A CALL ONDE O USUÁRIO ESTÁ
+    // =================================================
+    const targetChannel =
+      member.voice?.channel;
+
+    if (!targetChannel) {
+      await interaction.reply({
+        content:
+          '❌ Entre primeiro na call onde quer colocar o bot e depois use `/forcarcall`.',
+        ephemeral: true,
+      }).catch(() => {});
+
+      return;
+    }
+
+    const isVoice =
+      targetChannel.type ===
+        ChannelType.GuildVoice ||
+      targetChannel.type ===
+        ChannelType.GuildStageVoice;
+
+    if (!isVoice) {
+      await interaction.reply({
+        content:
+          '❌ O canal atual não foi reconhecido como uma call.',
+        ephemeral: true,
+      }).catch(() => {});
+
+      return;
+    }
+
+    const botMember =
+      interaction.guild.members.me ||
+      await interaction.guild.members
+        .fetchMe()
+        .catch(() => null);
+
+    if (!botMember) {
+      await interaction.reply({
+        content:
+          '❌ Não consegui localizar meu próprio usuário no servidor.',
+        ephemeral: true,
+      }).catch(() => {});
+
+      return;
+    }
+
+    const permissions =
+      targetChannel.permissionsFor(
+        botMember
+      );
+
+    if (!permissions) {
+      await interaction.reply({
+        content:
+          '❌ Não consegui verificar minhas permissões nessa call.',
+        ephemeral: true,
+      }).catch(() => {});
+
+      return;
+    }
+
+    const canView =
+      permissions.has(
+        PermissionsBitField.Flags.ViewChannel
+      );
+
+    const canConnect =
+      permissions.has(
+        PermissionsBitField.Flags.Connect
+      );
+
+    const canSpeak =
+      permissions.has(
+        PermissionsBitField.Flags.Speak
+      );
+
+    console.log(
+      `[voice-slash] call: #${targetChannel.name} (${targetChannel.id}) | Ver=${canView} | Conectar=${canConnect} | Falar=${canSpeak}`
+    );
+
+    if (
+      !canView ||
+      !canConnect
+    ) {
+      await interaction.reply({
+        content:
+          `❌ Não consigo entrar em **${targetChannel.name}**.\n\n` +
+          `👁️ Ver canal: ${canView ? '✅' : '❌'}\n` +
+          `🎧 Conectar: ${canConnect ? '✅' : '❌'}\n` +
+          `🎙️ Falar: ${canSpeak ? '✅' : '❌'}\n\n` +
+          `ID: \`${targetChannel.id}\``,
+        ephemeral: true,
+      }).catch(() => {});
+
+      return;
+    }
+
+    await interaction.deferReply({
+      ephemeral: true,
+    }).catch(() => {});
+
+    try {
+      let conn =
+        getVoiceConnection(
+          interaction.guild.id
+        );
+
+      if (conn) {
+        console.log(
+          '[voice-slash] destruindo conexão antiga...'
+        );
+
+        try {
+          conn.destroy();
+        } catch {}
+
+        conn = null;
+
+        await new Promise(
+          resolve =>
+            setTimeout(resolve, 1000)
+        );
+      }
+
+      console.log(
+        `[voice-slash] tentando conectar em #${targetChannel.name} (${targetChannel.id})`
+      );
+
+      conn = joinVoiceChannel({
+        channelId: targetChannel.id,
+        guildId: interaction.guild.id,
+        adapterCreator:
+          interaction.guild.voiceAdapterCreator,
+        selfDeaf: false,
+        selfMute: false,
+      });
+
+      try {
+        await entersState(
+          conn,
+          VoiceConnectionStatus.Ready,
+          15_000
+        );
+      } catch (e) {
+        console.error(
+          '[voice-slash] conexão não chegou em READY:',
+          e?.message || e
+        );
+
+        try {
+          conn.destroy();
+        } catch {}
+
+        await interaction.editReply({
+          content:
+            `❌ Encontrei **${targetChannel.name}**, mas não consegui completar a conexão.\n` +
+            `ID: \`${targetChannel.id}\``,
+        }).catch(() => {});
+
+        return;
+      }
+
+      // ===============================================
+      // SUCESSO
+      // MEMORIZA A CALL PARA OS PRÓXIMOS REINÍCIOS
+      // ===============================================
+      VOICE_CHANNEL_ID =
+        targetChannel.id;
+
+      state.voiceChannelId =
+        targetChannel.id;
+
+      saveState();
+
+      console.log(
+        `[voice-slash] ✅ conectado em #${targetChannel.name} (${targetChannel.id})`
+      );
+
+      console.log(
+        `[voice-slash] 💾 call salva para reconexão automática: ${targetChannel.id}`
+      );
+
+      await interaction.editReply({
+        content:
+          `✅ Entrei em **${targetChannel.name}** com sucesso! 🎧\n\n` +
+          `📌 ID: \`${targetChannel.id}\`\n` +
+          `💾 Essa call foi salva. Nos próximos reinícios tentarei voltar automaticamente para ela.`,
+      }).catch(() => {});
+    } catch (e) {
+      console.error(
+        '[voice-slash] erro:',
+        e?.message || e
+      );
+
+      await interaction.editReply({
+        content:
+          `❌ Erro tentando entrar em **${targetChannel.name}**.\n` +
+          `Erro: \`${e?.message || 'desconhecido'}\``,
+      }).catch(() => {});
+    }
+  }
+);
+
 // ——— READY ———
 client.once(Events.ClientReady, async () => {
   console.log(`[ready] Logado como ${client.user.tag}`);
+
+  // =====================================================
+  // DEBUG DE SERVIDORES / CALLS VISÍVEIS
+  // =====================================================
+  console.log('[voice-debug] ========================================');
+  console.log('[voice-debug] SERVIDORES E CALLS VISÍVEIS PARA O BOT');
+  console.log('[voice-debug] ========================================');
+
+  for (const [, guild] of client.guilds.cache) {
+    console.log(
+      `[voice-debug] Servidor: ${guild.name} (${guild.id})`
+    );
+
+    try {
+      await guild.channels.fetch().catch(() => null);
+    } catch {}
+
+    const voiceChannels = guild.channels.cache.filter(channel =>
+      channel.type === ChannelType.GuildVoice ||
+      channel.type === ChannelType.GuildStageVoice
+    );
+
+    if (!voiceChannels.size) {
+      console.log(
+        `[voice-debug]   Nenhuma call visível nesse servidor.`
+      );
+
+      continue;
+    }
+
+    for (const [, channel] of voiceChannels) {
+      const me =
+        guild.members.me ||
+        await guild.members.fetchMe().catch(() => null);
+
+      const permissions =
+        me
+          ? channel.permissionsFor(me)
+          : null;
+
+      const canView =
+        permissions?.has(
+          PermissionsBitField.Flags.ViewChannel
+        ) ?? false;
+
+      const canConnect =
+        permissions?.has(
+          PermissionsBitField.Flags.Connect
+        ) ?? false;
+
+      const canSpeak =
+        permissions?.has(
+          PermissionsBitField.Flags.Speak
+        ) ?? false;
+
+      console.log(
+        `[voice-debug]   #${channel.name} (${channel.id}) | Ver=${canView} | Conectar=${canConnect} | Falar=${canSpeak}`
+      );
+    }
+  }
+
+  console.log('[voice-debug] ========================================');
+
+  // =====================================================
+  // REGISTRA O SLASH COMMAND /forcarcall
+  // =====================================================
+  for (const [, guild] of client.guilds.cache) {
+    try {
+      const existingCommands =
+        await guild.commands.fetch();
+
+      const existing =
+        existingCommands.find(
+          command =>
+            command.name === 'forcarcall'
+        );
+
+      if (!existing) {
+        await guild.commands.create({
+          name: 'forcarcall',
+          description:
+            'Força o Amigo dos Creators a entrar na sua call.',
+        });
+
+        console.log(
+          `[voice-command] /forcarcall registrado em ${guild.name} (${guild.id})`
+        );
+      } else {
+        console.log(
+          `[voice-command] /forcarcall já existe em ${guild.name} (${guild.id})`
+        );
+      }
+    } catch (e) {
+      console.error(
+        `[voice-command] erro ao registrar /forcarcall em ${guild.name}:`,
+        e?.message || e
+      );
+    }
+  }
 
   // se reiniciou, limpa o que venceu
   await runPendingDeletionsSweep();
 
   await ensureInCall();
-  setInterval(ensureInCall, CHECK_INTERVAL_MS);
+  setInterval(
+    ensureInCall,
+    CHECK_INTERVAL_MS
+  );
 
   // varredura das pendências de deleção
-  setInterval(runPendingDeletionsSweep, 60_000);
+  setInterval(
+    runPendingDeletionsSweep,
+    60_000
+  );
 });
 
 // ——— ENTRADA/SAÍDA/EXPULSÃO ———
@@ -1046,7 +1849,25 @@ function markSentJoin(uid){
 
 client.on(Events.VoiceStateUpdate, async (oldS, newS) => {
   // BOT EXPULSO / CAIU (do VOICE_CHANNEL_ID)
-  if (oldS.member?.id === client.user.id && oldS.channelId === VOICE_CHANNEL_ID && newS.channelId !== VOICE_CHANNEL_ID) {
+  if (
+    oldS.member?.id === client.user.id &&
+    oldS.channelId === VOICE_CHANNEL_ID &&
+    newS.channelId !== VOICE_CHANNEL_ID
+  ) {
+    // =====================================================
+    // RECONEXÃO AUTOMÁTICA DO PRÓPRIO BOT
+    // =====================================================
+    if (!voiceIntentionalDestroy) {
+      console.warn(
+        `[voice] bot saiu/mudou da call. old=${oldS.channelId} new=${newS.channelId}`
+      );
+
+      scheduleVoiceReconnect(
+        8_000,
+        'VoiceStateUpdate detectou saída/movimentação'
+      );
+    }
+
     setTimeout(async () => {
       try {
         const logs = await newS.guild.fetchAuditLogs({ type: AuditLogEvent.MemberDisconnect, limit: 5 });
