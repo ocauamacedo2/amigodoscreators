@@ -500,43 +500,174 @@ async function sendText(msg){
 }
 
 // ——— CONEXÃO AO CANAL DE VOZ ———
-async function connectToVoice() {
-  try {
-    const channel = await client.channels.fetch(VOICE_CHANNEL_ID);
-    const isVoice = channel && (channel.type === ChannelType.GuildVoice || channel.type === ChannelType.GuildStageVoice);
-    if (!isVoice) throw new Error('Canal de voz inválido');
 
-    const conn = joinVoiceChannel({
-      channelId: channel.id,
-      guildId: channel.guild.id,
-      adapterCreator: channel.guild.voiceAdapterCreator,
-      selfDeaf: false,
-      selfMute: false,
-    });
+// Impede várias tentativas simultâneas de conexão.
+let voiceConnecting = false;
 
-    conn.on('stateChange', (o,n) => {
-      if (n.status === VoiceConnectionStatus.Disconnected || n.status === VoiceConnectionStatus.Destroyed) {
-        setTimeout(() => connectToVoice().catch(()=>{}), 1500);
-      }
-    });
+// Evita spam de mensagens de erro no console.
+let lastVoiceErrorLogAt = 0;
 
-    try { await entersState(conn, VoiceConnectionStatus.Ready, 10_000); } catch {}
-    return true;
-  } catch (e) {
-    console.error('[voice] erro ao conectar:', e?.message || e);
-    return false;
+// Intervalo mínimo entre logs iguais de erro.
+const VOICE_ERROR_LOG_COOLDOWN_MS = 60_000;
+
+function logVoiceError(message) {
+  const now = Date.now();
+
+  if (now - lastVoiceErrorLogAt >= VOICE_ERROR_LOG_COOLDOWN_MS) {
+    lastVoiceErrorLogAt = now;
+    console.error('[voice] erro ao conectar:', message);
   }
 }
 
-async function ensureInCall(){
-  const channel = await client.channels.fetch(VOICE_CHANNEL_ID).catch(()=>null);
-  const inChannel = channel && channel.members?.has(client.user.id);
-  if (!inChannel) {
+async function connectToVoice() {
+  // Se já existe uma tentativa acontecendo, não inicia outra.
+  if (voiceConnecting) {
+    return false;
+  }
+
+  voiceConnecting = true;
+
+  try {
+    const channel = await client.channels.fetch(VOICE_CHANNEL_ID).catch(() => null);
+
+    if (!channel) {
+      logVoiceError(
+        `Canal ${VOICE_CHANNEL_ID} não encontrado ou sem acesso para o bot.`
+      );
+      return false;
+    }
+
+    const isVoice =
+      channel.type === ChannelType.GuildVoice ||
+      channel.type === ChannelType.GuildStageVoice;
+
+    if (!isVoice) {
+      logVoiceError(
+        `O canal ${VOICE_CHANNEL_ID} existe, mas não é um canal de voz válido.`
+      );
+      return false;
+    }
+
+    const me =
+      channel.guild.members.me ||
+      await channel.guild.members.fetchMe().catch(() => null);
+
+    if (!me) {
+      logVoiceError(
+        `Não foi possível localizar o próprio bot no servidor ${channel.guild.id}.`
+      );
+      return false;
+    }
+
+    const permissions = channel.permissionsFor(me);
+
+    if (!permissions) {
+      logVoiceError(
+        `Não foi possível verificar as permissões do bot no canal ${VOICE_CHANNEL_ID}.`
+      );
+      return false;
+    }
+
+    if (!permissions.has(PermissionsBitField.Flags.ViewChannel)) {
+      logVoiceError(
+        `Missing Access: o bot não possui a permissão "Ver canal" no canal ${VOICE_CHANNEL_ID}.`
+      );
+      return false;
+    }
+
+    if (!permissions.has(PermissionsBitField.Flags.Connect)) {
+      logVoiceError(
+        `Missing Access: o bot não possui a permissão "Conectar" no canal ${VOICE_CHANNEL_ID}.`
+      );
+      return false;
+    }
+
+    // Reaproveita uma conexão existente, quando possível.
+    let conn = getVoiceConnection(channel.guild.id);
+
+    if (
+      conn &&
+      conn.joinConfig?.channelId !== channel.id
+    ) {
+      try {
+        conn.destroy();
+      } catch {}
+
+      conn = null;
+    }
+
+    if (!conn) {
+      conn = joinVoiceChannel({
+        channelId: channel.id,
+        guildId: channel.guild.id,
+        adapterCreator: channel.guild.voiceAdapterCreator,
+        selfDeaf: false,
+        selfMute: false,
+      });
+    }
+
+    try {
+      await entersState(
+        conn,
+        VoiceConnectionStatus.Ready,
+        10_000
+      );
+    } catch (e) {
+      try {
+        conn.destroy();
+      } catch {}
+
+      logVoiceError(
+        `A conexão não ficou pronta em até 10 segundos: ${e?.message || e}`
+      );
+
+      return false;
+    }
+
+    console.log(
+      `[voice] conectado com sucesso em #${channel.name} (${channel.id})`
+    );
+
+    return true;
+  } catch (e) {
+    logVoiceError(e?.message || e);
+    return false;
+  } finally {
+    voiceConnecting = false;
+  }
+}
+
+async function ensureInCall() {
+  try {
+    const channel = await client.channels
+      .fetch(VOICE_CHANNEL_ID)
+      .catch(() => null);
+
+    if (!channel) {
+      logVoiceError(
+        `Canal ${VOICE_CHANNEL_ID} não encontrado ou sem acesso para o bot.`
+      );
+      return;
+    }
+
+    const inChannel =
+      channel.members?.has(client.user.id) === true;
+
+    if (inChannel) {
+      return;
+    }
+
     const ok = await connectToVoice();
+
     if (ok) {
       // Antes de mandar o “já está de volta…”, apaga a anterior desse tipo:
-      await sendTextManaged('🎧 O amigo deles **já está de volta**!! Quer companhia pra ficar na call? Alguém disponível?', 'statusReturn');
+      await sendTextManaged(
+        '🎧 O amigo deles **já está de volta**!! Quer companhia pra ficar na call? Alguém disponível?',
+        'statusReturn'
+      );
     }
+  } catch (e) {
+    logVoiceError(e?.message || e);
   }
 }
 
