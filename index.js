@@ -236,6 +236,11 @@ const CHECK_INTERVAL_MS = 60_000;            // checagem de presença no canal d
 const LEAVE_DELAY_MS    = 4 * 60 * 1000;     // 4 minutos
 const AUTO_DELETE_MS    = 30 * 60 * 1000;    // 30 minutos (apagamento automático)
 
+// Quem pode usar o comando manual !forcarcall.
+// Administradores também podem usar automaticamente.
+const FORCE_CALL_USER_IDS = new Set([
+  '660311795327828008', // Macedo
+]);
 // ——— TOKEN / CLIENT ———
 const TOKEN = (process.env.DISCORD_TOKEN || process.env.TOKEN || '').trim();
 if (!TOKEN) throw new Error('DISCORD_TOKEN/TOKEN ausente no .env');
@@ -519,21 +524,89 @@ function logVoiceError(message) {
   }
 }
 
-async function connectToVoice() {
+// Procura o canal de voz primeiro globalmente e,
+// se necessário, tenta localizar dentro de cada servidor do bot.
+async function findVoiceChannel() {
+  // 1. Cache global
+  const cached = client.channels.cache.get(VOICE_CHANNEL_ID);
+
+  if (cached) {
+    return cached;
+  }
+
+  // 2. Busca direta global
+  try {
+    const fetched = await client.channels.fetch(
+      VOICE_CHANNEL_ID,
+      { force: true }
+    );
+
+    if (fetched) {
+      return fetched;
+    }
+  } catch (e) {
+    console.warn(
+      `[voice] busca global do canal ${VOICE_CHANNEL_ID} falhou:`,
+      e?.message || e
+    );
+  }
+
+  // 3. Procura dentro de todos os servidores onde o bot está
+  for (const [, guild] of client.guilds.cache) {
+    try {
+      const cachedGuildChannel =
+        guild.channels.cache.get(VOICE_CHANNEL_ID);
+
+      if (cachedGuildChannel) {
+        return cachedGuildChannel;
+      }
+
+      const fetchedGuildChannel =
+        await guild.channels.fetch(
+          VOICE_CHANNEL_ID,
+          { force: true }
+        ).catch(() => null);
+
+      if (fetchedGuildChannel) {
+        return fetchedGuildChannel;
+      }
+    } catch {}
+  }
+
+  return null;
+}
+
+async function connectToVoice({ force = false } = {}) {
   // Se já existe uma tentativa acontecendo, não inicia outra.
   if (voiceConnecting) {
+    console.log('[voice] já existe uma tentativa de conexão em andamento.');
     return false;
   }
 
   voiceConnecting = true;
 
   try {
-    const channel = await client.channels.fetch(VOICE_CHANNEL_ID).catch(() => null);
+    const channel = await findVoiceChannel();
 
     if (!channel) {
-      logVoiceError(
-        `Canal ${VOICE_CHANNEL_ID} não encontrado ou sem acesso para o bot.`
+      console.error(
+        `[voice] NÃO FOI POSSÍVEL LOCALIZAR O CANAL ${VOICE_CHANNEL_ID}.`
       );
+
+      console.error(
+        '[voice] Servidores onde o bot está atualmente:'
+      );
+
+      for (const [, guild] of client.guilds.cache) {
+        console.error(
+          `[voice] - ${guild.name} (${guild.id})`
+        );
+      }
+
+      console.error(
+        '[voice] Confira se VOICE_CHANNEL_ID está correto e se o bot pertence ao servidor desse canal.'
+      );
+
       return false;
     }
 
@@ -542,61 +615,111 @@ async function connectToVoice() {
       channel.type === ChannelType.GuildStageVoice;
 
     if (!isVoice) {
-      logVoiceError(
-        `O canal ${VOICE_CHANNEL_ID} existe, mas não é um canal de voz válido.`
+      console.error(
+        `[voice] O ID ${VOICE_CHANNEL_ID} foi encontrado, mas corresponde ao canal #${channel.name}, que NÃO é um canal de voz.`
       );
+
       return false;
     }
+
+    console.log(
+      `[voice] canal localizado: #${channel.name} (${channel.id}) | servidor: ${channel.guild.name} (${channel.guild.id})`
+    );
 
     const me =
       channel.guild.members.me ||
       await channel.guild.members.fetchMe().catch(() => null);
 
     if (!me) {
-      logVoiceError(
-        `Não foi possível localizar o próprio bot no servidor ${channel.guild.id}.`
+      console.error(
+        `[voice] Não foi possível localizar o próprio bot dentro do servidor ${channel.guild.name} (${channel.guild.id}).`
       );
+
       return false;
     }
 
     const permissions = channel.permissionsFor(me);
 
     if (!permissions) {
-      logVoiceError(
-        `Não foi possível verificar as permissões do bot no canal ${VOICE_CHANNEL_ID}.`
+      console.error(
+        `[voice] Não foi possível verificar as permissões do bot em #${channel.name}.`
       );
+
       return false;
     }
 
-    if (!permissions.has(PermissionsBitField.Flags.ViewChannel)) {
-      logVoiceError(
-        `Missing Access: o bot não possui a permissão "Ver canal" no canal ${VOICE_CHANNEL_ID}.`
+    const canView =
+      permissions.has(PermissionsBitField.Flags.ViewChannel);
+
+    const canConnect =
+      permissions.has(PermissionsBitField.Flags.Connect);
+
+    const canSpeak =
+      permissions.has(PermissionsBitField.Flags.Speak);
+
+    console.log(
+      `[voice] permissões em #${channel.name}: Ver=${canView} | Conectar=${canConnect} | Falar=${canSpeak}`
+    );
+
+    if (!canView) {
+      console.error(
+        `[voice] BLOQUEADO: o bot não possui "Ver canal" em #${channel.name}.`
       );
+
       return false;
     }
 
-    if (!permissions.has(PermissionsBitField.Flags.Connect)) {
-      logVoiceError(
-        `Missing Access: o bot não possui a permissão "Conectar" no canal ${VOICE_CHANNEL_ID}.`
+    if (!canConnect) {
+      console.error(
+        `[voice] BLOQUEADO: o bot não possui "Conectar" em #${channel.name}.`
       );
+
       return false;
     }
 
-    // Reaproveita uma conexão existente, quando possível.
     let conn = getVoiceConnection(channel.guild.id);
 
-    if (
-      conn &&
-      conn.joinConfig?.channelId !== channel.id
-    ) {
+    // Se foi solicitado retorno forçado,
+    // destrói a conexão antiga antes de criar uma nova.
+    if (force && conn) {
+      console.log(
+        '[voice] modo FORÇADO: destruindo conexão antiga antes de reconectar...'
+      );
+
       try {
         conn.destroy();
       } catch {}
 
       conn = null;
+
+      // Pequeno intervalo para o Discord registrar a desconexão anterior.
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+
+    // Se há uma conexão em outro canal,
+    // remove para conectar no canal correto.
+    if (
+      conn &&
+      conn.joinConfig?.channelId !== channel.id
+    ) {
+      console.log(
+        `[voice] conexão antiga encontrada no canal ${conn.joinConfig?.channelId}. Recriando no canal correto...`
+      );
+
+      try {
+        conn.destroy();
+      } catch {}
+
+      conn = null;
+
+      await new Promise(resolve => setTimeout(resolve, 1000));
     }
 
     if (!conn) {
+      console.log(
+        `[voice] tentando entrar em #${channel.name}...`
+      );
+
       conn = joinVoiceChannel({
         channelId: channel.id,
         guildId: channel.guild.id,
@@ -610,27 +733,31 @@ async function connectToVoice() {
       await entersState(
         conn,
         VoiceConnectionStatus.Ready,
-        10_000
+        15_000
       );
     } catch (e) {
       try {
         conn.destroy();
       } catch {}
 
-      logVoiceError(
-        `A conexão não ficou pronta em até 10 segundos: ${e?.message || e}`
+      console.error(
+        `[voice] conexão criada, mas não chegou ao estado READY: ${e?.message || e}`
       );
 
       return false;
     }
 
     console.log(
-      `[voice] conectado com sucesso em #${channel.name} (${channel.id})`
+      `[voice] ✅ conectado com sucesso em #${channel.name} (${channel.id})`
     );
 
     return true;
   } catch (e) {
-    logVoiceError(e?.message || e);
+    console.error(
+      '[voice] erro inesperado ao conectar:',
+      e?.message || e
+    );
+
     return false;
   } finally {
     voiceConnecting = false;
@@ -639,14 +766,13 @@ async function connectToVoice() {
 
 async function ensureInCall() {
   try {
-    const channel = await client.channels
-      .fetch(VOICE_CHANNEL_ID)
-      .catch(() => null);
+    const channel = await findVoiceChannel();
 
     if (!channel) {
       logVoiceError(
         `Canal ${VOICE_CHANNEL_ID} não encontrado ou sem acesso para o bot.`
       );
+
       return;
     }
 
