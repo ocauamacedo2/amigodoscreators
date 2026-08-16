@@ -592,6 +592,12 @@ const VOICE_RECONNECT_DELAY_MS = 8_000;
 const VOICE_CONNECT_COOLDOWN_MS = 10_000;
 const VOICE_STABILIZE_TIMEOUT_MS = 60_000;
 
+// =====================================================
+// GRUPO EXCLUSIVO DE VOZ DESTE BOT
+// Impede conflito com outra VoiceConnection da mesma guild.
+// =====================================================
+const VOICE_CONNECTION_GROUP = 'amigo-dos-creators';
+
 let voiceLastConnectAttempt = 0;
 let voiceReconnectTimer = null;
 let voiceBoundConnection = null;
@@ -981,8 +987,11 @@ async function connectToVoice({
     // =====================================================
     // ANALISA A CONEXÃO ATUAL
     // =====================================================
-    let connection =
-      getVoiceConnection(guild.id);
+let connection =
+  getVoiceConnection(
+    guild.id,
+    VOICE_CONNECTION_GROUP
+  );
 
     const botChannelId =
       me.voice?.channelId ?? null;
@@ -1116,17 +1125,17 @@ async function connectToVoice({
     );
 
     const newConnection =
-      joinVoiceChannel({
-        channelId: channel.id,
-        guildId: guild.id,
-        adapterCreator:
-          guild.voiceAdapterCreator,
-        selfDeaf: false,
-        selfMute: false,
+  joinVoiceChannel({
+    channelId: channel.id,
+    guildId: guild.id,
+    adapterCreator:
+      guild.voiceAdapterCreator,
+    selfDeaf: false,
+    selfMute: false,
 
-        // Igual ao sistema estável do outro bot.
-        group: 'default',
-      });
+    // Grupo exclusivo deste bot.
+    group: VOICE_CONNECTION_GROUP,
+  });
 
     bindVoiceConnectionEvents(
       newConnection
@@ -1149,46 +1158,64 @@ async function connectToVoice({
 
       return true;
     } catch (e) {
-      const currentBotChannelId =
-        guild.members.me?.voice?.channelId ??
-        null;
+  const currentBotChannelId =
+    guild.voiceStates.cache
+      .get(client.user.id)
+      ?.channelId ??
+    null;
 
-      const currentConnectionChannelId =
-        newConnection?.joinConfig
-          ?.channelId ?? null;
+  const currentConnectionChannelId =
+    newConnection?.joinConfig
+      ?.channelId ?? null;
 
-      // Em alguns casos o VoiceConnection não chega em READY,
-      // mas o Gateway confirma que o bot já está dentro.
-      if (
-        e?.name === 'AbortError' ||
-        e?.code === 'ABORT_ERR'
-      ) {
-        if (
-          currentBotChannelId === channel.id &&
-          currentConnectionChannelId ===
-            channel.id
-        ) {
-          console.warn(
-            '[voice] conexão não marcou Ready, mas o bot já está confirmado dentro da call.'
-          );
+  const currentConnectionStatus =
+    newConnection?.state?.status ?? null;
 
-          return true;
-        }
+  const botVisibleInTarget =
+    channel.members?.has(client.user.id) === true;
 
-        console.warn(
-          '[voice] tentativa não estabilizou dentro do prazo.'
-        );
-
-        scheduleVoiceReconnect(
-          20_000,
-          'join não estabilizou'
-        );
-
-        return false;
-      }
-
-      throw e;
+  console.warn(
+    '[voice] conexão não chegou em READY.',
+    {
+      botId: client.user.id,
+      botTag: client.user.tag,
+      targetChannelId: channel.id,
+      gatewayChannelId: currentBotChannelId,
+      joinConfigChannelId:
+        currentConnectionChannelId,
+      connectionStatus:
+        currentConnectionStatus,
+      botVisibleInTarget,
     }
+  );
+
+  // =====================================================
+  // IMPORTANTE:
+  // Só consideramos sucesso quando a VoiceConnection
+  // realmente chega ao estado READY.
+  // =====================================================
+  try {
+    newConnection.destroy();
+  } catch {}
+
+  if (
+    e?.name === 'AbortError' ||
+    e?.code === 'ABORT_ERR'
+  ) {
+    console.warn(
+      '[voice] Gateway chegou a responder à entrada, mas a conexão de voz não estabilizou. Uma nova tentativa será feita.'
+    );
+
+    scheduleVoiceReconnect(
+      20_000,
+      'VoiceConnection não chegou em Ready'
+    );
+
+    return false;
+  }
+
+  throw e;
+}
   } catch (e) {
     console.error(
       '[voice] erro em connectToVoice:',
@@ -1386,8 +1413,11 @@ client.on(Events.MessageCreate, async (message) => {
 
   try {
     // Busca conexão existente nesse servidor.
-    let conn =
-      getVoiceConnection(message.guild.id);
+let conn =
+  getVoiceConnection(
+    message.guild.id,
+    VOICE_CONNECTION_GROUP
+  );
 
     // Destrói a antiga para realmente forçar uma nova conexão.
     if (conn) {
@@ -1411,12 +1441,13 @@ client.on(Events.MessageCreate, async (message) => {
     );
 
     conn = joinVoiceChannel({
-      channelId: targetChannel.id,
-      guildId: message.guild.id,
-      adapterCreator: message.guild.voiceAdapterCreator,
-      selfDeaf: false,
-      selfMute: false,
-    });
+  channelId: targetChannel.id,
+  guildId: message.guild.id,
+  adapterCreator: message.guild.voiceAdapterCreator,
+  selfDeaf: false,
+  selfMute: false,
+  group: VOICE_CONNECTION_GROUP,
+});
 
     try {
       await entersState(
@@ -1653,10 +1684,11 @@ client.on(
     }).catch(() => {});
 
     try {
-      let conn =
-        getVoiceConnection(
-          interaction.guild.id
-        );
+let conn =
+  getVoiceConnection(
+    interaction.guild.id,
+    VOICE_CONNECTION_GROUP
+  );
 
       if (conn) {
         console.log(
@@ -1680,13 +1712,14 @@ client.on(
       );
 
       conn = joinVoiceChannel({
-        channelId: targetChannel.id,
-        guildId: interaction.guild.id,
-        adapterCreator:
-          interaction.guild.voiceAdapterCreator,
-        selfDeaf: false,
-        selfMute: false,
-      });
+  channelId: targetChannel.id,
+  guildId: interaction.guild.id,
+  adapterCreator:
+    interaction.guild.voiceAdapterCreator,
+  selfDeaf: false,
+  selfMute: false,
+  group: VOICE_CONNECTION_GROUP,
+});
 
       try {
         await entersState(
