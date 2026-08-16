@@ -798,8 +798,8 @@ async function ensureInCall() {
 }
 
 // ———————————————————————————————————————————————————————————————
-// COMANDO MANUAL: !forcarcall
-// Força a recriação da conexão do bot com a call.
+// COMANDO MANUAL: !forcarcall / +joincall
+// Força o bot a entrar na MESMA call de quem executou o comando.
 // ———————————————————————————————————————————————————————————————
 client.on(Events.MessageCreate, async (message) => {
   if (!message.guild) return;
@@ -809,9 +809,18 @@ client.on(Events.MessageCreate, async (message) => {
     .trim()
     .toLowerCase();
 
-  if (content !== '!forcarcall') {
+  // Aceita os dois comandos.
+  const isForceCommand =
+    content === '!forcarcall' ||
+    content === '+joincall';
+
+  if (!isForceCommand) {
     return;
   }
+
+  console.log(
+    `[voice-command] comando recebido: ${content} | usuário: ${message.author.tag} (${message.author.id}) | guild: ${message.guild.name} (${message.guild.id})`
+  );
 
   const isAuthorizedUser =
     FORCE_CALL_USER_IDS.has(message.author.id);
@@ -822,6 +831,10 @@ client.on(Events.MessageCreate, async (message) => {
     ) === true;
 
   if (!isAuthorizedUser && !isAdministrator) {
+    console.warn(
+      `[voice-command] usuário ${message.author.id} tentou usar ${content}, mas não possui permissão.`
+    );
+
     await message.reply({
       content: '❌ Você não tem permissão para forçar o retorno do bot para a call.'
     }).catch(() => {});
@@ -829,33 +842,182 @@ client.on(Events.MessageCreate, async (message) => {
     return;
   }
 
-  await message.reply({
-    content: `🔄 Tentando forçar minha entrada na call <#${VOICE_CHANNEL_ID}>...`
-  }).catch(() => {});
+  // Pega diretamente a call onde a pessoa que executou o comando está.
+  const targetChannel = message.member?.voice?.channel;
 
-  console.log(
-    `[voice] retorno FORÇADO solicitado por ${message.author.tag} (${message.author.id})`
-  );
+  if (!targetChannel) {
+    console.warn(
+      `[voice-command] ${message.author.tag} usou ${content}, mas não está conectado em nenhuma call.`
+    );
 
-  const ok = await connectToVoice({
-    force: true
-  });
-
-  if (ok) {
-    await message.channel.send({
-      content: `✅ Voltei para <#${VOICE_CHANNEL_ID}> com sucesso! 🎧`
+    await message.reply({
+      content:
+        '❌ Você precisa estar dentro da call onde quer colocar o bot.\n' +
+        'Entre na call primeiro e depois use `!forcarcall` ou `+joincall` novamente.'
     }).catch(() => {});
 
     return;
   }
 
-  await message.channel.send({
-    content:
-      `❌ Não consegui entrar em <#${VOICE_CHANNEL_ID}>.\n` +
-      'Confira o console da Square Cloud. Agora ele mostrará exatamente em qual etapa a conexão falhou.'
-  }).catch(() => {});
-});
+  const isVoice =
+    targetChannel.type === ChannelType.GuildVoice ||
+    targetChannel.type === ChannelType.GuildStageVoice;
 
+  if (!isVoice) {
+    await message.reply({
+      content: '❌ O canal onde você está não foi reconhecido como canal de voz.'
+    }).catch(() => {});
+
+    return;
+  }
+
+  const botMember =
+    message.guild.members.me ||
+    await message.guild.members.fetchMe().catch(() => null);
+
+  if (!botMember) {
+    console.error(
+      `[voice-command] não consegui localizar o próprio bot no guild ${message.guild.id}.`
+    );
+
+    await message.reply({
+      content: '❌ Não consegui localizar meu próprio usuário dentro deste servidor.'
+    }).catch(() => {});
+
+    return;
+  }
+
+  const permissions =
+    targetChannel.permissionsFor(botMember);
+
+  if (!permissions) {
+    console.error(
+      `[voice-command] não foi possível consultar permissões em ${targetChannel.id}.`
+    );
+
+    await message.reply({
+      content: '❌ Não consegui verificar minhas permissões nessa call.'
+    }).catch(() => {});
+
+    return;
+  }
+
+  const canView =
+    permissions.has(PermissionsBitField.Flags.ViewChannel);
+
+  const canConnect =
+    permissions.has(PermissionsBitField.Flags.Connect);
+
+  const canSpeak =
+    permissions.has(PermissionsBitField.Flags.Speak);
+
+  console.log(
+    `[voice-command] call encontrada: #${targetChannel.name} (${targetChannel.id})`
+  );
+
+  console.log(
+    `[voice-command] permissões: Ver=${canView} | Conectar=${canConnect} | Falar=${canSpeak}`
+  );
+
+  if (!canView || !canConnect) {
+    await message.reply({
+      content:
+        `❌ Não consigo entrar em **${targetChannel.name}**.\n\n` +
+        `Ver canal: ${canView ? '✅' : '❌'}\n` +
+        `Conectar: ${canConnect ? '✅' : '❌'}\n` +
+        `Falar: ${canSpeak ? '✅' : '❌'}`
+    }).catch(() => {});
+
+    return;
+  }
+
+  await message.reply({
+    content:
+      `🔄 Tentando entrar em **${targetChannel.name}**...\n` +
+      `Canal: \`${targetChannel.id}\``
+  }).catch(() => {});
+
+  try {
+    // Busca conexão existente nesse servidor.
+    let conn =
+      getVoiceConnection(message.guild.id);
+
+    // Destrói a antiga para realmente forçar uma nova conexão.
+    if (conn) {
+      console.log(
+        '[voice-command] destruindo conexão de voz antiga...'
+      );
+
+      try {
+        conn.destroy();
+      } catch {}
+
+      conn = null;
+
+      await new Promise(resolve =>
+        setTimeout(resolve, 1000)
+      );
+    }
+
+    console.log(
+      `[voice-command] criando conexão em #${targetChannel.name} (${targetChannel.id})...`
+    );
+
+    conn = joinVoiceChannel({
+      channelId: targetChannel.id,
+      guildId: message.guild.id,
+      adapterCreator: message.guild.voiceAdapterCreator,
+      selfDeaf: false,
+      selfMute: false,
+    });
+
+    try {
+      await entersState(
+        conn,
+        VoiceConnectionStatus.Ready,
+        15_000
+      );
+    } catch (e) {
+      console.error(
+        '[voice-command] conexão não chegou em READY:',
+        e?.message || e
+      );
+
+      try {
+        conn.destroy();
+      } catch {}
+
+      await message.channel.send({
+        content:
+          `❌ A conexão com **${targetChannel.name}** foi criada, ` +
+          'mas não conseguiu chegar ao estado READY.'
+      }).catch(() => {});
+
+      return;
+    }
+
+    console.log(
+      `[voice-command] ✅ BOT CONECTADO em #${targetChannel.name} (${targetChannel.id})`
+    );
+
+    await message.channel.send({
+      content:
+        `✅ Entrei em **${targetChannel.name}** com sucesso! 🎧\n` +
+        `ID correto da call: \`${targetChannel.id}\``
+    }).catch(() => {});
+  } catch (e) {
+    console.error(
+      '[voice-command] erro inesperado:',
+      e?.message || e
+    );
+
+    await message.channel.send({
+      content:
+        `❌ Não consegui entrar em **${targetChannel.name}**.\n` +
+        `Erro: \`${e?.message || 'erro desconhecido'}\``
+    }).catch(() => {});
+  }
+});
 // ——— READY ———
 client.once(Events.ClientReady, async () => {
   console.log(`[ready] Logado como ${client.user.tag}`);
