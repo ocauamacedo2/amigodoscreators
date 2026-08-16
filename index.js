@@ -231,16 +231,19 @@ const __dirname = path.dirname(new URL(import.meta.url).pathname);
 // ——— CONFIG ———
 
 // =====================================================
-// CALL PADRÃO DO AMIGO DOS CREATORS - CIDADE MALTA
+// SERVIDOR E CALL OFICIAIS DO AMIGO DOS CREATORS
 // =====================================================
-// 👨┃Creators
-const DEFAULT_VOICE_CHANNEL_ID = '1379643427980836914';
 
-// A call salva manualmente através de /forcarcall ou +joincall
-// poderá substituir esse valor depois que o state for carregado.
+// Discord principal onde o bot DEVE permanecer.
+const TARGET_VOICE_GUILD_ID = '1262262852782129183';
+
+// Call oficial onde o bot DEVE permanecer.
+const DEFAULT_VOICE_CHANNEL_ID = '1415386915137388664';
+
+// A call ativa começa obrigatoriamente pela call oficial.
 let VOICE_CHANNEL_ID = DEFAULT_VOICE_CHANNEL_ID;
 
-const TEXT_CHANNEL_ID  = (process.env.TEXT_CHANNEL_ID || '1381597720007151698').trim();
+const TEXT_CHANNEL_ID = (process.env.TEXT_CHANNEL_ID || '1381597720007151698').trim();
 
 const CHECK_INTERVAL_MS = 60_000;            // checagem de presença no canal de voz
 const LEAVE_DELAY_MS    = 4 * 60 * 1000;     // 4 minutos
@@ -266,14 +269,17 @@ const state = (() => {
     );
   } catch {
     return {
-      lastJoinMessageDay: {},
-      pendingLeave: {},
-      lastByType: {},
-      pendingDeletes: [],
+  lastJoinMessageDay: {},
+  pendingLeave: {},
+  lastByType: {},
+  pendingDeletes: [],
 
-      // Última call válida escolhida manualmente.
-      voiceChannelId: null,
-    };
+  // Última call válida escolhida manualmente.
+  voiceChannelId: null,
+
+  // Servidor ao qual a call salva pertence.
+  voiceGuildId: null,
+};
   }
 })();
 
@@ -287,48 +293,75 @@ function saveState() {
 }
 
 // =====================================================
-// RESTAURA A ÚLTIMA CALL VÁLIDA APÓS REINICIAR
+// RESTAURA / CORRIGE A CALL OFICIAL APÓS REINICIAR
 // =====================================================
 
-// ID antigo que não pertence à Cidade Malta.
-// Se estiver salvo no call_bot_state.json, ele será ignorado.
-const LEGACY_INVALID_VOICE_CHANNEL_ID = '1415386915137388664';
+// Call usada anteriormente no servidor errado.
+// Se estiver persistida, será descartada.
+const LEGACY_WRONG_VOICE_CHANNEL_ID = '1379643427980836914';
 
+// Garante que o estado sempre tenha o campo do servidor.
+state.voiceGuildId =
+  state.voiceGuildId || null;
+
+const savedVoiceChannelId =
+  state.voiceChannelId
+    ? String(state.voiceChannelId)
+    : null;
+
+const savedVoiceGuildId =
+  state.voiceGuildId
+    ? String(state.voiceGuildId)
+    : null;
+
+// Se veio da configuração errada anterior,
+// remove imediatamente.
+if (
+  savedVoiceChannelId ===
+  LEGACY_WRONG_VOICE_CHANNEL_ID
+) {
+  console.warn(
+    `[voice] call antiga do servidor errado removida: ${savedVoiceChannelId}`
+  );
+
+  state.voiceChannelId = null;
+  state.voiceGuildId = null;
+
+  saveState();
+}
+
+// Só aceita uma call persistida quando ela pertence
+// explicitamente ao servidor correto.
 if (
   state.voiceChannelId &&
+  state.voiceGuildId === TARGET_VOICE_GUILD_ID &&
   /^\d{17,20}$/.test(
     String(state.voiceChannelId)
   )
 ) {
-  const savedVoiceChannelId =
+  VOICE_CHANNEL_ID =
     String(state.voiceChannelId);
 
-  if (
-    savedVoiceChannelId ===
-    LEGACY_INVALID_VOICE_CHANNEL_ID
-  ) {
-    console.warn(
-      `[voice] call persistida antiga ignorada: ${savedVoiceChannelId}`
-    );
+  console.log(
+    `[voice] call persistida do servidor correto carregada: ${VOICE_CHANNEL_ID}`
+  );
+} else {
+  // Qualquer estado antigo, incompleto ou vindo
+  // de outro servidor é descartado.
+  VOICE_CHANNEL_ID =
+    DEFAULT_VOICE_CHANNEL_ID;
 
-    state.voiceChannelId = null;
+  state.voiceChannelId =
+    DEFAULT_VOICE_CHANNEL_ID;
 
-    saveState();
+  state.voiceGuildId =
+    TARGET_VOICE_GUILD_ID;
 
-    VOICE_CHANNEL_ID =
-      DEFAULT_VOICE_CHANNEL_ID;
+  saveState();
 
-    console.log(
-      `[voice] usando call padrão da Cidade Malta: ${VOICE_CHANNEL_ID}`
-    );
-  } else {
-    VOICE_CHANNEL_ID =
-      savedVoiceChannelId;
-
-    console.log(
-      `[voice] call persistida carregada: ${VOICE_CHANNEL_ID}`
-    );
-  }
+  console.log(
+    `[voice] usando servidor oficial ${TARGET_VOICE_GUILD_ID} e call oficial ${VOICE_CHANNEL_ID}`
+  );
 }
 // ——— HELPERS ———
 function pick(a){ return Array.isArray(a) && a.length ? a[Math.floor(Math.random()*a.length)] : ''; }
@@ -813,55 +846,80 @@ function bindVoiceConnectionEvents(connection) {
   );
 }
 
-// Procura o canal de voz primeiro globalmente e,
-// se necessário, tenta localizar dentro de cada servidor do bot.
+// =====================================================
+// LOCALIZA SOMENTE A CALL DO SERVIDOR OFICIAL
+// =====================================================
 async function findVoiceChannel() {
-  // 1. Cache global
-  const cached = client.channels.cache.get(VOICE_CHANNEL_ID);
+  // Primeiro exige que o bot esteja no servidor correto.
+  const guild =
+    client.guilds.cache.get(
+      TARGET_VOICE_GUILD_ID
+    ) ||
+    await client.guilds
+      .fetch(TARGET_VOICE_GUILD_ID)
+      .catch(() => null);
 
-  if (cached) {
-    return cached;
+  if (!guild) {
+    logVoiceError(
+      `O bot não está no servidor obrigatório ${TARGET_VOICE_GUILD_ID}. Não será feita tentativa em outro servidor.`
+    );
+
+    return null;
   }
 
-// 2. Busca direta global
-try {
-  const fetched = await client.channels.fetch(
-    VOICE_CHANNEL_ID,
-    { force: true }
-  );
+  // Tenta pelo cache específico da guild correta.
+  const cachedChannel =
+    guild.channels.cache.get(
+      VOICE_CHANNEL_ID
+    );
 
-  if (fetched) {
-    return fetched;
-  }
-} catch (e) {
-  logVoiceError(
-    `Busca global do canal ${VOICE_CHANNEL_ID} falhou: ${e?.message || e}`
-  );
-}
+  if (cachedChannel) {
+    if (
+      cachedChannel.guild.id !==
+      TARGET_VOICE_GUILD_ID
+    ) {
+      logVoiceError(
+        `Canal ${VOICE_CHANNEL_ID} pertence a um servidor diferente do esperado.`
+      );
 
-  // 3. Procura dentro de todos os servidores onde o bot está
-  for (const [, guild] of client.guilds.cache) {
-    try {
-      const cachedGuildChannel =
-        guild.channels.cache.get(VOICE_CHANNEL_ID);
+      return null;
+    }
 
-      if (cachedGuildChannel) {
-        return cachedGuildChannel;
-      }
-
-      const fetchedGuildChannel =
-        await guild.channels.fetch(
-          VOICE_CHANNEL_ID,
-          { force: true }
-        ).catch(() => null);
-
-      if (fetchedGuildChannel) {
-        return fetchedGuildChannel;
-      }
-    } catch {}
+    return cachedChannel;
   }
 
-  return null;
+  // Busca diretamente dentro da guild correta.
+  const channel =
+    await guild.channels
+      .fetch(
+        VOICE_CHANNEL_ID,
+        { force: true }
+      )
+      .catch((e) => {
+        logVoiceError(
+          `Não foi possível buscar a call ${VOICE_CHANNEL_ID} no servidor ${TARGET_VOICE_GUILD_ID}: ${e?.message || e}`
+        );
+
+        return null;
+      });
+
+  if (!channel) {
+    return null;
+  }
+
+  // Segurança absoluta contra servidor errado.
+  if (
+    channel.guild.id !==
+    TARGET_VOICE_GUILD_ID
+  ) {
+    logVoiceError(
+      `BLOQUEADO: a call ${channel.id} pertence ao servidor ${channel.guild.id}, mas o permitido é ${TARGET_VOICE_GUILD_ID}.`
+    );
+
+    return null;
+  }
+
+  return channel;
 }
 
 async function connectToVoice({
@@ -1283,12 +1341,26 @@ client.on(Events.MessageCreate, async (message) => {
     .trim()
     .toLowerCase();
 
-  // Aceita os dois comandos.
   const isForceCommand =
     content === '!forcarcall' ||
     content === '+joincall';
 
   if (!isForceCommand) {
+    return;
+  }
+
+  // =====================================================
+  // SEGURANÇA: COMANDO DE VOZ SOMENTE NO SERVIDOR OFICIAL
+  // =====================================================
+  if (
+    message.guild.id !==
+    TARGET_VOICE_GUILD_ID
+  ) {
+    await message.reply({
+      content:
+        `❌ Este comando de voz só funciona no servidor oficial \`${TARGET_VOICE_GUILD_ID}\`.`
+    }).catch(() => {});
+
     return;
   }
 
@@ -1316,22 +1388,26 @@ client.on(Events.MessageCreate, async (message) => {
     return;
   }
 
-  // Pega diretamente a call onde a pessoa que executou o comando está.
-  const targetChannel = message.member?.voice?.channel;
+// =====================================================
+// USA SEMPRE A CALL OFICIAL CONFIGURADA
+// =====================================================
+const targetChannel =
+  await message.guild.channels
+    .fetch(DEFAULT_VOICE_CHANNEL_ID)
+    .catch(() => null);
 
-  if (!targetChannel) {
-    console.warn(
-      `[voice-command] ${message.author.tag} usou ${content}, mas não está conectado em nenhuma call.`
-    );
+if (!targetChannel) {
+  console.error(
+    `[voice-command] não foi possível localizar a call oficial ${DEFAULT_VOICE_CHANNEL_ID}.`
+  );
 
-    await message.reply({
-      content:
-        '❌ Você precisa estar dentro da call onde quer colocar o bot.\n' +
-        'Entre na call primeiro e depois use `!forcarcall` ou `+joincall` novamente.'
-    }).catch(() => {});
+  await message.reply({
+    content:
+      `❌ Não consegui localizar a call oficial <#${DEFAULT_VOICE_CHANNEL_ID}>.`
+  }).catch(() => {});
 
-    return;
-  }
+  return;
+}
 
   const isVoice =
     targetChannel.type === ChannelType.GuildVoice ||
@@ -1484,6 +1560,7 @@ let conn =
 VOICE_CHANNEL_ID = targetChannel.id;
 
 state.voiceChannelId = targetChannel.id;
+state.voiceGuildId = message.guild.id;
 
 saveState();
 
@@ -1533,19 +1610,35 @@ client.on(
     );
 
     if (!interaction.guild) {
-      await interaction.reply({
-        content:
-          '❌ Esse comando só pode ser usado dentro de um servidor.',
-        ephemeral: true,
-      }).catch(() => {});
+  await interaction.reply({
+    content:
+      '❌ Esse comando só pode ser usado dentro de um servidor.',
+    ephemeral: true,
+  }).catch(() => {});
 
-      return;
-    }
+  return;
+}
 
-    const member =
-      await interaction.guild.members
-        .fetch(interaction.user.id)
-        .catch(() => null);
+// =====================================================
+// SEGURANÇA: SLASH DE VOZ SOMENTE NO SERVIDOR OFICIAL
+// =====================================================
+if (
+  interaction.guild.id !==
+  TARGET_VOICE_GUILD_ID
+) {
+  await interaction.reply({
+    content:
+      `❌ O comando \`/forcarcall\` só funciona no servidor oficial \`${TARGET_VOICE_GUILD_ID}\`.`,
+    ephemeral: true,
+  }).catch(() => {});
+
+  return;
+}
+
+const member =
+  await interaction.guild.members
+    .fetch(interaction.user.id)
+    .catch(() => null);
 
     if (!member) {
       await interaction.reply({
@@ -1580,21 +1673,23 @@ client.on(
       return;
     }
 
-    // =================================================
-    // PEGA A CALL ONDE O USUÁRIO ESTÁ
-    // =================================================
-    const targetChannel =
-      member.voice?.channel;
+// =================================================
+// PEGA SEMPRE A CALL OFICIAL
+// =================================================
+const targetChannel =
+  await interaction.guild.channels
+    .fetch(DEFAULT_VOICE_CHANNEL_ID)
+    .catch(() => null);
 
-    if (!targetChannel) {
-      await interaction.reply({
-        content:
-          '❌ Entre primeiro na call onde quer colocar o bot e depois use `/forcarcall`.',
-        ephemeral: true,
-      }).catch(() => {});
+if (!targetChannel) {
+  await interaction.reply({
+    content:
+      `❌ Não consegui localizar a call oficial <#${DEFAULT_VOICE_CHANNEL_ID}>.`,
+    ephemeral: true,
+  }).catch(() => {});
 
-      return;
-    }
+  return;
+}
 
     const isVoice =
       targetChannel.type ===
@@ -1750,13 +1845,16 @@ let conn =
       // SUCESSO
       // MEMORIZA A CALL PARA OS PRÓXIMOS REINÍCIOS
       // ===============================================
-      VOICE_CHANNEL_ID =
-        targetChannel.id;
+VOICE_CHANNEL_ID =
+  targetChannel.id;
 
-      state.voiceChannelId =
-        targetChannel.id;
+state.voiceChannelId =
+  targetChannel.id;
 
-      saveState();
+state.voiceGuildId =
+  interaction.guild.id;
+
+saveState();
 
       console.log(
         `[voice-slash] ✅ conectado em #${targetChannel.name} (${targetChannel.id})`
