@@ -797,6 +797,65 @@ async function ensureInCall() {
   }
 }
 
+// ———————————————————————————————————————————————————————————————
+// COMANDO MANUAL: !forcarcall
+// Força a recriação da conexão do bot com a call.
+// ———————————————————————————————————————————————————————————————
+client.on(Events.MessageCreate, async (message) => {
+  if (!message.guild) return;
+  if (message.author?.bot) return;
+
+  const content = (message.content || '')
+    .trim()
+    .toLowerCase();
+
+  if (content !== '!forcarcall') {
+    return;
+  }
+
+  const isAuthorizedUser =
+    FORCE_CALL_USER_IDS.has(message.author.id);
+
+  const isAdministrator =
+    message.member?.permissions?.has(
+      PermissionsBitField.Flags.Administrator
+    ) === true;
+
+  if (!isAuthorizedUser && !isAdministrator) {
+    await message.reply({
+      content: '❌ Você não tem permissão para forçar o retorno do bot para a call.'
+    }).catch(() => {});
+
+    return;
+  }
+
+  await message.reply({
+    content: `🔄 Tentando forçar minha entrada na call <#${VOICE_CHANNEL_ID}>...`
+  }).catch(() => {});
+
+  console.log(
+    `[voice] retorno FORÇADO solicitado por ${message.author.tag} (${message.author.id})`
+  );
+
+  const ok = await connectToVoice({
+    force: true
+  });
+
+  if (ok) {
+    await message.channel.send({
+      content: `✅ Voltei para <#${VOICE_CHANNEL_ID}> com sucesso! 🎧`
+    }).catch(() => {});
+
+    return;
+  }
+
+  await message.channel.send({
+    content:
+      `❌ Não consegui entrar em <#${VOICE_CHANNEL_ID}>.\n` +
+      'Confira o console da Square Cloud. Agora ele mostrará exatamente em qual etapa a conexão falhou.'
+  }).catch(() => {});
+});
+
 // ——— READY ———
 client.once(Events.ClientReady, async () => {
   console.log(`[ready] Logado como ${client.user.tag}`);
