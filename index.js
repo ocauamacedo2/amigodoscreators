@@ -636,6 +636,13 @@ let voiceReconnectTimer = null;
 let voiceBoundConnection = null;
 let voiceIntentionalDestroy = false;
 
+// =====================================================
+// MEMÓRIA DE ESTABILIDADE DA CONEXÃO
+// Mesma lógica usada pelo autojoinVoice.js estável.
+// =====================================================
+let voiceLastStableAt = 0;
+let voiceLastSoftHealthyAt = 0;
+
 function logVoiceError(message) {
   const now = Date.now();
 
@@ -1199,27 +1206,32 @@ let connection =
       newConnection
     );
 
-    try {
-      await entersState(
-        newConnection,
-        VoiceConnectionStatus.Ready,
+try {
+  await entersState(
+    newConnection,
+    VoiceConnectionStatus.Ready,
+    VOICE_STABILIZE_TIMEOUT_MS
+  );
 
-        // O outro sistema dá mais tempo para estabilizar.
-        VOICE_STABILIZE_TIMEOUT_MS
-      );
+  // =====================================================
+  // CONEXÃO TOTALMENTE ESTÁVEL
+  // =====================================================
+  voiceLastStableAt = Date.now();
+  voiceLastSoftHealthyAt = Date.now();
 
-      console.log(
-        `[voice] ✅ conectado e estável em #${channel.name} (${channel.id})`
-      );
+  console.log(
+    `[voice] ✅ conectado e estável em #${channel.name} (${channel.id})`
+  );
 
-      clearVoiceReconnectTimer();
+  clearVoiceReconnectTimer();
 
-      return true;
-    } catch (e) {
+  return true;
+} catch (e) {
   const currentBotChannelId =
     guild.voiceStates.cache
       .get(client.user.id)
       ?.channelId ??
+    guild.members.me?.voice?.channelId ??
     null;
 
   const currentConnectionChannelId =
@@ -1233,7 +1245,7 @@ let connection =
     channel.members?.has(client.user.id) === true;
 
   console.warn(
-    '[voice] conexão não chegou em READY.',
+    '[voice] conexão ainda não marcou READY.',
     {
       botId: client.user.id,
       botTag: client.user.tag,
@@ -1248,25 +1260,62 @@ let connection =
   );
 
   // =====================================================
-  // IMPORTANTE:
-  // Só consideramos sucesso quando a VoiceConnection
-  // realmente chega ao estado READY.
+  // MESMA LÓGICA DO AUTOJOIN ESTÁVEL:
+  //
+  // entersState pode estourar o prazo mesmo com o Gateway
+  // já confirmando que o bot está dentro da call.
+  //
+  // NESSE CASO NÃO DESTRÓI A CONEXÃO.
   // =====================================================
-  try {
-    newConnection.destroy();
-  } catch {}
-
   if (
     e?.name === 'AbortError' ||
     e?.code === 'ABORT_ERR'
   ) {
+    const gatewayConfirmsTarget =
+      currentBotChannelId === channel.id;
+
+    const connectionConfirmsTarget =
+      currentConnectionChannelId ===
+      channel.id;
+
+    if (
+      gatewayConfirmsTarget &&
+      connectionConfirmsTarget
+    ) {
+      voiceLastSoftHealthyAt =
+        Date.now();
+
+      bindVoiceConnectionEvents(
+        newConnection
+      );
+
+      clearVoiceReconnectTimer();
+
+      console.log(
+        `[voice] ✅ Gateway confirmou o bot em #${channel.name}. Mantendo conexão sem destruir enquanto o VoiceConnection estabiliza.`
+      );
+
+      return true;
+    }
+
+    // =====================================================
+    // SOMENTE SE O BOT REALMENTE NÃO ESTIVER NA CALL
+    // destruímos a tentativa e reagendamos.
+    // =====================================================
+    try {
+      await destroyVoiceConnectionSafely(
+        newConnection,
+        1500
+      );
+    } catch {}
+
     console.warn(
-      '[voice] Gateway chegou a responder à entrada, mas a conexão de voz não estabilizou. Uma nova tentativa será feita.'
+      '[voice] join não estabilizou e o Gateway também não confirmou o bot na call. Nova tentativa será feita.'
     );
 
     scheduleVoiceReconnect(
       20_000,
-      'VoiceConnection não chegou em Ready'
+      'join não estabilizou'
     );
 
     return false;
@@ -2042,39 +2091,91 @@ function markSentJoin(uid){
 }
 
 client.on(Events.VoiceStateUpdate, async (oldS, newS) => {
-  // BOT EXPULSO / CAIU (do VOICE_CHANNEL_ID)
+  // =====================================================
+  // PRÓPRIO BOT SAIU OU FOI MOVIDO DA CALL OFICIAL
+  // =====================================================
   if (
     oldS.member?.id === client.user.id &&
     oldS.channelId === VOICE_CHANNEL_ID &&
     newS.channelId !== VOICE_CHANNEL_ID
   ) {
     // =====================================================
-    // RECONEXÃO AUTOMÁTICA DO PRÓPRIO BOT
+    // SAÍDA INTENCIONAL DO NOSSO PRÓPRIO SISTEMA
     // =====================================================
-    if (!voiceIntentionalDestroy) {
-      console.warn(
-        `[voice] bot saiu/mudou da call. old=${oldS.channelId} new=${newS.channelId}`
+    if (voiceIntentionalDestroy) {
+      console.log(
+        '[voice] VoiceStateUpdate ignorado porque a conexão foi destruída intencionalmente.'
       );
 
-      scheduleVoiceReconnect(
-        8_000,
-        'VoiceStateUpdate detectou saída/movimentação'
-      );
+      return;
     }
 
+    console.warn(
+      `[voice] bot saiu/mudou da call. old=${oldS.channelId} new=${newS.channelId}`
+    );
+
+    scheduleVoiceReconnect(
+      8_000,
+      'VoiceStateUpdate detectou saída/movimentação'
+    );
+
+    // =====================================================
+    // SÓ MANDA MENSAGEM DE "EXPULSO" SE EXISTIR
+    // AUDIT LOG REAL CONFIRMANDO MEMBER DISCONNECT.
+    //
+    // Queda de rede, reconnect interno ou falha de voice
+    // NÃO gera mensagem no chat.
+    // =====================================================
     setTimeout(async () => {
       try {
-        const logs = await newS.guild.fetchAuditLogs({ type: AuditLogEvent.MemberDisconnect, limit: 5 });
-        const entry = logs.entries.find(e => e?.target?.id === client.user.id && (Date.now() - e.createdTimestamp) < 15_000);
-        if (entry) {
-          await sendTextManaged(genKick(entry.executor?.id), 'kickNotice');
-        } else {
-          await sendTextManaged(genKick(), 'kickNotice');
+        const logs =
+          await newS.guild.fetchAuditLogs({
+            type:
+              AuditLogEvent.MemberDisconnect,
+            limit: 5,
+          });
+
+        const entry =
+          logs.entries.find(
+            (e) =>
+              e?.target?.id ===
+                client.user.id &&
+              Date.now() -
+                e.createdTimestamp <
+                15_000
+          );
+
+        // =================================================
+        // NÃO HOUVE EXPULSÃO REAL
+        // =================================================
+        if (!entry) {
+          console.log(
+            '[voice] saída sem Audit Log de MemberDisconnect. Nenhum aviso de expulsão será enviado.'
+          );
+
+          return;
         }
-      } catch {
-        await sendTextManaged(genKick(), 'kickNotice');
+
+        // =================================================
+        // HOUVE EXPULSÃO REAL
+        // =================================================
+        console.warn(
+          `[voice] expulsão real detectada pelo Audit Log | executor=${entry.executor?.tag || 'desconhecido'} (${entry.executor?.id || 'sem-id'})`
+        );
+
+        await sendTextManaged(
+          genKick(
+            entry.executor?.id
+          ),
+          'kickNotice'
+        );
+      } catch (error) {
+        console.warn(
+          '[voice] não foi possível confirmar expulsão pelo Audit Log. Nenhum aviso será enviado.',
+          error?.message || error
+        );
       }
-    }, 1500);
+    }, 3000);
   }
 
   const wasIn = oldS.channelId === VOICE_CHANNEL_ID;
