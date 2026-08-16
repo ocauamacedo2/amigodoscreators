@@ -1890,6 +1890,31 @@ client.once(Events.ClientReady, async () => {
   console.log(`[ready] Logado como ${client.user.tag}`);
 
   // =====================================================
+  // IDENTIDADE REAL DO BOT / DIAGNÓSTICO DE SERVIDORES
+  // =====================================================
+  console.log(
+    `[BOT DEBUG] Usuário real: ${client.user.tag} | ID: ${client.user.id}`
+  );
+
+  console.log(
+    `[BOT DEBUG] Servidores onde ESTE bot realmente está: ${client.guilds.cache.size}`
+  );
+
+  for (const [, guild] of client.guilds.cache) {
+    console.log(
+      `[BOT DEBUG] - ${guild.name} (${guild.id})`
+    );
+  }
+
+  console.log(
+    `[BOT DEBUG] Servidor obrigatório: ${TARGET_VOICE_GUILD_ID}`
+  );
+
+  console.log(
+    `[BOT DEBUG] Está no servidor obrigatório? ${client.guilds.cache.has(TARGET_VOICE_GUILD_ID) ? 'SIM' : 'NÃO'}`
+  );
+
+  // =====================================================
   // DEBUG DE SERVIDORES / CALLS VISÍVEIS
   // =====================================================
   console.log('[voice-debug] ========================================');
