@@ -115,6 +115,20 @@ participantsByMsg: {},
       currentValidMessageId: null,
       currentSatisfied: true,
       activity: { counter: 0, threshold: 30 },
+
+      // =====================================================
+      // HISTÓRICO INTELIGENTE DE PERGUNTAS
+      // =====================================================
+      // Salva somente IDs.
+      // Isso evita repetir perguntas recentes no Creators
+      // e evita repetir, na mesma semana, perguntas para
+      // o mesmo usuário no PV.
+      questionHistory: {
+        weekKey: null,
+        creatorsRecent: [],
+        users: {}
+      },
+
       rt: { __todayScheduleFast: [], active: null, attempts: {}, lastWinnerId: null, lastFastMsgId: null }
     };
 
@@ -148,6 +162,13 @@ participantsByMsg: {},
         currentValidMessageId: null,
         currentSatisfied: true,
         activity: { counter: 0, threshold: 30 },
+
+        questionHistory: {
+          weekKey: null,
+          creatorsRecent: [],
+          users: {}
+        },
+
         rt: {
           __todayScheduleFast: [],
           lastScheduleDayKeyFast: null,
@@ -218,9 +239,233 @@ lastWeeklyResetKey: SC_QUIZ_STATE.lastWeeklyResetKey || null,
       }
       return null;
     }
-    function scq_getRandomQuestion(exclude = new Set()) {
-      const pool = SC_QUIZ_BANK.filter(q => !exclude.has(q.id));
-      return pool.length ? pool[Math.floor(Math.random() * pool.length)] : null;
+    // =====================================================
+    // SISTEMA INTELIGENTE DE VARIEDADE DAS PERGUNTAS
+    // =====================================================
+
+    const SC_QUIZ_CREATORS_RECENT_LIMIT = 120;
+
+    function scq_getWeekKeyBRT(date = new Date()) {
+      // Brasil atualmente utiliza UTC-3.
+      // Trabalhamos em UTC internamente para impedir que
+      // a troca de semana dependa do fuso da hospedagem.
+      const brt = new Date(date.getTime() - (3 * 60 * 60 * 1000));
+
+      const year = brt.getUTCFullYear();
+      const month = brt.getUTCMonth();
+      const day = brt.getUTCDate();
+      const dayOfWeek = brt.getUTCDay();
+
+      // A semana do Quiz começa no domingo,
+      // acompanhando o reset semanal do ranking.
+      const startOfWeek = new Date(
+        Date.UTC(
+          year,
+          month,
+          day - dayOfWeek
+        )
+      );
+
+      return startOfWeek.toISOString().slice(0, 10);
+    }
+
+    function scq_ensureQuestionHistory() {
+      const currentWeekKey = scq_getWeekKeyBRT();
+
+      if (
+        !SC_QUIZ_STATE.questionHistory ||
+        typeof SC_QUIZ_STATE.questionHistory !== 'object'
+      ) {
+        SC_QUIZ_STATE.questionHistory = {
+          weekKey: currentWeekKey,
+          creatorsRecent: [],
+          users: {}
+        };
+
+        scq_save();
+      }
+
+      if (!Array.isArray(SC_QUIZ_STATE.questionHistory.creatorsRecent)) {
+        SC_QUIZ_STATE.questionHistory.creatorsRecent = [];
+      }
+
+      if (
+        !SC_QUIZ_STATE.questionHistory.users ||
+        typeof SC_QUIZ_STATE.questionHistory.users !== 'object' ||
+        Array.isArray(SC_QUIZ_STATE.questionHistory.users)
+      ) {
+        SC_QUIZ_STATE.questionHistory.users = {};
+      }
+
+      // Nova semana:
+      // limpa o histórico individual para que todo o banco
+      // volte a ficar disponível para cada pessoa.
+      if (SC_QUIZ_STATE.questionHistory.weekKey !== currentWeekKey) {
+        SC_QUIZ_STATE.questionHistory.weekKey = currentWeekKey;
+        SC_QUIZ_STATE.questionHistory.users = {};
+
+        scq_save();
+      }
+
+      return SC_QUIZ_STATE.questionHistory;
+    }
+
+    function scq_pickRandomFromPool(pool) {
+      if (!Array.isArray(pool) || pool.length === 0) {
+        return null;
+      }
+
+      return pool[
+        Math.floor(Math.random() * pool.length)
+      ];
+    }
+
+    function scq_markCreatorsQuestionUsed(questionId) {
+      if (!questionId) return;
+
+      const history = scq_ensureQuestionHistory();
+
+      history.creatorsRecent = history.creatorsRecent
+        .filter(id => Number(id) !== Number(questionId));
+
+      history.creatorsRecent.push(Number(questionId));
+
+      // Nunca deixa esse histórico crescer para sempre.
+      // Com 546+ perguntas no banco, 120 perguntas recentes
+      // já cria uma rotação enorme sem sacrificar variedade.
+      if (
+        history.creatorsRecent.length >
+        SC_QUIZ_CREATORS_RECENT_LIMIT
+      ) {
+        history.creatorsRecent =
+          history.creatorsRecent.slice(
+            -SC_QUIZ_CREATORS_RECENT_LIMIT
+          );
+      }
+
+      scq_save();
+    }
+
+    function scq_markUserQuestionUsed(userId, questionId) {
+      if (!userId || !questionId) return;
+
+      const history = scq_ensureQuestionHistory();
+
+      const key = String(userId);
+
+      if (!Array.isArray(history.users[key])) {
+        history.users[key] = [];
+      }
+
+      const numericQuestionId = Number(questionId);
+
+      if (!history.users[key].includes(numericQuestionId)) {
+        history.users[key].push(numericQuestionId);
+        scq_save();
+      }
+    }
+
+    function scq_getRandomQuestion(
+      exclude = new Set(),
+      options = {}
+    ) {
+      const history = scq_ensureQuestionHistory();
+
+      const normalizedExclude = new Set(
+        [...exclude]
+          .map(id => Number(id))
+          .filter(Number.isFinite)
+      );
+
+      const basePool = SC_QUIZ_BANK.filter(
+        q => !normalizedExclude.has(Number(q.id))
+      );
+
+      if (!basePool.length) {
+        return null;
+      }
+
+      const recentCreators = new Set(
+        history.creatorsRecent
+          .map(id => Number(id))
+          .filter(Number.isFinite)
+      );
+
+      const userId =
+        options?.userId
+          ? String(options.userId)
+          : null;
+
+      // =====================================================
+      // SORTEIO INDIVIDUAL PARA PV
+      // =====================================================
+      if (userId) {
+        const userSeen = new Set(
+          (history.users[userId] || [])
+            .map(id => Number(id))
+            .filter(Number.isFinite)
+        );
+
+        // PRIORIDADE 1
+        // Nunca vista pelo usuário nesta semana
+        // E também não apareceu recentemente no Creators.
+        const unseenAndFresh = basePool.filter(
+          q =>
+            !userSeen.has(Number(q.id)) &&
+            !recentCreators.has(Number(q.id))
+        );
+
+        if (unseenAndFresh.length) {
+          return scq_pickRandomFromPool(unseenAndFresh);
+        }
+
+        // PRIORIDADE 2
+        // Ainda não vista pelo usuário na semana,
+        // mesmo que tenha aparecido há algum tempo no Creators.
+        const unseenByUser = basePool.filter(
+          q => !userSeen.has(Number(q.id))
+        );
+
+        if (unseenByUser.length) {
+          return scq_pickRandomFromPool(unseenByUser);
+        }
+
+        // PRIORIDADE 3
+        // Se o usuário já percorreu todo o banco disponível,
+        // ainda tentamos evitar o que apareceu recentemente
+        // no canal Creators.
+        const notRecentCreators = basePool.filter(
+          q => !recentCreators.has(Number(q.id))
+        );
+
+        if (notRecentCreators.length) {
+          return scq_pickRandomFromPool(notRecentCreators);
+        }
+
+        // PRIORIDADE 4
+        // Último fallback.
+        // Nunca trava o Quiz mesmo depois de consumir todo banco.
+        return scq_pickRandomFromPool(basePool);
+      }
+
+      // =====================================================
+      // SORTEIO PARA O CANAL CREATORS
+      // =====================================================
+
+      // No canal público, primeiro tenta qualquer pergunta que
+      // não tenha aparecido recentemente.
+      const freshCreatorsPool = basePool.filter(
+        q => !recentCreators.has(Number(q.id))
+      );
+
+      if (freshCreatorsPool.length) {
+        return scq_pickRandomFromPool(freshCreatorsPool);
+      }
+
+      // Se algum dia o histórico atingir praticamente todo
+      // o banco, libera novamente o conjunto disponível
+      // em vez de interromper o sistema.
+      return scq_pickRandomFromPool(basePool);
     }
     function scq_buildEmbed({ title, description, image, color = 0x915BFF, footer, thumbnail }) {
       return {
@@ -999,9 +1244,10 @@ const embedI = scq_buildEmbed({
         console.error(`[SC_QUIZ] Erro: Canal ${SC_QUIZ_CREATORS_CHANNEL_ID} não encontrado.`);
         return;
       }
-
       const q = scq_getRandomQuestion();
       if (!q) return;
+
+      scq_markCreatorsQuestionUsed(q.id);
 
       await scq_clearCreatorsTrackedMessages(channel);
 
@@ -1049,6 +1295,8 @@ const embedI = scq_buildEmbed({
 
       const q = scq_getRandomQuestion();
       if (!q) return;
+
+      scq_markCreatorsQuestionUsed(q.id);
 
       await scq_clearCreatorsTrackedMessages(channel);
 
@@ -1277,13 +1525,31 @@ description: right
 
       await dm.send({ embeds: [scq_buildEmbed({ title: '📥 QUIZ — Extras', description: `Você tem **3 minutos** por pergunta. Responda **A/B/C/D**. Boa sorte!` })] });
 
+      // A pergunta principal do Creators também passa a fazer
+      // parte do histórico pessoal desse usuário.
+      // Assim ela não volta no PV dele durante a mesma semana.
+      scq_markUserQuestionUsed(user.id, mainQid);
+
       const used = new Set([mainQid]);
       let r = 0, w = 0;
 
       for (let i = 0; i < SC_QUIZ_EXTRA_DM_QUESTIONS; i++) {
-        const q = scq_getRandomQuestion(used);
+        const q = scq_getRandomQuestion(
+          used,
+          {
+            userId: user.id
+          }
+        );
+
         if (!q) break;
+
         used.add(q.id);
+
+        // Marca antes do envio.
+        // Dessa forma, mesmo que o usuário deixe o tempo acabar
+        // ou o bot reinicie depois, aquela pergunta já é
+        // considerada apresentada naquela semana.
+        scq_markUserQuestionUsed(user.id, q.id);
 
         await dm.send({ embeds: [scq_buildEmbed({ title: `Pergunta ${i + 1}/${SC_QUIZ_EXTRA_DM_QUESTIONS}`, description: `**${q.texto}**\n\n${q.opcoes.join('\n')}` })] });
 
@@ -1303,6 +1569,7 @@ description: right
         
         await scq_log(scq_buildEmbed({ title: hit ? '✅ Acerto PV' : '❌ Erro PV', description: `Usuário: <@${user.id}>\nQID: ${q.id}\nResposta: ${collected.first().content}` }));
       }
+
       const finalRank = scq_getUserRankStatus(user.id);
       await dm.send({ embeds: [scq_buildEmbed({ title: '📊 Resumo', description: `Chat: ${mainRight ? '✅' : '❌'}\nPV: ✅ ${r} | ❌ ${w}${finalRank}` })] });
       await scq_renderRankingSticky();
