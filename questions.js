@@ -546,11 +546,11 @@ addS('Social Médias', 'Os eventos fixos da SantaCreators acontecem em quais dia
 ], 0);
 
 addS('Social Médias', 'Na operação fixa atual, qual opção descreve corretamente os horários dos eventos?', [
-  'Todos os eventos acontecem somente às 22:00',
-  'Há eventos às 21:00 e às 23:30 conforme o dia e a cidade',
-  'Todos os eventos acontecem somente às 23:30',
-  'Os horários são escolhidos sem cronograma'
-], 1);
+  'Todos os eventos principais acontecem às 21:00',
+  'Todos os eventos principais acontecem somente às 22:00',
+  'Cada cidade escolhe seu horário sem seguir cronograma',
+  'Os eventos principais não possuem horário definido'
+], 0);
 
 addS('Social Médias', 'O cronograma da semana deve ser organizado em qual dia?', [
   'Domingo',
@@ -3388,272 +3388,282 @@ const SC_EVENT_QUESTION_VARIATIONS = [
 const SC_EVENT_FACTS = [
   {
     categoria: 'Eventos — Agenda',
-    assunto: 'a segunda-feira às 21:00',
-    correta: 'O evento ocorre na Cidade Maresia',
+    assunto: 'a segunda-feira às 21:00 no cronograma atual',
+    correta: 'O evento principal acontece na Cidade Maresia',
     erradas: [
-      'O evento ocorre na Cidade Grande',
-      'O evento ocorre na Cidade Santa',
-      'O evento ocorre na Cidade Nobre'
+      'O evento principal acontece na Cidade Grande',
+      'O evento principal acontece na Cidade Santa',
+      'O evento principal acontece na Cidade Nobre'
     ]
   },
   {
     categoria: 'Eventos — Agenda',
-    assunto: 'o evento de segunda-feira às 21:00',
-    correta: 'É o Maresia do Crime',
+    assunto: 'a programação principal de segunda-feira',
+    correta: 'Maresia recebe o evento das 21:00',
     erradas: [
-      'É o Nobre do Crime',
-      'É o Santa do Crime',
-      'É o Grande do Crime'
+      'Grande recebe o evento das 21:00',
+      'Santa recebe o evento das 21:00',
+      'Nobre recebe o evento das 21:00'
     ]
   },
   {
     categoria: 'Eventos — Agenda',
-    assunto: 'a segunda-feira às 23:30',
-    correta: 'O evento ocorre na Cidade Grande',
+    assunto: 'o nome do evento de segunda-feira na Cidade Maresia',
+    correta: 'Pode variar conforme o cronograma oficial da semana',
     erradas: [
-      'O evento ocorre na Cidade Nobre',
-      'O evento ocorre na Cidade Santa',
-      'O evento ocorre na Cidade Maresia'
+      'É obrigatoriamente Maresia do Crime em todas as semanas',
+      'É obrigatoriamente Missão Rosa em todas as semanas',
+      'Nunca pode ser alterado depois de definido'
     ]
   },
   {
     categoria: 'Eventos — Agenda',
-    assunto: 'o evento de segunda-feira às 23:30',
-    correta: 'É a Missão Pântano na Cidade Grande',
+    assunto: 'o Maresia do Crime na programação de segunda-feira',
+    correta: 'É um evento comum nesse dia, mas o nome pode variar conforme o cronograma',
     erradas: [
-      'É a Missão Rosa na Cidade Nobre',
-      'É o Santa do Crime na Cidade Santa',
-      'É o Maresia do Crime na Cidade Maresia'
+      'É obrigatório em todas as segundas-feiras sem exceção',
+      'Só pode acontecer na Cidade Grande',
+      'Foi definido como único evento permitido na segunda-feira'
     ]
   },
   {
     categoria: 'Eventos — Agenda',
-    assunto: 'a terça-feira às 21:00',
-    correta: 'O evento ocorre na Cidade Santa',
+    assunto: 'a terça-feira às 21:00 no cronograma atual',
+    correta: 'O evento principal acontece na Cidade Grande',
     erradas: [
-      'O evento ocorre na Cidade Grande',
-      'O evento ocorre na Cidade Nobre',
-      'O evento ocorre na Cidade Maresia'
+      'O evento principal acontece na Cidade Santa',
+      'O evento principal acontece na Cidade Maresia',
+      'O evento principal acontece na Cidade Nobre'
     ]
   },
   {
     categoria: 'Eventos — Agenda',
-    assunto: 'o evento de terça-feira às 21:00',
-    correta: 'É a Missão Pântano na Cidade Santa',
+    assunto: 'a programação principal de terça-feira',
+    correta: 'Grande recebe o evento das 21:00',
     erradas: [
-      'É a Missão Rosa na Cidade Nobre',
-      'É o Grande do Crime na Cidade Grande',
-      'É o Maresia do Crime na Cidade Maresia'
+      'Santa recebe o evento das 21:00',
+      'Maresia recebe o evento das 21:00',
+      'Nobre recebe o evento das 21:00'
     ]
   },
   {
     categoria: 'Eventos — Agenda',
-    assunto: 'a terça-feira às 23:30',
-    correta: 'O evento ocorre na Cidade Grande',
+    assunto: 'a programação principal de terça-feira',
+    correta: 'Grande recebe o evento das 21:00',
     erradas: [
-      'O evento ocorre na Cidade Santa',
-      'O evento ocorre na Cidade Nobre',
-      'O evento ocorre na Cidade Maresia'
+      'Santa recebe o evento das 21:00',
+      'Maresia recebe o evento das 21:00',
+      'Nobre recebe o evento das 21:00'
     ]
   },
   {
     categoria: 'Eventos — Agenda',
-    assunto: 'o evento de terça-feira às 23:30',
-    correta: 'É o Grande do Crime',
+    assunto: 'a mudança da Cidade Grande para o novo cronograma',
+    correta: 'A programação principal informada agora é terça-feira às 21:00',
     erradas: [
-      'É o Nobre do Crime',
-      'É o Santa do Crime',
-      'É o Maresia do Crime'
+      'A programação principal continua segunda e terça às 23:30',
+      'A programação principal passou para domingo às 23:30',
+      'A Cidade Grande ficou sem evento principal'
     ]
   },
   {
     categoria: 'Eventos — Agenda',
-    assunto: 'a quarta-feira às 21:00',
-    correta: 'O evento ocorre na Cidade Santa',
+    assunto: 'a mudança da Cidade Grande para o novo cronograma',
+    correta: 'A programação principal informada agora é terça-feira às 21:00',
     erradas: [
-      'O evento ocorre na Cidade Grande',
-      'O evento ocorre na Cidade Nobre',
-      'O evento ocorre na Cidade Maresia'
+      'A programação principal continua segunda e terça às 23:30',
+      'A programação principal passou para domingo às 23:30',
+      'A Cidade Grande ficou sem evento principal'
     ]
   },
   {
     categoria: 'Eventos — Agenda',
-    assunto: 'o evento de quarta-feira às 21:00',
-    correta: 'É o Santa do Crime',
+    assunto: 'a quarta-feira às 21:00 no cronograma atual',
+    correta: 'O evento principal acontece na Cidade Santa',
     erradas: [
-      'É o Grande do Crime',
-      'É o Nobre do Crime',
-      'É o Maresia do Crime'
+      'O evento principal acontece na Cidade Grande',
+      'O evento principal acontece na Cidade Maresia',
+      'O evento principal acontece na Cidade Nobre'
     ]
   },
   {
     categoria: 'Eventos — Agenda',
-    assunto: 'a quarta-feira às 23:30',
-    correta: 'O evento ocorre na Cidade Maresia',
+    assunto: 'a programação principal de quarta-feira',
+    correta: 'Santa recebe o evento das 21:00',
     erradas: [
-      'O evento ocorre na Cidade Santa',
-      'O evento ocorre na Cidade Grande',
-      'O evento ocorre na Cidade Nobre'
+      'Grande recebe o evento das 21:00',
+      'Maresia recebe o evento das 21:00',
+      'Nobre recebe o evento das 21:00'
     ]
   },
   {
     categoria: 'Eventos — Agenda',
-    assunto: 'o Socializar da agenda fixa',
-    correta: 'Acontece na quarta-feira às 23:30, na Cidade Maresia',
+    assunto: 'a Cidade Santa no novo cronograma semanal',
+    correta: 'Tem sua programação principal na quarta-feira às 21:00',
     erradas: [
-      'Acontece na segunda-feira às 21:00, na Cidade Santa',
-      'Acontece na sexta-feira às 23:30, na Cidade Grande',
-      'Acontece no domingo às 21:00, na Cidade Nobre'
+      'Tem sua programação principal na terça-feira às 21:00',
+      'Tem sua programação principal na sexta-feira às 23:30',
+      'Não possui mais programação principal'
     ]
   },
   {
     categoria: 'Eventos — Agenda',
-    assunto: 'a quinta-feira às 21:00',
-    correta: 'O evento ocorre na Cidade Nobre',
+    assunto: 'a Cidade Santa no novo cronograma semanal',
+    correta: 'Tem sua programação principal na quarta-feira às 21:00',
     erradas: [
-      'O evento ocorre na Cidade Grande',
-      'O evento ocorre na Cidade Santa',
-      'O evento ocorre na Cidade Maresia'
+      'Tem sua programação principal na terça-feira às 21:00',
+      'Tem sua programação principal na sexta-feira às 23:30',
+      'Não possui mais programação principal'
     ]
   },
   {
     categoria: 'Eventos — Agenda',
-    assunto: 'o evento fixo de quinta-feira',
-    correta: 'É a Missão Rosa com dois veículos',
+    assunto: 'a quinta-feira às 21:00 no cronograma atual',
+    correta: 'O evento principal acontece na Cidade Nobre',
     erradas: [
-      'É a Missão Rosa Bônus com quatro veículos',
-      'É o Nobre do Crime',
-      'É a Missão Pântano'
+      'O evento principal acontece na Cidade Grande',
+      'O evento principal acontece na Cidade Santa',
+      'O evento principal acontece na Cidade Maresia'
     ]
   },
   {
     categoria: 'Eventos — Agenda',
-    assunto: 'a sexta-feira às 21:00',
-    correta: 'O evento ocorre na Cidade Nobre',
+    assunto: 'o nome do evento realizado na quinta-feira na Cidade Nobre',
+    correta: 'Pode variar conforme o cronograma oficial da semana',
     erradas: [
-      'O evento ocorre na Cidade Grande',
-      'O evento ocorre na Cidade Santa',
-      'O evento ocorre na Cidade Maresia'
+      'É obrigatoriamente Missão Rosa em todas as semanas',
+      'É obrigatoriamente Missão Pântano em todas as semanas',
+      'É obrigatoriamente Nobre do Crime em todas as semanas'
     ]
   },
   {
     categoria: 'Eventos — Agenda',
-    assunto: 'o evento fixo de sexta-feira',
-    correta: 'É a Missão Pântano na Cidade Nobre',
+    assunto: 'a sexta-feira às 21:00 no cronograma atual',
+    correta: 'O evento principal acontece na Cidade Nobre',
     erradas: [
-      'É a Missão Rosa Bônus',
-      'É o Nobre do Crime',
-      'É o Grande do Crime'
+      'O evento principal acontece na Cidade Grande',
+      'O evento principal acontece na Cidade Santa',
+      'O evento principal acontece na Cidade Maresia'
     ]
   },
   {
     categoria: 'Eventos — Agenda',
-    assunto: 'o sábado às 21:00',
-    correta: 'O Nobre do Crime acontece na Cidade Nobre',
+    assunto: 'o nome do evento realizado na sexta-feira na Cidade Nobre',
+    correta: 'Pode variar conforme o cronograma oficial da semana',
     erradas: [
-      'O Grande do Crime acontece na Cidade Grande',
-      'O Santa do Crime acontece na Cidade Santa',
-      'O Maresia do Crime acontece na Cidade Maresia'
+      'É obrigatoriamente Missão Pântano em todas as semanas',
+      'É obrigatoriamente Missão Rosa em todas as semanas',
+      'É obrigatoriamente Nobre do Crime em todas as semanas'
     ]
   },
   {
     categoria: 'Eventos — Agenda',
-    assunto: 'o evento fixo de sábado',
-    correta: 'É o Nobre do Crime',
+    assunto: 'o sábado às 21:00 no cronograma atual',
+    correta: 'O evento principal acontece na Cidade Nobre',
     erradas: [
-      'É a Missão Pântano',
-      'É a Missão Rosa de dois veículos',
-      'É o Socializar'
+      'O evento principal acontece na Cidade Grande',
+      'O evento principal acontece na Cidade Santa',
+      'O evento principal acontece na Cidade Maresia'
     ]
   },
   {
     categoria: 'Eventos — Agenda',
-    assunto: 'o domingo às 21:00',
-    correta: 'A Missão Rosa Bônus ocorre na Cidade Nobre',
+    assunto: 'o nome do evento realizado no sábado na Cidade Nobre',
+    correta: 'Pode variar conforme o cronograma oficial da semana',
     erradas: [
-      'A Missão Pântano ocorre na Cidade Grande',
-      'O Santa do Crime ocorre na Cidade Santa',
-      'O Socializar ocorre na Cidade Maresia'
+      'É obrigatoriamente Nobre do Crime em todas as semanas',
+      'É obrigatoriamente Missão Rosa em todas as semanas',
+      'É obrigatoriamente Missão Pântano em todas as semanas'
     ]
   },
   {
     categoria: 'Eventos — Agenda',
-    assunto: 'a Missão Rosa de domingo',
-    correta: 'Possui quatro veículos rosa',
+    assunto: 'o domingo às 21:00 no cronograma atual',
+    correta: 'O evento principal acontece na Cidade Nobre',
     erradas: [
-      'Possui somente um veículo rosa',
-      'Possui dois veículos rosa',
-      'Não possui veículos rosa'
+      'O evento principal acontece na Cidade Grande',
+      'O evento principal acontece na Cidade Santa',
+      'O evento principal acontece na Cidade Maresia'
     ]
   },
   {
     categoria: 'Eventos — Agenda',
-    assunto: 'a Missão Rosa de quinta-feira',
-    correta: 'Possui dois veículos rosa',
+    assunto: 'o nome do evento realizado no domingo na Cidade Nobre',
+    correta: 'Pode variar conforme o cronograma oficial da semana',
     erradas: [
-      'Possui quatro veículos rosa',
-      'Possui seis veículos rosa',
-      'Não possui veículos rosa'
+      'É obrigatoriamente Missão Rosa em todas as semanas',
+      'É obrigatoriamente Missão Pântano em todas as semanas',
+      'É obrigatoriamente Nobre do Crime em todas as semanas'
     ]
   },
   {
     categoria: 'Eventos — Agenda',
-    assunto: 'os eventos das 23:30 de segunda e terça',
-    correta: 'Acontecem na Cidade Grande',
-    erradas: [
-      'Acontecem na Cidade Nobre',
-      'Acontecem na Cidade Santa',
-      'Acontecem na Cidade Maresia'
-    ]
-  },
-  {
-    categoria: 'Eventos — Agenda',
-    assunto: 'o horário fixo da Cidade Grande',
-    correta: 'É 23:30, na segunda e na terça-feira',
-    erradas: [
-      'É 21:00, na quinta e na sexta-feira',
-      'É 19:00, em todos os dias',
-      'É 00:00, no sábado e no domingo'
-    ]
-  },
-  {
-    categoria: 'Eventos — Agenda',
-    assunto: 'o horário fixo da Cidade Santa',
-    correta: 'É 21:00, na terça e na quarta-feira',
-    erradas: [
-      'É 23:30, na segunda e na terça-feira',
-      'É 19:00, no sábado e no domingo',
-      'É 00:00, na quinta e na sexta-feira'
-    ]
-  },
-  {
-    categoria: 'Eventos — Agenda',
-    assunto: 'os horários da Cidade Maresia',
-    correta: 'São alternados entre 21:00 e 23:30',
-    erradas: [
-      'São sempre às 19:00',
-      'São sempre às 23:30',
-      'São sempre à 01:00'
-    ]
-  },
-  {
-    categoria: 'Eventos — Agenda',
-    assunto: 'os eventos de quinta a domingo',
+    assunto: 'os eventos principais entre quinta-feira e domingo',
     correta: 'Acontecem às 21:00 na Cidade Nobre',
     erradas: [
-      'Acontecem às 23:30 na Cidade Grande',
-      'Acontecem às 19:00 na Cidade Santa',
-      'Acontecem à 01:00 na Cidade Maresia'
+      'Acontecem às 21:00 na Cidade Grande',
+      'Acontecem às 21:00 na Cidade Santa',
+      'Acontecem às 21:00 na Cidade Maresia'
     ]
   },
   {
     categoria: 'Eventos — Agenda',
-    assunto: 'os horários das 23:30 entre quinta e domingo',
-    correta: 'Não existem na agenda fixa informada',
+    assunto: 'o horário principal atual dos eventos semanais',
+    correta: 'A programação principal informada acontece às 21:00',
     erradas: [
-      'Existem todos os dias na Cidade Grande',
-      'Existem somente no sábado',
-      'Existem somente no domingo'
+      'A programação principal informada acontece sempre às 20:00',
+      'A programação principal informada acontece sempre às 22:00',
+      'Os eventos principais não possuem horário definido'
+    ]
+  },
+  {
+    categoria: 'Eventos — Agenda',
+    assunto: 'os nomes dos eventos do cronograma semanal',
+    correta: 'Podem mudar mesmo que o dia, horário e cidade permaneçam iguais',
+    erradas: [
+      'São permanentemente ligados a cada dia da semana',
+      'Nunca podem ser alterados depois da primeira edição',
+      'Precisam repetir obrigatoriamente o evento da semana anterior'
+    ]
+  },
+  {
+    categoria: 'Eventos — Agenda',
+    assunto: 'a fonte correta para confirmar qual evento será realizado',
+    correta: 'Deve ser considerado o cronograma oficial atualizado da semana',
+    erradas: [
+      'Deve ser considerado sempre um cronograma antigo',
+      'Deve ser considerado obrigatoriamente o evento da semana anterior',
+      'O nome do evento nunca precisa ser confirmado'
+    ]
+  },
+  {
+    categoria: 'Eventos — Agenda',
+    assunto: 'uma alteração de evento publicada no cronograma oficial',
+    correta: 'A informação mais recente do cronograma passa a ser a válida',
+    erradas: [
+      'A informação antiga continua valendo mesmo depois da alteração',
+      'A alteração deve ser ignorada até o mês seguinte',
+      'O evento anterior continua obrigatório naquele dia'
+    ]
+  },
+  {
+    categoria: 'Eventos — Agenda',
+    assunto: 'os eventos da madrugada ligados à programação de sexta-feira',
+    correta: 'Podem ocorrer depois do Battle Night da Cidade Nobre',
+    erradas: [
+      'Acontecem antes do evento principal das 21:00',
+      'Acontecem obrigatoriamente na Cidade Grande',
+      'Substituem o Battle Night da Cidade Nobre'
+    ]
+  },
+  {
+    categoria: 'Eventos — Agenda',
+    assunto: 'o horário dos eventos da madrugada após o Battle Night',
+    correta: 'Deve ser acompanhado pela informação atual do cronograma, pois pode variar',
+    erradas: [
+      'É sempre no mesmo horário, independentemente do cronograma',
+      'Acontece obrigatoriamente antes do Battle Night',
+      'Substitui o evento principal das 21:00'
     ]
   },
   {
