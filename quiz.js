@@ -125,8 +125,22 @@ participantsByMsg: {},
       // o mesmo usuário no PV.
       questionHistory: {
         weekKey: null,
+
+        // Perguntas recentemente usadas no canal Creators.
         creatorsRecent: [],
-        users: {}
+
+        // Ciclo completo do canal Creators.
+        // NÃO zera semanalmente.
+        creatorsCycle: [],
+
+        // Histórico individual somente da semana atual.
+        users: {},
+
+        // Ciclo individual completo.
+        // NÃO zera quando muda a semana.
+        // Só zera para aquela pessoa quando ela percorre
+        // todas as perguntas únicas do banco.
+        userCycles: {}
       },
 
       rt: { __todayScheduleFast: [], active: null, attempts: {}, lastWinnerId: null, lastFastMsgId: null }
@@ -166,7 +180,9 @@ participantsByMsg: {},
         questionHistory: {
           weekKey: null,
           creatorsRecent: [],
-          users: {}
+          creatorsCycle: [],
+          users: {},
+          userCycles: {}
         },
 
         rt: {
@@ -245,11 +261,68 @@ lastWeeklyResetKey: SC_QUIZ_STATE.lastWeeklyResetKey || null,
 
     const SC_QUIZ_CREATORS_RECENT_LIMIT = 120;
 
+    // Índice rápido por ID para consultar a pergunta original.
+    const SC_QUIZ_QUESTION_BY_ID = new Map(
+      SC_QUIZ_BANK.map(q => [Number(q.id), q])
+    );
+
+    // =====================================================
+    // IDENTIDADE REAL DA PERGUNTA
+    // =====================================================
+    // Não confiamos somente no ID.
+    //
+    // Se existirem:
+    //
+    // ID 100 -> "Como Manager, você é staff?"
+    // ID 450 -> "Como Manager, você é staff?"
+    //
+    // os dois serão tratados como a MESMA pergunta.
+    //
+    // Também ignoramos diferenças apenas de:
+    // - maiúsculas/minúsculas
+    // - acentos
+    // - pontuação
+    // - espaços
+    function scq_questionKey(question) {
+      return String(question?.texto || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, ' ')
+        .trim();
+    }
+
+    // Quantidade REAL de perguntas únicas.
+    // Duplicatas textuais não contam duas vezes.
+    const SC_QUIZ_UNIQUE_QUESTION_KEYS = new Set(
+      SC_QUIZ_BANK
+        .map(scq_questionKey)
+        .filter(Boolean)
+    );
+
+    function scq_idsToQuestionKeys(ids = []) {
+      const keys = new Set();
+
+      for (const id of Array.isArray(ids) ? ids : []) {
+        const q = SC_QUIZ_QUESTION_BY_ID.get(Number(id));
+        const key = scq_questionKey(q);
+
+        if (key) {
+          keys.add(key);
+        }
+      }
+
+      return keys;
+    }
+
     function scq_getWeekKeyBRT(date = new Date()) {
       // Brasil atualmente utiliza UTC-3.
       // Trabalhamos em UTC internamente para impedir que
       // a troca de semana dependa do fuso da hospedagem.
-      const brt = new Date(date.getTime() - (3 * 60 * 60 * 1000));
+      const brt = new Date(
+        date.getTime() -
+        (3 * 60 * 60 * 1000)
+      );
 
       const year = brt.getUTCFullYear();
       const month = brt.getUTCMonth();
@@ -266,11 +339,16 @@ lastWeeklyResetKey: SC_QUIZ_STATE.lastWeeklyResetKey || null,
         )
       );
 
-      return startOfWeek.toISOString().slice(0, 10);
+      return startOfWeek
+        .toISOString()
+        .slice(0, 10);
     }
 
     function scq_ensureQuestionHistory() {
-      const currentWeekKey = scq_getWeekKeyBRT();
+      const currentWeekKey =
+        scq_getWeekKeyBRT();
+
+      let changed = false;
 
       if (
         !SC_QUIZ_STATE.questionHistory ||
@@ -279,60 +357,211 @@ lastWeeklyResetKey: SC_QUIZ_STATE.lastWeeklyResetKey || null,
         SC_QUIZ_STATE.questionHistory = {
           weekKey: currentWeekKey,
           creatorsRecent: [],
-          users: {}
+          creatorsCycle: [],
+          users: {},
+          userCycles: {}
         };
 
-        scq_save();
+        changed = true;
       }
 
-      if (!Array.isArray(SC_QUIZ_STATE.questionHistory.creatorsRecent)) {
-        SC_QUIZ_STATE.questionHistory.creatorsRecent = [];
-      }
+      const history =
+        SC_QUIZ_STATE.questionHistory;
+
+      // =====================================================
+      // HISTÓRICO RECENTE DO CREATORS
+      // =====================================================
 
       if (
-        !SC_QUIZ_STATE.questionHistory.users ||
-        typeof SC_QUIZ_STATE.questionHistory.users !== 'object' ||
-        Array.isArray(SC_QUIZ_STATE.questionHistory.users)
+        !Array.isArray(
+          history.creatorsRecent
+        )
       ) {
-        SC_QUIZ_STATE.questionHistory.users = {};
+        history.creatorsRecent = [];
+        changed = true;
       }
 
-      // Nova semana:
-      // limpa o histórico individual para que todo o banco
-      // volte a ficar disponível para cada pessoa.
-      if (SC_QUIZ_STATE.questionHistory.weekKey !== currentWeekKey) {
-        SC_QUIZ_STATE.questionHistory.weekKey = currentWeekKey;
-        SC_QUIZ_STATE.questionHistory.users = {};
+      // =====================================================
+      // CICLO COMPLETO DO CREATORS
+      // =====================================================
+      //
+      // Compatibilidade automática com o JSON antigo:
+      // se creatorsCycle ainda não existir, aproveita o
+      // creatorsRecent atual como começo do ciclo.
+      //
+      // Isso impede que você reinicie o bot e as perguntas
+      // recentes voltem imediatamente.
+      if (
+        !Array.isArray(
+          history.creatorsCycle
+        )
+      ) {
+        history.creatorsCycle = [
+          ...history.creatorsRecent
+        ];
 
+        changed = true;
+      }
+
+      // =====================================================
+      // HISTÓRICO SEMANAL DOS USUÁRIOS
+      // =====================================================
+
+      if (
+        !history.users ||
+        typeof history.users !== 'object' ||
+        Array.isArray(history.users)
+      ) {
+        history.users = {};
+        changed = true;
+      }
+
+      // =====================================================
+      // CICLO COMPLETO INDIVIDUAL
+      // =====================================================
+      //
+      // Esse é o histórico que NÃO some domingo.
+      //
+      // Se o bot está vindo da versão anterior, copiamos
+      // automaticamente o histórico semanal atual para
+      // iniciar o primeiro ciclo.
+      if (
+        !history.userCycles ||
+        typeof history.userCycles !== 'object' ||
+        Array.isArray(history.userCycles)
+      ) {
+        history.userCycles = {};
+
+        for (
+          const [userId, ids]
+          of Object.entries(history.users)
+        ) {
+          history.userCycles[userId] =
+            Array.isArray(ids)
+              ? [...ids]
+              : [];
+        }
+
+        changed = true;
+      }
+
+      // =====================================================
+      // VIRADA DA SEMANA
+      // =====================================================
+      //
+      // MUITO IMPORTANTE:
+      //
+      // limpa SOMENTE a trava semanal.
+      //
+      // NÃO limpa userCycles.
+      // NÃO limpa creatorsCycle.
+      //
+      // Portanto a pessoa continua avançando pelo banco
+      // inteiro mesmo atravessando domingo.
+      if (
+        history.weekKey !==
+        currentWeekKey
+      ) {
+        history.weekKey =
+          currentWeekKey;
+
+        history.users = {};
+
+        changed = true;
+      }
+
+      if (changed) {
         scq_save();
       }
 
-      return SC_QUIZ_STATE.questionHistory;
+      return history;
     }
 
     function scq_pickRandomFromPool(pool) {
-      if (!Array.isArray(pool) || pool.length === 0) {
+      if (
+        !Array.isArray(pool) ||
+        pool.length === 0
+      ) {
         return null;
       }
 
       return pool[
-        Math.floor(Math.random() * pool.length)
+        Math.floor(
+          Math.random() *
+          pool.length
+        )
       ];
     }
 
-    function scq_markCreatorsQuestionUsed(questionId) {
-      if (!questionId) return;
+    // =====================================================
+    // ADICIONA ID SEM DUPLICAR PERGUNTA EQUIVALENTE
+    // =====================================================
 
-      const history = scq_ensureQuestionHistory();
+    function scq_pushQuestionIdWithoutEquivalent(
+      ids,
+      questionId
+    ) {
+      const q =
+        SC_QUIZ_QUESTION_BY_ID.get(
+          Number(questionId)
+        );
 
-      history.creatorsRecent = history.creatorsRecent
-        .filter(id => Number(id) !== Number(questionId));
+      const key =
+        scq_questionKey(q);
 
-      history.creatorsRecent.push(Number(questionId));
+      if (!key) {
+        return false;
+      }
 
-      // Nunca deixa esse histórico crescer para sempre.
-      // Com 546+ perguntas no banco, 120 perguntas recentes
-      // já cria uma rotação enorme sem sacrificar variedade.
+      const existingKeys =
+        scq_idsToQuestionKeys(ids);
+
+      // Já existe outra pergunta com esse mesmo texto
+      // no histórico?
+      //
+      // Então não precisa inserir novamente.
+      if (
+        existingKeys.has(key)
+      ) {
+        return false;
+      }
+
+      ids.push(
+        Number(questionId)
+      );
+
+      return true;
+    }
+
+    // =====================================================
+    // REGISTRA PERGUNTA DO CANAL CREATORS
+    // =====================================================
+
+    function scq_markCreatorsQuestionUsed(
+      questionId
+    ) {
+      if (!questionId) {
+        return;
+      }
+
+      const history =
+        scq_ensureQuestionHistory();
+
+      const numericQuestionId =
+        Number(questionId);
+
+      // Mantém o histórico RECENTE.
+      history.creatorsRecent =
+        history.creatorsRecent.filter(
+          id =>
+            Number(id) !==
+            numericQuestionId
+        );
+
+      history.creatorsRecent.push(
+        numericQuestionId
+      );
+
       if (
         history.creatorsRecent.length >
         SC_QUIZ_CREATORS_RECENT_LIMIT
@@ -343,53 +572,154 @@ lastWeeklyResetKey: SC_QUIZ_STATE.lastWeeklyResetKey || null,
           );
       }
 
+      // E também registra no ciclo COMPLETO.
+      //
+      // Se outro ID tiver o mesmo texto,
+      // não será contado como nova pergunta.
+      scq_pushQuestionIdWithoutEquivalent(
+        history.creatorsCycle,
+        numericQuestionId
+      );
+
       scq_save();
     }
 
-    function scq_markUserQuestionUsed(userId, questionId) {
-      if (!userId || !questionId) return;
+    // =====================================================
+    // REGISTRA PERGUNTA RECEBIDA PELO USUÁRIO
+    // =====================================================
 
-      const history = scq_ensureQuestionHistory();
+    function scq_markUserQuestionUsed(
+      userId,
+      questionId
+    ) {
+      if (
+        !userId ||
+        !questionId
+      ) {
+        return;
+      }
 
-      const key = String(userId);
+      const history =
+        scq_ensureQuestionHistory();
 
-      if (!Array.isArray(history.users[key])) {
+      const key =
+        String(userId);
+
+      const numericQuestionId =
+        Number(questionId);
+
+      if (
+        !Array.isArray(
+          history.users[key]
+        )
+      ) {
         history.users[key] = [];
       }
 
-      const numericQuestionId = Number(questionId);
+      if (
+        !Array.isArray(
+          history.userCycles[key]
+        )
+      ) {
+        history.userCycles[key] = [];
+      }
 
-      if (!history.users[key].includes(numericQuestionId)) {
-        history.users[key].push(numericQuestionId);
+      let changed = false;
+
+      // Histórico SEMANAL.
+      if (
+        scq_pushQuestionIdWithoutEquivalent(
+          history.users[key],
+          numericQuestionId
+        )
+      ) {
+        changed = true;
+      }
+
+      // Histórico do CICLO COMPLETO.
+      if (
+        scq_pushQuestionIdWithoutEquivalent(
+          history.userCycles[key],
+          numericQuestionId
+        )
+      ) {
+        changed = true;
+      }
+
+      if (changed) {
         scq_save();
       }
     }
+
+    // =====================================================
+    // SORTEADOR PRINCIPAL
+    // =====================================================
 
     function scq_getRandomQuestion(
       exclude = new Set(),
       options = {}
     ) {
-      const history = scq_ensureQuestionHistory();
+      const history =
+        scq_ensureQuestionHistory();
 
-      const normalizedExclude = new Set(
-        [...exclude]
-          .map(id => Number(id))
-          .filter(Number.isFinite)
-      );
+      const normalizedExclude =
+        new Set(
+          [...exclude]
+            .map(
+              id => Number(id)
+            )
+            .filter(
+              Number.isFinite
+            )
+        );
 
-      const basePool = SC_QUIZ_BANK.filter(
-        q => !normalizedExclude.has(Number(q.id))
-      );
+      // =====================================================
+      // BLOQUEIA TAMBÉM O TEXTO DAS PERGUNTAS DA RODADA
+      // =====================================================
+      //
+      // Antes:
+      //
+      // used tinha ID 100.
+      //
+      // Mas se ID 430 tivesse a MESMA pergunta,
+      // ele ainda poderia entrar.
+      //
+      // Agora bloqueamos pela identidade textual também.
+      const excludedKeys =
+        scq_idsToQuestionKeys(
+          [...normalizedExclude]
+        );
 
-      if (!basePool.length) {
+      const basePool =
+        SC_QUIZ_BANK.filter(
+          q => {
+            const qid =
+              Number(q.id);
+
+            const qkey =
+              scq_questionKey(q);
+
+            return (
+              !normalizedExclude.has(
+                qid
+              ) &&
+              !excludedKeys.has(
+                qkey
+              )
+            );
+          }
+        );
+
+      if (
+        !basePool.length
+      ) {
         return null;
       }
 
-      const recentCreators = new Set(
-        history.creatorsRecent
-          .map(id => Number(id))
-          .filter(Number.isFinite)
-      );
+      const recentCreatorsKeys =
+        scq_idsToQuestionKeys(
+          history.creatorsRecent
+        );
 
       const userId =
         options?.userId
@@ -399,73 +729,351 @@ lastWeeklyResetKey: SC_QUIZ_STATE.lastWeeklyResetKey || null,
       // =====================================================
       // SORTEIO INDIVIDUAL PARA PV
       // =====================================================
+
       if (userId) {
-        const userSeen = new Set(
-          (history.users[userId] || [])
-            .map(id => Number(id))
-            .filter(Number.isFinite)
-        );
+        if (
+          !Array.isArray(
+            history.users[userId]
+          )
+        ) {
+          history.users[userId] = [];
+        }
 
+        if (
+          !Array.isArray(
+            history.userCycles[userId]
+          )
+        ) {
+          history.userCycles[userId] = [];
+        }
+
+        // Perguntas recebidas na semana atual.
+        const weeklyKeys =
+          scq_idsToQuestionKeys(
+            history.users[userId]
+          );
+
+        // Perguntas recebidas desde o início
+        // do ciclo individual.
+        let cycleKeys =
+          scq_idsToQuestionKeys(
+            history.userCycles[userId]
+          );
+
+        // =====================================================
+        // VERIFICA SE O USUÁRIO CONSUMIU O BANCO INTEIRO
+        // =====================================================
+        //
+        // Só aqui o ciclo poderá começar novamente.
+        if (
+          SC_QUIZ_UNIQUE_QUESTION_KEYS.size > 0 &&
+          cycleKeys.size >=
+            SC_QUIZ_UNIQUE_QUESTION_KEYS.size
+        ) {
+          history.userCycles[userId] = [];
+
+          cycleKeys =
+            new Set();
+
+          scq_save();
+        }
+
+        // =====================================================
         // PRIORIDADE 1
-        // Nunca vista pelo usuário nesta semana
-        // E também não apareceu recentemente no Creators.
-        const unseenAndFresh = basePool.filter(
-          q =>
-            !userSeen.has(Number(q.id)) &&
-            !recentCreators.has(Number(q.id))
-        );
+        // =====================================================
+        //
+        // Pergunta:
+        //
+        // - nunca recebida nesse ciclo
+        // - não recebida nesta semana
+        // - não recente no Creators
+        //
+        // Essa é a opção PERFEITA.
+        const neverSeenBestPool =
+          basePool.filter(
+            q => {
+              const key =
+                scq_questionKey(q);
 
-        if (unseenAndFresh.length) {
-          return scq_pickRandomFromPool(unseenAndFresh);
+              return (
+                !cycleKeys.has(key) &&
+                !weeklyKeys.has(key) &&
+                !recentCreatorsKeys.has(key)
+              );
+            }
+          );
+
+        if (
+          neverSeenBestPool.length
+        ) {
+          return scq_pickRandomFromPool(
+            neverSeenBestPool
+          );
         }
 
+        // =====================================================
         // PRIORIDADE 2
-        // Ainda não vista pelo usuário na semana,
-        // mesmo que tenha aparecido há algum tempo no Creators.
-        const unseenByUser = basePool.filter(
-          q => !userSeen.has(Number(q.id))
-        );
+        // =====================================================
+        //
+        // Nunca recebida nesse ciclo
+        // e nunca recebida nesta semana.
+        //
+        // Pode ter aparecido recentemente no Creators,
+        // mas ainda é inédita para a pessoa.
+        const neverSeenNotWeeklyPool =
+          basePool.filter(
+            q => {
+              const key =
+                scq_questionKey(q);
 
-        if (unseenByUser.length) {
-          return scq_pickRandomFromPool(unseenByUser);
+              return (
+                !cycleKeys.has(key) &&
+                !weeklyKeys.has(key)
+              );
+            }
+          );
+
+        if (
+          neverSeenNotWeeklyPool.length
+        ) {
+          return scq_pickRandomFromPool(
+            neverSeenNotWeeklyPool
+          );
         }
 
+        // =====================================================
         // PRIORIDADE 3
-        // Se o usuário já percorreu todo o banco disponível,
-        // ainda tentamos evitar o que apareceu recentemente
-        // no canal Creators.
-        const notRecentCreators = basePool.filter(
-          q => !recentCreators.has(Number(q.id))
-        );
+        // =====================================================
+        //
+        // Ainda não apareceu nesse ciclo.
+        //
+        // Essa condição normalmente só entra
+        // em cenários muito específicos.
+        const neverSeenCyclePool =
+          basePool.filter(
+            q =>
+              !cycleKeys.has(
+                scq_questionKey(q)
+              )
+          );
 
-        if (notRecentCreators.length) {
-          return scq_pickRandomFromPool(notRecentCreators);
+        if (
+          neverSeenCyclePool.length
+        ) {
+          return scq_pickRandomFromPool(
+            neverSeenCyclePool
+          );
         }
 
-        // PRIORIDADE 4
-        // Último fallback.
-        // Nunca trava o Quiz mesmo depois de consumir todo banco.
-        return scq_pickRandomFromPool(basePool);
+        // =====================================================
+        // SEGURANÇA
+        // =====================================================
+        //
+        // Se chegou aqui, alguma inconsistência antiga
+        // pode ter deixado o ciclo completo sem ter sido
+        // detectado acima.
+        //
+        // Reinicia SOMENTE o ciclo dessa pessoa.
+        history.userCycles[userId] = [];
+
+        cycleKeys =
+          new Set();
+
+        scq_save();
+
+        // =====================================================
+        // NOVO CICLO — PRIORIDADE 1
+        // =====================================================
+        //
+        // Mesmo começando novamente,
+        // NÃO queremos repetir nada desta semana.
+        //
+        // Também evitamos as recentes do Creators.
+        const recycleNotWeeklyFreshPool =
+          basePool.filter(
+            q => {
+              const key =
+                scq_questionKey(q);
+
+              return (
+                !weeklyKeys.has(key) &&
+                !recentCreatorsKeys.has(key)
+              );
+            }
+          );
+
+        if (
+          recycleNotWeeklyFreshPool.length
+        ) {
+          return scq_pickRandomFromPool(
+            recycleNotWeeklyFreshPool
+          );
+        }
+
+        // =====================================================
+        // NOVO CICLO — PRIORIDADE 2
+        // =====================================================
+        //
+        // Qualquer pergunta que NÃO tenha sido
+        // recebida nesta semana.
+        const recycleNotWeeklyPool =
+          basePool.filter(
+            q =>
+              !weeklyKeys.has(
+                scq_questionKey(q)
+              )
+          );
+
+        if (
+          recycleNotWeeklyPool.length
+        ) {
+          return scq_pickRandomFromPool(
+            recycleNotWeeklyPool
+          );
+        }
+
+        // =====================================================
+        // NOVO CICLO — PRIORIDADE 3
+        // =====================================================
+        //
+        // A pessoa já passou pelo banco inteiro
+        // E conseguiu consumir praticamente tudo
+        // também nesta semana.
+        //
+        // Ainda evitamos as perguntas recentes
+        // do canal Creators.
+        const recycleNotRecentCreatorsPool =
+          basePool.filter(
+            q =>
+              !recentCreatorsKeys.has(
+                scq_questionKey(q)
+              )
+          );
+
+        if (
+          recycleNotRecentCreatorsPool.length
+        ) {
+          return scq_pickRandomFromPool(
+            recycleNotRecentCreatorsPool
+          );
+        }
+
+        // =====================================================
+        // ÚLTIMO FALLBACK
+        // =====================================================
+        //
+        // Só será atingido quando literalmente
+        // não existir alternativa melhor.
+        return scq_pickRandomFromPool(
+          basePool
+        );
       }
 
       // =====================================================
-      // SORTEIO PARA O CANAL CREATORS
+      // SORTEIO DO CANAL CREATORS
       // =====================================================
 
-      // No canal público, primeiro tenta qualquer pergunta que
-      // não tenha aparecido recentemente.
-      const freshCreatorsPool = basePool.filter(
-        q => !recentCreators.has(Number(q.id))
+      let creatorsCycleKeys =
+        scq_idsToQuestionKeys(
+          history.creatorsCycle
+        );
+
+      // Assim como no PV, o Creators também
+      // precisa percorrer TODO o banco antes
+      // de começar a repetir.
+      if (
+        SC_QUIZ_UNIQUE_QUESTION_KEYS.size > 0 &&
+        creatorsCycleKeys.size >=
+          SC_QUIZ_UNIQUE_QUESTION_KEYS.size
+      ) {
+        history.creatorsCycle = [];
+
+        creatorsCycleKeys =
+          new Set();
+
+        scq_save();
+      }
+
+      // =====================================================
+      // CREATORS — PRIORIDADE 1
+      // =====================================================
+      //
+      // Nunca usada no ciclo público
+      // e não está entre as recentes.
+      const creatorsNeverSeenFreshPool =
+        basePool.filter(
+          q => {
+            const key =
+              scq_questionKey(q);
+
+            return (
+              !creatorsCycleKeys.has(key) &&
+              !recentCreatorsKeys.has(key)
+            );
+          }
+        );
+
+      if (
+        creatorsNeverSeenFreshPool.length
+      ) {
+        return scq_pickRandomFromPool(
+          creatorsNeverSeenFreshPool
+        );
+      }
+
+      // =====================================================
+      // CREATORS — PRIORIDADE 2
+      // =====================================================
+      //
+      // Qualquer pergunta ainda nunca usada
+      // neste ciclo.
+      const creatorsNeverSeenPool =
+        basePool.filter(
+          q =>
+            !creatorsCycleKeys.has(
+              scq_questionKey(q)
+            )
+        );
+
+      if (
+        creatorsNeverSeenPool.length
+      ) {
+        return scq_pickRandomFromPool(
+          creatorsNeverSeenPool
+        );
+      }
+
+      // =====================================================
+      // NOVO CICLO DO CREATORS
+      // =====================================================
+
+      history.creatorsCycle = [];
+
+      scq_save();
+
+      // Mesmo depois de consumir todo o banco,
+      // evita as 120 perguntas mais recentes.
+      const creatorsFreshPool =
+        basePool.filter(
+          q =>
+            !recentCreatorsKeys.has(
+              scq_questionKey(q)
+            )
+        );
+
+      if (
+        creatorsFreshPool.length
+      ) {
+        return scq_pickRandomFromPool(
+          creatorsFreshPool
+        );
+      }
+
+      // Só chega aqui se realmente não houver
+      // nenhuma alternativa melhor.
+      return scq_pickRandomFromPool(
+        basePool
       );
-
-      if (freshCreatorsPool.length) {
-        return scq_pickRandomFromPool(freshCreatorsPool);
-      }
-
-      // Se algum dia o histórico atingir praticamente todo
-      // o banco, libera novamente o conjunto disponível
-      // em vez de interromper o sistema.
-      return scq_pickRandomFromPool(basePool);
     }
     function scq_buildEmbed({ title, description, image, color = 0x915BFF, footer, thumbnail }) {
       return {
