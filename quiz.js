@@ -47,37 +47,33 @@ const SC_QUIZ_WEEKLY_REWARDS = [
   {
     pos: 1,
     label: 'TOP 1',
-    reward: '1 VIP + 100KK',
+    reward: '1 VIP de 7 dias',
     payments: [
       {
         tipo: 'VIP Staff',
-        premiacao: '1 VIP',
-      },
-      {
-        tipo: 'Dinheiro',
-        premiacao: '100KK',
+        premiacao: '1 VIP de 7 dias',
       },
     ],
   },
   {
     pos: 2,
     label: 'TOP 2',
-    reward: '100KK',
+    reward: '1 VIP de 3 dias',
     payments: [
       {
-        tipo: 'Dinheiro',
-        premiacao: '100KK',
+        tipo: 'VIP Staff',
+        premiacao: '1 VIP de 3 dias',
       },
     ],
   },
   {
     pos: 3,
     label: 'TOP 3',
-    reward: '50KK',
+    reward: '5KK',
     payments: [
       {
         tipo: 'Dinheiro',
-        premiacao: '50KK',
+        premiacao: '5KK',
       },
     ],
   },
@@ -1227,9 +1223,9 @@ function scq_getWeeklyPrizeBlock() {
     '━━━━━━━━━━━━━━━━━━━━━━',
     '🏆 **PREMIAÇÃO SEMANAL — SANTA CREATORS**',
     '',
-    '🥇 **TOP 1** → **1 VIP + 100KK**',
-    '🥈 **TOP 2** → **100KK**',
-    '🥉 **TOP 3** → **50KK**',
+    '🥇 **TOP 1** → **1 VIP de 7 dias**',
+    '🥈 **TOP 2** → **1 VIP de 3 dias**',
+    '🥉 **TOP 3** → **5KK**',
     '',
     '⏳ **Prazo:** até **sábado 23:59**',
     '🔄 **Reset:** domingo **00:00**',
