@@ -69,11 +69,11 @@ const SC_QUIZ_WEEKLY_REWARDS = [
   {
     pos: 3,
     label: 'TOP 3',
-    reward: '500k',
+    reward: '100k',
     payments: [
       {
         tipo: 'Dinheiro',
-        premiacao: '500k',
+        premiacao: '100k',
       },
     ],
   },
@@ -1225,7 +1225,7 @@ function scq_getWeeklyPrizeBlock() {
     '',
     '🥇 **TOP 1** → **1 VIP de 7 dias**',
     '🥈 **TOP 2** → **1 VIP de 3 dias**',
-    '🥉 **TOP 3** → **500k**',
+    '🥉 **TOP 3** → **100k**',
     '',
     '⏳ **Prazo:** até **sábado 23:59**',
     '🔄 **Reset:** domingo **00:00**',
