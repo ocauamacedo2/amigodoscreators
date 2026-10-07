@@ -2404,7 +2404,146 @@ scq_save();
         console.error(`[SC_QUIZ] Erro ao remover membro ${member.id} do ranking:`, e);
       }
     });
+// =====================================================
+// SITE HUB • QUIZ
+// =====================================================
 
+globalThis.__SC_QUIZ_SITE_API__ = {
+  async snapshot({
+    actorId,
+  } = {}) {
+    const entries =
+      Object.entries(
+        SC_QUIZ_STATE
+          .leaderboard ||
+        {}
+      )
+        .sort(
+          (
+            a,
+            b
+          ) =>
+            Number(
+              b[1]?.acertos ||
+              0
+            ) -
+              Number(
+                a[1]?.acertos ||
+                0
+              ) ||
+            Number(
+              b[1]?.interacoes ||
+              0
+            ) -
+              Number(
+                a[1]?.interacoes ||
+                0
+              )
+        );
+
+    const ranking =
+      await Promise.all(
+        entries.map(
+          async (
+            [
+              userId,
+              stats,
+            ],
+            index
+          ) => ({
+            position:
+              index + 1,
+
+            userId,
+
+            name:
+              await scq_getDisplayName(
+                userId
+              ),
+
+            acertos:
+              Number(
+                stats?.acertos ||
+                0
+              ),
+
+            erros:
+              Number(
+                stats?.erros ||
+                0
+              ),
+
+            interacoes:
+              Number(
+                stats?.interacoes ||
+                0
+              ),
+
+            lastAt:
+              Number(
+                stats?.lastAt ||
+                0
+              ),
+          })
+        )
+      );
+
+    return {
+      ranking,
+
+      rights: {
+        reset:
+          SC_AUTHORIZED_RESET_IDS
+            .includes(
+              String(actorId)
+            ),
+      },
+    };
+  },
+
+  async reset({
+    actorId,
+  } = {}) {
+    const id =
+      String(
+        actorId ||
+        ""
+      );
+
+    if (
+      !SC_AUTHORIZED_RESET_IDS
+        .includes(id)
+    ) {
+      throw new Error(
+        "Você não possui permissão para resetar o ranking."
+      );
+    }
+
+    await scq_resetEntireQuizState(
+      `site_reset:${id}`
+    );
+
+    await scq_renderRankingSticky();
+
+    await scq_log(
+      scq_buildEmbed({
+        title:
+          "🧹 Ranking Resetado",
+
+        description:
+          `O ranking global do Quiz foi zerado por <@${id}> através do **Creators Hub**.`,
+
+        color:
+          0xFF0000,
+      })
+    );
+
+    return {
+      ok:
+        true,
+    };
+  },
+};
     async function scq_startSystemOnce() {
   if (client.__SC_QUIZ_SYSTEM_STARTED) return;
   client.__SC_QUIZ_SYSTEM_STARTED = true;
