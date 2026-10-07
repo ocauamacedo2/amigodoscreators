@@ -32,7 +32,40 @@ export async function setupQuiz(client) {
     const SC_MENTION_ROLES = ['1262978759922028575', '1352275728476930099'];
 
     // IDs autorizados para resetar o ranking
-    const SC_AUTHORIZED_RESET_IDS = ['660311795327828008', '1262262852949905408', '1352408327983861844'];
+   const SC_AUTHORIZED_RESET_USER_IDS = [
+  '660311795327828008',
+];
+
+const SC_AUTHORIZED_RESET_ROLE_IDS = [
+  '1262262852949905408',
+  '1352408327983861844',
+];
+
+function scq_canResetRanking(
+  member,
+  userId
+) {
+  if (
+    SC_AUTHORIZED_RESET_USER_IDS
+      .includes(
+        String(
+          userId
+        )
+      )
+  ) {
+    return true;
+  }
+
+  return Boolean(
+    member?.roles?.cache?.some(
+      role =>
+        SC_AUTHORIZED_RESET_ROLE_IDS
+          .includes(
+            role.id
+          )
+    )
+  );
+}
 
     const SC_QUIZ_TOTAL_PER_DAY      = 20; // Quantidade de quizzes aleatórios por dia
     const SC_QUIZ_WINDOW_START_HOUR  = 0;  // 00:00 (24 horas)
@@ -1080,6 +1113,12 @@ lastWeeklyResetKey: SC_QUIZ_STATE.lastWeeklyResetKey || null,
         timestamp: new Date().toISOString()
       };
     }
+    function scq_siteDisplayName(guild, userId) {
+      const member = guild?.members?.cache?.get(String(userId));
+      const user = client.users?.cache?.get(String(userId));
+      return member?.displayName || user?.globalName || user?.username || String(userId);
+    }
+
     async function scq_userDisplayNameSafe(guild, userId, fallbackName) {
       try {
         const m = await guild.members.fetch(userId);
@@ -2296,7 +2335,7 @@ if (rankingChannel?.guild) {
           // Comandos Operador
       const scq_cmd = String(msg.content || '').trim().toLowerCase();
 
-      if (SC_AUTHORIZED_RESET_IDS.includes(msg.author.id)) {
+      if (scq_canResetRanking(msg.member, msg.author.id)) {
         if (scq_cmd === '!quiznow') {
           await scq_postDailyQuiz(true);
           await msg.react('✅').catch(() => {});
@@ -2377,10 +2416,20 @@ scq_save();
       if (interaction.customId !== 'scq_reset_ranking_btn') return;
 
       // Verifica se o usuário está na lista permitida
-      if (!SC_AUTHORIZED_RESET_IDS.includes(interaction.user.id)) {
-        return interaction.reply({ content: '❌ Você não tem permissão para resetar o ranking global.', ephemeral: true });
-      }
+      if (
+  !scq_canResetRanking(
+    interaction.member,
+    interaction.user.id
+  )
+) {
+  return interaction.reply({
+    content:
+      '❌ Você não tem permissão para resetar o ranking global.',
 
+    ephemeral:
+      true
+  });
+}
       // Executa o reset
       await scq_resetEntireQuizState('button_reset');
       
@@ -2412,6 +2461,10 @@ globalThis.__SC_QUIZ_SITE_API__ = {
   async snapshot({
     actorId,
   } = {}) {
+    const guild = client.guilds.cache.get('1262262852782129183');
+    const member = actorId && guild
+      ? await guild.members.fetch({ user: String(actorId), force: true }).catch(() => null)
+      : null;
     const entries =
       Object.entries(
         SC_QUIZ_STATE
@@ -2457,9 +2510,7 @@ globalThis.__SC_QUIZ_SITE_API__ = {
             userId,
 
             name:
-              await scq_getDisplayName(
-                userId
-              ),
+              scq_siteDisplayName(guild, userId),
 
             acertos:
               Number(
@@ -2493,10 +2544,10 @@ globalThis.__SC_QUIZ_SITE_API__ = {
 
       rights: {
         reset:
-          SC_AUTHORIZED_RESET_IDS
-            .includes(
-              String(actorId)
-            ),
+          scq_canResetRanking(
+            member,
+            String(actorId)
+          ),
       },
     };
   },
@@ -2510,9 +2561,13 @@ globalThis.__SC_QUIZ_SITE_API__ = {
         ""
       );
 
+    const guild = client.guilds.cache.get('1262262852782129183');
+    const member = guild
+      ? await guild.members.fetch({ user: id, force: true }).catch(() => null)
+      : null;
+
     if (
-      !SC_AUTHORIZED_RESET_IDS
-        .includes(id)
+      !scq_canResetRanking(member, id)
     ) {
       throw new Error(
         "Você não possui permissão para resetar o ranking."
@@ -2544,6 +2599,182 @@ globalThis.__SC_QUIZ_SITE_API__ = {
     };
   },
 };
+
+globalThis.__SC_QUIZ_SITE_API__ = {
+  async snapshot({
+    actorId,
+  } = {}) {
+    const id =
+      String(
+        actorId ||
+        ''
+      );
+
+    const guild =
+      client.guilds.cache.get(
+        '1262262852782129183'
+      );
+
+    const member =
+      guild
+        ? await guild.members
+            .fetch(
+              id
+            )
+            .catch(
+              () => null
+            )
+        : null;
+
+    const entries =
+      Object.entries(
+        SC_QUIZ_STATE
+          .leaderboard ||
+        {}
+      )
+        .sort(
+          (
+            a,
+            b
+          ) =>
+            Number(
+              b[1]?.acertos ||
+              0
+            ) -
+              Number(
+                a[1]?.acertos ||
+                0
+              ) ||
+            Number(
+              b[1]?.interacoes ||
+              0
+            ) -
+              Number(
+                a[1]?.interacoes ||
+                0
+              )
+        );
+
+    const ranking =
+      await Promise.all(
+        entries.map(
+          async (
+            [
+              userId,
+              stats,
+            ],
+            index
+          ) => ({
+            position:
+              index +
+              1,
+
+            userId,
+
+            name:
+              scq_siteDisplayName(guild, userId),
+
+            acertos:
+              Number(
+                stats?.acertos ||
+                0
+              ),
+
+            erros:
+              Number(
+                stats?.erros ||
+                0
+              ),
+
+            interacoes:
+              Number(
+                stats?.interacoes ||
+                0
+              ),
+
+            lastAt:
+              Number(
+                stats?.lastAt ||
+                0
+              ),
+          })
+        )
+      );
+
+    return {
+      ranking,
+
+      rights: {
+        reset:
+          scq_canResetRanking(
+            member,
+            id
+          ),
+      },
+    };
+  },
+
+  async reset({
+    actorId,
+  } = {}) {
+    const id =
+      String(
+        actorId ||
+        ''
+      );
+
+    const guild =
+      client.guilds.cache.get(
+        '1262262852782129183'
+      );
+
+    const member =
+      guild
+        ? await guild.members
+            .fetch(
+              id
+            )
+            .catch(
+              () => null
+            )
+        : null;
+
+    if (
+      !scq_canResetRanking(
+        member,
+        id
+      )
+    ) {
+      throw new Error(
+        'Você não possui permissão para resetar o ranking.'
+      );
+    }
+
+    await scq_resetEntireQuizState(
+      `site_reset:${id}`
+    );
+
+    await scq_renderRankingSticky();
+
+    await scq_log(
+      scq_buildEmbed({
+        title:
+          '🧹 Ranking Resetado',
+
+        description:
+          `O ranking global do Quiz foi zerado por <@${id}> através do Creators Hub.`,
+
+        color:
+          0xFF0000,
+      })
+    );
+
+    return {
+      ok:
+        true,
+    };
+  },
+};
     async function scq_startSystemOnce() {
   if (client.__SC_QUIZ_SYSTEM_STARTED) return;
   client.__SC_QUIZ_SYSTEM_STARTED = true;
@@ -2560,3 +2791,10 @@ else client.once('ready', scq_startSystemOnce);
 
   } catch (err) { console.error("[SC_QUIZ] Falha Crítica:", err); }
 }
+
+
+// ===================================================================
+// 🧩 TOPO PADRONIZADO (COMPATÍVEL COM MÓDULOS DO BOT PRINCIPAL)
+// ===================================================================
+
+// ---- Variáveis de ambiente ----
