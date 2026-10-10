@@ -32,8 +32,20 @@ export async function setupQuiz(client) {
     // ========== CONFIGURAÇÕES ==========
     const SC_QUIZ_CREATORS_CHANNEL_ID = '1381597720007151698'; // Canal do quiz
     const SC_QUIZ_RANKING_CHANNEL_ID  = '1495330319715532880'; // Canal do ranking
-    const SC_QUIZ_LOGS_CHANNEL_ID     = '1415390219779313808'; // Canal de logs
-    const SC_MENTION_ROLES = ['1262978759922028575', '1352275728476930099'];
+
+    const SC_QUIZ_LOGS_CHANNEL_ID =
+      '1558189160710406194';
+
+    const SC_QUIZ_HISTORY_CHANNEL_ID =
+      '1415390219779313808';
+
+    const SC_QUIZ_DIAGNOSTICS_CHANNEL_ID =
+      '1558553389032415332';
+
+    const SC_MENTION_ROLES = [
+      '1262978759922028575',
+      '1352275728476930099'
+    ];
 
     // IDs autorizados para resetar o ranking
    const SC_AUTHORIZED_RESET_USER_IDS = [
@@ -200,6 +212,630 @@ participantsByMsg: {},
 }
     scq_load();
 
+    const SC_QUIZ_ARCHIVE_PATH =
+      './sc_quiz_lifetime.json';
+
+    const SC_QUIZ_JOURNAL_PATH =
+      './sc_quiz_lifetime.jsonl';
+
+    let scqArchive = fs.existsSync(
+      SC_QUIZ_ARCHIVE_PATH
+    )
+      ? JSON.parse(
+          fs.readFileSync(
+            SC_QUIZ_ARCHIVE_PATH,
+            'utf8'
+          )
+        )
+      : {
+          version: 1,
+          history: {
+            before: null,
+            done: false,
+            scanned: 0,
+            matched: 0,
+            ignored: 0
+          }
+        };
+
+    if (
+      scqArchive.version !== 1 ||
+      !scqArchive.history
+    ) {
+      throw new Error(
+        'Arquivo geral do quiz inválido. O arquivo existente foi preservado.'
+      );
+    }
+
+    const scqSeenEvents = new Set();
+    const scqPendingEvents = new Map();
+    const scqTotals = new Map();
+    const scqMembership = new Map();
+
+    let scqArchiveBusy = false;
+    let scqArchiveRetryAt = 0;
+
+    function scqApplyJournal(entry) {
+      if (entry.type === 'delivered') {
+        scqPendingEvents.delete(entry.key);
+        return;
+      }
+
+      if (
+        entry.type !== 'point' ||
+        scqSeenEvents.has(entry.key)
+      ) {
+        return;
+      }
+
+      const event = entry.event;
+
+      if (
+        !/^\d{17,20}$/.test(event.userId) ||
+        !Number.isSafeInteger(event.right) ||
+        !Number.isSafeInteger(event.wrong) ||
+        event.right < 0 ||
+        event.wrong < 0 ||
+        !Number.isFinite(event.at)
+      ) {
+        throw new Error(
+          'Evento inválido no histórico do quiz.'
+        );
+      }
+
+      scqSeenEvents.add(entry.key);
+
+      const stats = scqTotals.get(event.userId) || {
+        userId: event.userId,
+        acertos: 0,
+        erros: 0,
+        interacoes: 0,
+        lastAt: 0
+      };
+
+      stats.acertos += event.right;
+      stats.erros += event.wrong;
+      stats.interacoes += event.right + event.wrong;
+      stats.lastAt = Math.max(
+        stats.lastAt,
+        event.at
+      );
+
+      scqTotals.set(event.userId, stats);
+
+      if (!event.delivered) {
+        scqPendingEvents.set(
+          entry.key,
+          event
+        );
+      }
+    }
+
+    if (fs.existsSync(SC_QUIZ_JOURNAL_PATH)) {
+      const journal = fs.readFileSync(
+        SC_QUIZ_JOURNAL_PATH,
+        'utf8'
+      );
+
+      for (const line of journal.split('\n')) {
+        if (line.trim()) {
+          scqApplyJournal(
+            JSON.parse(line)
+          );
+        }
+      }
+    }
+
+    function scqAppendJournal(entries) {
+      if (!entries.length) {
+        return;
+      }
+
+      fs.appendFileSync(
+        SC_QUIZ_JOURNAL_PATH,
+        entries
+          .map(entry => JSON.stringify(entry))
+          .join('\n') + '\n'
+      );
+
+      for (const entry of entries) {
+        scqApplyJournal(entry);
+      }
+    }
+
+    function scqArchiveSave(next) {
+      scqArchive = next;
+
+      const temporary =
+        SC_QUIZ_ARCHIVE_PATH + '.tmp';
+
+      try {
+        fs.writeFileSync(
+          temporary,
+          JSON.stringify({
+            ...next,
+            totals: [
+              ...scqTotals.values()
+            ]
+          })
+        );
+
+        fs.renameSync(
+          temporary,
+          SC_QUIZ_ARCHIVE_PATH
+        );
+      } catch (error) {
+        console.error(
+          '[QUIZ HISTÓRICO] Índice pendente; eventos preservados no journal:',
+          error.message
+        );
+      }
+    }
+
+    function scqArchivePoint(userId, right, wrong) {
+      const key =
+        'live:' + crypto.randomUUID();
+
+      const event = {
+        userId: String(userId),
+        right: Number(right),
+        wrong: Number(wrong),
+        at: Date.now(),
+        delivered: false,
+        source: 'quiz-live'
+      };
+
+      if (
+        !/^\d{17,20}$/.test(event.userId) ||
+        !Number.isSafeInteger(event.right) ||
+        !Number.isSafeInteger(event.wrong) ||
+        event.right < 0 ||
+        event.wrong < 0 ||
+        event.right + event.wrong === 0
+      ) {
+        throw new Error(
+          'Pontuação inválida para o histórico do quiz.'
+        );
+      }
+
+      scqAppendJournal([
+        {
+          type: 'point',
+          key,
+          event
+        }
+      ]);
+
+      scqArchiveSave(scqArchive);
+    }
+
+    function scqLegacyPoint(message) {
+      if (
+        message.author?.id !==
+        client.user.id
+      ) {
+        return null;
+      }
+
+      const embed = message.embeds?.[0];
+
+      const title = String(
+        embed?.title || ''
+      ).trim();
+
+      const correct =
+        /^(?:✅\s*)?Acerto PV$/i.test(title);
+
+      const wrong =
+        /^(?:❌\s*)?Erro PV$/i.test(title);
+
+      if (!correct && !wrong) {
+        return null;
+      }
+
+      const userId = String(
+        embed?.description || ''
+      ).match(
+        /Usuário:\s*<@!?(\d{17,20})>/i
+      )?.[1];
+
+      if (!userId) {
+        return null;
+      }
+
+      return {
+        userId,
+        right: correct ? 1 : 0,
+        wrong: wrong ? 1 : 0,
+        at: message.createdTimestamp,
+        delivered: true,
+        source: 'discord-legacy'
+      };
+    }
+
+    async function scqImportHistoryPage() {
+      if (scqArchive.history.done) {
+        return;
+      }
+
+      const channel = await client.channels.fetch(
+        SC_QUIZ_HISTORY_CHANNEL_ID
+      );
+
+      if (
+        !channel?.isTextBased() ||
+        channel.guildId !== '1262262852782129183'
+      ) {
+        throw new Error(
+          'Canal histórico do quiz inválido ou de outro servidor.'
+        );
+      }
+
+      const before =
+        scqArchive.history.before;
+
+      const page = await channel.messages.fetch({
+        limit: 100,
+        ...(before ? { before } : {})
+      });
+
+      const messages = [
+        ...page.values()
+      ];
+
+      const oldest = messages.reduce(
+        (value, message) => {
+          return (
+            !value ||
+            BigInt(message.id) < BigInt(value.id)
+          )
+            ? message
+            : value;
+        },
+        null
+      );
+
+      if (
+        oldest &&
+        before &&
+        BigInt(oldest.id) >= BigInt(before)
+      ) {
+        throw new Error(
+          'A paginação do histórico do quiz não avançou.'
+        );
+      }
+
+      const additions = [];
+      let matched = 0;
+
+      for (const message of messages) {
+        const point =
+          scqLegacyPoint(message);
+
+        if (!point) {
+          continue;
+        }
+
+        matched++;
+
+        const key =
+          'discord:' + message.id;
+
+        if (!scqSeenEvents.has(key)) {
+          additions.push({
+            type: 'point',
+            key,
+            event: point
+          });
+        }
+      }
+
+      const history = {
+        ...scqArchive.history,
+        before: oldest?.id || before,
+        done: page.size < 100,
+        scanned:
+          scqArchive.history.scanned +
+          page.size,
+        matched:
+          scqArchive.history.matched +
+          matched,
+        ignored:
+          scqArchive.history.ignored +
+          page.size -
+          matched
+      };
+
+      scqAppendJournal(additions);
+
+      scqArchiveSave({
+        ...scqArchive,
+        history
+      });
+
+      if (history.done) {
+        console.log(
+          '[QUIZ HISTÓRICO] Varredura concluída:',
+          history
+        );
+      }
+    }
+
+    async function scqArchivePump() {
+      if (
+        scqArchiveBusy ||
+        Date.now() < scqArchiveRetryAt ||
+        !client.isReady()
+      ) {
+        return;
+      }
+
+      if (
+        !scqPendingEvents.size &&
+        scqArchive.history.done
+      ) {
+        return;
+      }
+
+      scqArchiveBusy = true;
+
+      try {
+        const pending = [
+          ...scqPendingEvents
+        ].slice(0, 10);
+
+        if (pending.length) {
+          const channel =
+            await client.channels.fetch(
+              SC_QUIZ_LOGS_CHANNEL_ID
+            );
+
+          if (
+            !channel?.isTextBased() ||
+            channel.guildId !== '1262262852782129183'
+          ) {
+            throw new Error(
+              'Canal de salvamentos do quiz inválido ou de outro servidor.'
+            );
+          }
+
+          for (const [key, event] of pending) {
+            const message = await channel.send({
+              embeds: [
+                scq_buildEmbed({
+                  title: '📊 Pontuação do Quiz',
+                  description:
+                    `Usuário: <@${event.userId}>\n` +
+                    `Acertos: ${event.right}\n` +
+                    `Erros: ${event.wrong}\n` +
+                    `Data: <t:${Math.floor(event.at / 1000)}:F>`
+                })
+              ],
+              content:
+                `SC_QUIZ_EVENT::${key}`,
+              allowedMentions: {
+                parse: []
+              }
+            });
+
+            scqAppendJournal([
+              {
+                type: 'delivered',
+                key,
+                logMessageId: message.id
+              }
+            ]);
+          }
+        }
+
+        await scqImportHistoryPage();
+        scqArchiveSave(scqArchive);
+      } catch (error) {
+        scqArchiveRetryAt =
+          Date.now() + 60000;
+
+        console.error(
+          '[QUIZ HISTÓRICO] Entrega ou importação pendente:',
+          error.message
+        );
+
+        const channel = await client.channels
+          .fetch(
+            SC_QUIZ_DIAGNOSTICS_CHANNEL_ID
+          )
+          .catch(() => null);
+
+        if (
+          channel?.isTextBased() &&
+          channel.guildId === '1262262852782129183'
+        ) {
+          await channel.send({
+            content: (
+              '⚠️ Quiz: ' +
+              error.message
+            ).slice(0, 1800),
+            allowedMentions: {
+              parse: []
+            }
+          }).catch(() => {});
+        }
+      } finally {
+        scqArchiveBusy = false;
+      }
+    }
+
+    async function scqMemberForRanking(guild, userId) {
+      const saved =
+        scqMembership.get(userId);
+
+      if (
+        saved &&
+        Date.now() - saved.at < 30000
+      ) {
+        return saved.member;
+      }
+
+      let member;
+
+      try {
+        const liveMemberCache = Boolean(
+          client.options?.intents?.has(
+            'GuildMembers'
+          )
+        );
+
+        member =
+          (
+            liveMemberCache &&
+            guild.members.cache.get(
+              userId
+            )
+          ) ||
+          await guild.members.fetch({
+            user: userId,
+            force: !liveMemberCache
+          });
+      } catch (error) {
+        if (Number(error.code) !== 10007) {
+          throw error;
+        }
+
+        member = null;
+      }
+
+      scqMembership.set(
+        userId,
+        {
+          at: Date.now(),
+          member
+        }
+      );
+
+      return member;
+    }
+
+    async function scqRankingsWithHistory(snapshot) {
+      const guild = client.guilds.cache.get(
+        '1262262852782129183'
+      );
+
+      if (!guild) {
+        throw new Error(
+          'Servidor do quiz indisponível.'
+        );
+      }
+
+      const ids = [
+        ...new Set([
+          ...(snapshot.ranking || []).map(
+            item => item.userId
+          ),
+          ...scqTotals.keys()
+        ])
+      ];
+
+      const members = new Map();
+      let next = 0;
+
+      await Promise.all(
+        Array.from(
+          {
+            length: Math.min(4, ids.length)
+          },
+          async () => {
+            while (next < ids.length) {
+              const id = ids[next++];
+
+              const member =
+                await scqMemberForRanking(
+                  guild,
+                  id
+                );
+
+              if (
+                member &&
+                !member.user.bot
+              ) {
+                members.set(id, member);
+              }
+            }
+          }
+        )
+      );
+
+      const rank = rows => rows
+        .filter(
+          item => members.has(item.userId)
+        )
+        .sort(
+          (a, b) =>
+            b.acertos - a.acertos ||
+            b.interacoes - a.interacoes ||
+            a.userId.localeCompare(b.userId)
+        )
+        .map(
+          (item, index) => ({
+            ...item,
+            position: index + 1,
+            name: members.get(
+              item.userId
+            ).displayName,
+            avatar: members.get(
+              item.userId
+            ).displayAvatarURL({
+              size: 128
+            })
+          })
+        );
+
+      return {
+        ...snapshot,
+        ranking: rank(
+          snapshot.ranking || []
+        ),
+        generalRanking: rank([
+          ...scqTotals.values()
+        ]),
+        historyImport: {
+          ...scqArchive.history
+        }
+      };
+    }
+
+    for (
+      const name of [
+        'guildMemberAdd',
+        'guildMemberRemove',
+        'guildMemberUpdate'
+      ]
+    ) {
+      client.on(
+        name,
+        (...args) => {
+          const member =
+            args[args.length - 1];
+
+          if (
+            member.guild.id ===
+            '1262262852782129183'
+          ) {
+            scqMembership.delete(
+              member.id
+            );
+          }
+        }
+      );
+    }
+
+    const scqArchiveTimer = setInterval(
+      () => {
+        void scqArchivePump();
+      },
+      5000
+    );
+
+    scqArchiveTimer.unref?.();
+
     function scq_getFreshState() {
       return {
         leaderboard: {},
@@ -246,7 +882,39 @@ lastWeeklyResetKey: SC_QUIZ_STATE.lastWeeklyResetKey || null,
 
     // ======= HELPERS =======
     function scq_nowBRT() { return new Date(); }
-    function scq_dayKey(d = scq_nowBRT()) { return d.toISOString().slice(0, 10); }
+    function scq_dayKey(
+      d = scq_nowBRT()
+    ) {
+      const parts =
+        new Intl.DateTimeFormat(
+          'en-GB',
+          {
+            timeZone:
+              'America/Sao_Paulo',
+
+            year:
+              'numeric',
+
+            month:
+              '2-digit',
+
+            day:
+              '2-digit',
+          }
+        ).formatToParts(d);
+
+      const value = type =>
+        parts.find(
+          part =>
+            part.type === type
+        ).value;
+
+      return (
+        `${value('year')}-` +
+        `${value('month')}-` +
+        `${value('day')}`
+      );
+    }
     function scq_randInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
 
     function scq_hasActiveQuiz() {
@@ -1130,11 +1798,25 @@ lastWeeklyResetKey: SC_QUIZ_STATE.lastWeeklyResetKey || null,
       } catch { return fallbackName; }
     }
     function scq_updateLeaderboard(userId, right, wrong) {
-      const r = SC_QUIZ_STATE.leaderboard[userId] ||= { acertos: 0, erros: 0, interacoes: 0, lastAt: 0 };
+      scqArchivePoint(
+        userId,
+        right,
+        wrong
+      );
+
+      const r =
+        SC_QUIZ_STATE.leaderboard[userId] ||= {
+          acertos: 0,
+          erros: 0,
+          interacoes: 0,
+          lastAt: 0
+        };
+
       r.acertos += right;
       r.erros += wrong;
-      r.interacoes += (right + wrong);
+      r.interacoes += right + wrong;
       r.lastAt = Date.now();
+
       scq_save();
     }
 
@@ -1165,8 +1847,36 @@ lastWeeklyResetKey: SC_QUIZ_STATE.lastWeeklyResetKey || null,
     }
 
     async function scq_log(embed) {
-      const ch = await client.channels.fetch(SC_QUIZ_LOGS_CHANNEL_ID).catch(() => null);
-      if (ch) await ch.send({ embeds: [embed] }).catch(() => {});
+      const title = String(
+        embed.data?.title ||
+        embed.title ||
+        ''
+      ).trim();
+
+      const scoreDetail =
+        /^(?:✅|❌)?\s*(?:Acerto|Erro) PV$/i.test(
+          title
+        );
+
+      const channelId = scoreDetail
+        ? SC_QUIZ_LOGS_CHANNEL_ID
+        : SC_QUIZ_DIAGNOSTICS_CHANNEL_ID;
+
+      const ch = await client.channels
+        .fetch(channelId)
+        .catch(() => null);
+
+      if (
+        ch?.isTextBased() &&
+        ch.guildId === '1262262852782129183'
+      ) {
+        await ch.send({
+          embeds: [embed],
+          allowedMentions: {
+            parse: []
+          }
+        }).catch(() => {});
+      }
     }
     async function scq_clearCreatorsTrackedMessages(channel) {
   try {
@@ -2231,32 +2941,107 @@ function startTickers() {
 
   function scq_generateTodaySchedule(now) {
     const times = [];
-    const base = new Date();
 
-    // Garante uma primeira pergunta rápida depois que o bot inicia
-      times.push(now + 15 * 1000); // 15 segundos após ligar
+    const baseDayKey =
+      scq_dayKey(
+        new Date(now)
+      );
 
-    let next = now + SC_QUIZ_MIN_GAP_MINUTES * 60 * 1000;
+    const gapMs =
+      SC_QUIZ_MIN_GAP_MINUTES *
+      60 *
+      1000;
 
-    while (times.length < SC_QUIZ_TOTAL_PER_DAY) {
-      const extraGap = scq_randInt(0, 15) * 60 * 1000;
-      next += SC_QUIZ_MIN_GAP_MINUTES * 60 * 1000 + extraGap;
-
-      const d = new Date(next);
-      const hour = d.getHours();
-
-      if (hour >= SC_QUIZ_WINDOW_START_HOUR && hour <= SC_QUIZ_WINDOW_END_HOUR) {
-        times.push(next);
-      }
-
-      const sameDay = d.toISOString().slice(0, 10) === base.toISOString().slice(0, 10);
-      if (!sameDay) break;
+    if (
+      !Number.isFinite(gapMs) ||
+      gapMs <= 0
+    ) {
+      throw new Error(
+        'O intervalo entre perguntas deve ser maior que zero.'
+      );
     }
 
-    return times.sort((a, b) => a - b);
+    const hourFormatter =
+      new Intl.DateTimeFormat(
+        'en-GB',
+        {
+          timeZone:
+            'America/Sao_Paulo',
+
+          hour:
+            '2-digit',
+
+          hourCycle:
+            'h23',
+        }
+      );
+
+    const withinWindow = timestamp => {
+      const date =
+        new Date(timestamp);
+
+      const hour = Number(
+        hourFormatter.format(
+          date
+        )
+      );
+
+      return (
+        scq_dayKey(date) === baseDayKey &&
+        hour >= SC_QUIZ_WINDOW_START_HOUR &&
+        hour <= SC_QUIZ_WINDOW_END_HOUR
+      );
+    };
+
+    let next =
+      now +
+      15 * 1000;
+
+    if (
+      withinWindow(next)
+    ) {
+      times.push(next);
+    }
+
+    while (
+      times.length <
+      SC_QUIZ_TOTAL_PER_DAY
+    ) {
+      next +=
+        gapMs +
+        scq_randInt(0, 15) *
+        60 *
+        1000;
+
+      if (
+        scq_dayKey(
+          new Date(next)
+        ) !== baseDayKey
+      ) {
+        break;
+      }
+
+      if (
+        withinWindow(next)
+      ) {
+        times.push(next);
+      }
+    }
+
+    return times;
   }
 
+  let scqAutoTickBusy = false;
+
   async function scq_autoTick() {
+    if (
+      scqAutoTickBusy
+    ) {
+      return;
+    }
+
+    scqAutoTickBusy = true;
+
     try {
 const now = Date.now();
 const dk = scq_dayKey();
@@ -2268,14 +3053,31 @@ if (rankingChannel?.guild) {
 
       if (
         SC_QUIZ_STATE.lastScheduleDayKey !== dk ||
-        !Array.isArray(SC_QUIZ_STATE.__todaySchedule) ||
-        SC_QUIZ_STATE.__todaySchedule.length === 0
+        !Array.isArray(
+          SC_QUIZ_STATE.__todaySchedule
+        )
       ) {
         SC_QUIZ_STATE.__todaySchedule = scq_generateTodaySchedule(now);
         SC_QUIZ_STATE.lastScheduleDayKey = dk;
         scq_save();
 
-        console.log(`[SC_QUIZ] Agenda gerada para ${dk}: ${SC_QUIZ_STATE.__todaySchedule.length} horários.`);
+        console.log(
+          `[SC_QUIZ] Agenda gerada para ${dk}: ${SC_QUIZ_STATE.__todaySchedule.length} horários.`
+        );
+
+        await scq_log(
+          scq_buildEmbed({
+            title: '⏱️ Agenda do Quiz',
+            description:
+              SC_QUIZ_STATE.__todaySchedule
+                .map(
+                  time =>
+                    `<t:${Math.floor(time / 1000)}:F> • ` +
+                    `<t:${Math.floor(time / 1000)}:R>`
+                )
+                .join('\n')
+          })
+        );
       }
 
       const nextTime = SC_QUIZ_STATE.__todaySchedule[0];
@@ -2306,11 +3108,37 @@ if (rankingChannel?.guild) {
             await sc_rt_postFastQuiz(true);
           }
         } catch (err) {
-          console.error("[SC_QUIZ] Falha ao disparar quiz automático:", err);
+          console.error(
+            "[SC_QUIZ] Falha ao disparar quiz automático:",
+            err
+          );
+
+          await scq_log(
+            scq_buildEmbed({
+              title: '⚠️ Falha no envio do Quiz',
+              description: String(
+                err.message || err
+              ).slice(0, 1800)
+            })
+          );
         }
       }
     } catch (e) {
-      console.error("[SC_QUIZ] Erro no ticker automático:", e);
+      console.error(
+        "[SC_QUIZ] Erro no ticker automático:",
+        e
+      );
+
+      await scq_log(
+        scq_buildEmbed({
+          title: '⚠️ Erro no agendamento do Quiz',
+          description: String(
+            e.message || e
+          ).slice(0, 1800)
+        })
+      );
+    } finally {
+      scqAutoTickBusy = false;
     }
   }
 
@@ -2445,18 +3273,41 @@ scq_save();
     });
 
     // Remove automaticamente do ranking quando o membro sai do servidor
-    client.on(Events.GuildMemberRemove, async (member) => {
-      try {
-        if (SC_QUIZ_STATE.leaderboard && SC_QUIZ_STATE.leaderboard[member.id]) {
-          console.log(`[SC_QUIZ] Removendo ${member.user.tag} (${member.id}) do ranking pois saiu do servidor.`);
-          delete SC_QUIZ_STATE.leaderboard[member.id];
-          scq_save();
-          await scq_renderRankingSticky();
+    client.on(
+      Events.GuildMemberRemove,
+      async member => {
+        if (
+          member.guild.id !==
+          '1262262852782129183'
+        ) {
+          return;
         }
-      } catch (e) {
-        console.error(`[SC_QUIZ] Erro ao remover membro ${member.id} do ranking:`, e);
+
+        try {
+          if (
+            SC_QUIZ_STATE.leaderboard &&
+            SC_QUIZ_STATE.leaderboard[member.id]
+          ) {
+            console.log(
+              `[SC_QUIZ] Removendo ${member.user.tag} (${member.id}) do ranking pois saiu do servidor.`
+            );
+
+            delete SC_QUIZ_STATE.leaderboard[
+              member.id
+            ];
+
+            scq_save();
+
+            await scq_renderRankingSticky();
+          }
+        } catch (e) {
+          console.error(
+            `[SC_QUIZ] Erro ao remover membro ${member.id} do ranking:`,
+            e
+          );
+        }
       }
-    });
+    );
 // =====================================================
 // SITE HUB • QUIZ
 // =====================================================
@@ -2779,6 +3630,16 @@ globalThis.__SC_QUIZ_SITE_API__ = {
     };
   },
 };
+    const scqOriginalSiteSnapshot =
+      globalThis.__SC_QUIZ_SITE_API__.snapshot;
+
+    globalThis.__SC_QUIZ_SITE_API__.snapshot =
+      async options => {
+        return scqRankingsWithHistory(
+          await scqOriginalSiteSnapshot(options)
+        );
+      };
+
     installQuizBridgeServer({
       client,
 
