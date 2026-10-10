@@ -220,9 +220,8 @@ export function installQuizBridgeServer({
   }
 
   const port = Number(
+    process.env.SANTA_QUIZ_BRIDGE_PORT ||
     process.env.PORT ||
-    process.env
-      .SANTA_QUIZ_BRIDGE_PORT ||
     8080
   );
 
@@ -494,7 +493,14 @@ export function installQuizBridgeServer({
 
   server.listen(
     port,
-    '0.0.0.0'
+    '0.0.0.0',
+    () => {
+      console.log('[QUIZ BRIDGE SERVER] API disponível:', {
+        host: '0.0.0.0',
+        port,
+        route: '/quiz-site-bridge',
+      });
+    }
   );
 
   client
@@ -597,24 +603,58 @@ export function createQuizRemoteClient({
         }
       );
 
-    const value =
-      await response.json();
+    const contentType = String(
+      response.headers.get('content-type') || ''
+    );
+
+    const responseText = await response.text();
+
+    let value = null;
+
+    try {
+      value = JSON.parse(responseText);
+    } catch {
+      console.error('[SITE QUIZ API] Resposta não JSON:', {
+        status: response.status,
+        contentType,
+        destino: url.origin + url.pathname,
+      });
+
+      throw fail(
+        response.ok ? 502 : response.status,
+        'A API do quiz retornou uma resposta que não é JSON. Confira se a nova aplicação está executando a ponte na porta 80 e se SANTA_QUIZ_API_URL aponta para ela.'
+      );
+    }
 
     if (
-      !response.ok
+      !value ||
+      typeof value !== 'object' ||
+      Array.isArray(value)
     ) {
       throw fail(
+        502,
+        'A API do quiz retornou um formato de resposta inválido.'
+      );
+    }
+
+    if (!response.ok) {
+      console.error('[SITE QUIZ API] Consulta recusada:', {
+        status: response.status,
+        contentType,
+        destino: url.origin + url.pathname,
+      });
+
+      throw fail(
         response.status,
-        value.error ||
-          'O bot do quiz recusou a consulta.'
+        typeof value.error === 'string'
+          ? value.error
+          : 'O bot do quiz recusou a consulta.'
       );
     }
 
     if (
       action === 'snapshot' &&
-      !Array.isArray(
-        value.ranking
-      )
+      !Array.isArray(value.ranking)
     ) {
       throw fail(
         502,
