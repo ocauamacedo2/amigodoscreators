@@ -12,6 +12,10 @@ import crypto from 'node:crypto';
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, Events } from 'discord.js';
 import { SC_QUIZ_BANK } from './questions.js';
 
+import {
+  installQuizBridgeServer,
+} from './quizSiteBridge.js';
+
 export async function setupQuiz(client) {
   try {
     if (client.__SC_QUIZ_INSTALLED) return;
@@ -2775,6 +2779,14 @@ globalThis.__SC_QUIZ_SITE_API__ = {
     };
   },
 };
+    installQuizBridgeServer({
+      client,
+
+      getApi: () =>
+        globalThis
+          .__SC_QUIZ_SITE_API__,
+    });
+
     async function scq_startSystemOnce() {
   if (client.__SC_QUIZ_SYSTEM_STARTED) return;
   client.__SC_QUIZ_SYSTEM_STARTED = true;
