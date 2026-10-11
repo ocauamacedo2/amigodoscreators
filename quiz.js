@@ -43,7 +43,7 @@ export async function setupQuiz(client) {
       '1558553389032415332';
 
     const SC_QUIZ_LOGS_GUILD_ID = String(
-      process.env.SANTA_QUIZ_LOGS_GUILD_ID || '1262262852782129183'
+      process.env.SANTA_QUIZ_LOGS_GUILD_ID || '1482114384208597174'
     ).trim();
 
     const SC_QUIZ_HISTORY_GUILD_ID = String(
@@ -51,7 +51,7 @@ export async function setupQuiz(client) {
     ).trim();
 
     const SC_QUIZ_DIAGNOSTICS_GUILD_ID = String(
-      process.env.SANTA_QUIZ_DIAGNOSTICS_GUILD_ID || '1262262852782129183'
+      process.env.SANTA_QUIZ_DIAGNOSTICS_GUILD_ID || '1482114384208597174'
     ).trim();
 
     const SC_MENTION_ROLES = [
@@ -578,6 +578,56 @@ participantsByMsg: {},
           'Não foi possível salvar o avanço da importação. Os eventos foram preservados no journal; a página será retomada sem duplicar pontuações.'
         );
       }
+
+      const recognizedTitles = messages.filter(
+        message =>
+          (message.embeds || []).some(
+            embed =>
+              /^(?:✅\s*)?Acerto PV$/i.test(
+                String(embed?.title || '').trim()
+              ) ||
+              /^(?:❌\s*)?Erro PV$/i.test(
+                String(embed?.title || '').trim()
+              )
+          )
+      );
+
+      const otherAuthorIds = [
+        ...new Set(
+          recognizedTitles
+            .filter(
+              message =>
+                message.author?.id !== client.user.id
+            )
+            .map(
+              message =>
+                String(message.author?.id || '')
+            )
+            .filter(Boolean)
+        )
+      ];
+
+      console.log(
+        '[QUIZ HISTÓRICO] Página salva:',
+        {
+          channelId: SC_QUIZ_HISTORY_CHANNEL_ID,
+          expectedGuildId: SC_QUIZ_HISTORY_GUILD_ID,
+          actualGuildId: channel.guildId,
+          currentBotId: client.user.id,
+          pageMessages: page.size,
+          pageMatched: matched,
+          pageAdded: additions.length,
+          pageIgnored: page.size - matched,
+          recordsWithRecognizedTitle:
+            recognizedTitles.length,
+          otherAuthorIds,
+          before: history.before,
+          scanned: history.scanned,
+          matched: history.matched,
+          ignored: history.ignored,
+          done: history.done
+        }
+      );
 
       if (history.done) {
         console.log(
