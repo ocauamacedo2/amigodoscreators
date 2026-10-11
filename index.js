@@ -2257,7 +2257,9 @@ client.on(Events.VoiceStateUpdate, async (oldS, newS) => {
 
     // DC ANTIGO (mantém o menu antigo)
     '1262262852782129183': {
-      buttonChannelId: 'ENVIAR AQUI PARA DC SANTA CREATORS OFC',
+      buttonChannelId: String(
+        process.env.SANTA_PEDIRSET_MENU_CHANNEL_ID || ''
+      ).trim(),
       logChannelId: '1352706078621696030',
 
       roleSetId: '1352275728476930099',

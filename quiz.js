@@ -42,6 +42,18 @@ export async function setupQuiz(client) {
     const SC_QUIZ_DIAGNOSTICS_CHANNEL_ID =
       '1558553389032415332';
 
+    const SC_QUIZ_LOGS_GUILD_ID = String(
+      process.env.SANTA_QUIZ_LOGS_GUILD_ID || '1262262852782129183'
+    ).trim();
+
+    const SC_QUIZ_HISTORY_GUILD_ID = String(
+      process.env.SANTA_QUIZ_HISTORY_GUILD_ID || '1262262852782129183'
+    ).trim();
+
+    const SC_QUIZ_DIAGNOSTICS_GUILD_ID = String(
+      process.env.SANTA_QUIZ_DIAGNOSTICS_GUILD_ID || '1262262852782129183'
+    ).trim();
+
     const SC_MENTION_ROLES = [
       '1262978759922028575',
       '1352275728476930099'
@@ -253,7 +265,8 @@ participantsByMsg: {},
     const scqMembership = new Map();
 
     let scqArchiveBusy = false;
-    let scqArchiveRetryAt = 0;
+    let scqDeliveryRetryAt = 0;
+    let scqHistoryRetryAt = 0;
 
     function scqApplyJournal(entry) {
       if (entry.type === 'delivered') {
@@ -467,10 +480,14 @@ participantsByMsg: {},
 
       if (
         !channel?.isTextBased() ||
-        channel.guildId !== '1262262852782129183'
+        channel.guildId !== SC_QUIZ_HISTORY_GUILD_ID
       ) {
-        throw new Error(
-          'Canal histórico do quiz inválido ou de outro servidor.'
+        throw Object.assign(
+          new Error('Canal histórico do quiz inválido ou de outro servidor.'),
+          {
+            actualGuildId: channel?.guildId || null,
+            channelType: channel?.type ?? null
+          }
         );
       }
 
@@ -571,102 +588,149 @@ participantsByMsg: {},
     }
 
     async function scqArchivePump() {
-      if (
-        scqArchiveBusy ||
-        Date.now() < scqArchiveRetryAt ||
-        !client.isReady()
-      ) {
+      if (scqArchiveBusy || !client.isReady()) {
         return;
       }
 
-      if (
-        !scqPendingEvents.size &&
-        scqArchive.history.done
-      ) {
+      if (!scqPendingEvents.size && scqArchive.history.done) {
         return;
       }
 
       scqArchiveBusy = true;
+      const failures = [];
+
+      const report = (stage, channelId, expectedGuildId, error) => {
+        console.error('[QUIZ HISTÓRICO] Etapa pendente:', {
+          stage,
+          channelId,
+          expectedGuildId,
+          actualGuildId: error?.actualGuildId || null,
+          channelType: error?.channelType ?? null,
+          code: error?.code || null,
+          message: error?.message || String(error)
+        });
+
+        failures.push(
+          stage + ': ' + (error?.message || String(error))
+        );
+      };
 
       try {
-        const pending = [
-          ...scqPendingEvents
-        ].slice(0, 10);
-
-        if (pending.length) {
-          const channel =
-            await client.channels.fetch(
+        if (
+          scqPendingEvents.size &&
+          Date.now() >= scqDeliveryRetryAt
+        ) {
+          try {
+            const channel = await client.channels.fetch(
               SC_QUIZ_LOGS_CHANNEL_ID
             );
 
-          if (
-            !channel?.isTextBased() ||
-            channel.guildId !== '1262262852782129183'
-          ) {
-            throw new Error(
-              'Canal de salvamentos do quiz inválido ou de outro servidor.'
+            if (
+              !channel?.isTextBased() ||
+              typeof channel.send !== 'function' ||
+              channel.guildId !== SC_QUIZ_LOGS_GUILD_ID
+            ) {
+              throw Object.assign(
+                new Error('Canal de salvamentos do quiz inválido ou de outro servidor.'),
+                {
+                  actualGuildId: channel?.guildId || null,
+                  channelType: channel?.type ?? null
+                }
+              );
+            }
+
+            const pending = [...scqPendingEvents].slice(0, 10);
+
+            for (const [key, event] of pending) {
+              const message = await channel.send({
+                embeds: [
+                  scq_buildEmbed({
+                    title: '📊 Pontuação do Quiz',
+                    description:
+                      `Usuário: <@${event.userId}>\n` +
+                      `Acertos: ${event.right}\n` +
+                      `Erros: ${event.wrong}\n` +
+                      `Data: <t:${Math.floor(event.at / 1000)}:F>`
+                  })
+                ],
+                content: `SC_QUIZ_EVENT::${key}`,
+                allowedMentions: { parse: [] }
+              });
+
+              scqAppendJournal([
+                {
+                  type: 'delivered',
+                  key,
+                  logMessageId: message.id
+                }
+              ]);
+            }
+
+            scqDeliveryRetryAt = 0;
+          } catch (error) {
+            scqDeliveryRetryAt = Date.now() + 60000;
+            report(
+              'entrega',
+              SC_QUIZ_LOGS_CHANNEL_ID,
+              SC_QUIZ_LOGS_GUILD_ID,
+              error
             );
-          }
-
-          for (const [key, event] of pending) {
-            const message = await channel.send({
-              embeds: [
-                scq_buildEmbed({
-                  title: '📊 Pontuação do Quiz',
-                  description:
-                    `Usuário: <@${event.userId}>\n` +
-                    `Acertos: ${event.right}\n` +
-                    `Erros: ${event.wrong}\n` +
-                    `Data: <t:${Math.floor(event.at / 1000)}:F>`
-                })
-              ],
-              content:
-                `SC_QUIZ_EVENT::${key}`,
-              allowedMentions: {
-                parse: []
-              }
-            });
-
-            scqAppendJournal([
-              {
-                type: 'delivered',
-                key,
-                logMessageId: message.id
-              }
-            ]);
           }
         }
 
-        await scqImportHistoryPage();
-        scqArchiveSave(scqArchive);
-      } catch (error) {
-        scqArchiveRetryAt =
-          Date.now() + 60000;
-
-        console.error(
-          '[QUIZ HISTÓRICO] Entrega ou importação pendente:',
-          error.message
-        );
-
-        const channel = await client.channels
-          .fetch(
-            SC_QUIZ_DIAGNOSTICS_CHANNEL_ID
-          )
-          .catch(() => null);
-
         if (
-          channel?.isTextBased() &&
-          channel.guildId === '1262262852782129183'
+          !scqArchive.history.done &&
+          Date.now() >= scqHistoryRetryAt
         ) {
-          await channel.send({
-            content: (
-              '⚠️ Quiz: ' +
-              error.message
-            ).slice(0, 1800),
-            allowedMentions: {
-              parse: []
-            }
-          }).catch(() => {});
+          try {
+            await scqImportHistoryPage();
+            scqHistoryRetryAt = 0;
+          } catch (error) {
+            scqHistoryRetryAt = Date.now() + 60000;
+            report(
+              'importação',
+              SC_QUIZ_HISTORY_CHANNEL_ID,
+              SC_QUIZ_HISTORY_GUILD_ID,
+              error
+            );
+          }
+        }
+
+        scqArchiveSave(scqArchive);
+
+        if (failures.length) {
+          const channel = await client.channels
+            .fetch(SC_QUIZ_DIAGNOSTICS_CHANNEL_ID)
+            .catch(error => {
+              console.warn('[QUIZ HISTÓRICO] Diagnóstico indisponível:', {
+                channelId: SC_QUIZ_DIAGNOSTICS_CHANNEL_ID,
+                code: error?.code,
+                message: error?.message
+              });
+              return null;
+            });
+
+          if (
+            channel?.isTextBased() &&
+            typeof channel.send === 'function' &&
+            channel.guildId === SC_QUIZ_DIAGNOSTICS_GUILD_ID
+          ) {
+            await channel.send({
+              content: ('⚠️ Quiz:\n' + failures.join('\n')).slice(0, 1800),
+              allowedMentions: { parse: [] }
+            }).catch(error => {
+              console.warn('[QUIZ HISTÓRICO] Falha ao enviar diagnóstico:', {
+                code: error?.code,
+                message: error?.message
+              });
+            });
+          } else {
+            console.warn('[QUIZ HISTÓRICO] Destino do diagnóstico inválido:', {
+              channelId: SC_QUIZ_DIAGNOSTICS_CHANNEL_ID,
+              expectedGuildId: SC_QUIZ_DIAGNOSTICS_GUILD_ID,
+              actualGuildId: channel?.guildId || null
+            });
+          }
         }
       } finally {
         scqArchiveBusy = false;
@@ -1871,20 +1935,47 @@ lastWeeklyResetKey: SC_QUIZ_STATE.lastWeeklyResetKey || null,
         ? SC_QUIZ_LOGS_CHANNEL_ID
         : SC_QUIZ_DIAGNOSTICS_CHANNEL_ID;
 
+      const expectedGuildId = scoreDetail
+        ? SC_QUIZ_LOGS_GUILD_ID
+        : SC_QUIZ_DIAGNOSTICS_GUILD_ID;
+
       const ch = await client.channels
         .fetch(channelId)
-        .catch(() => null);
+        .catch(error => {
+          console.warn('[SC_QUIZ LOG] Canal indisponível:', {
+            channelId,
+            expectedGuildId,
+            code: error?.code,
+            message: error?.message
+          });
+
+          return null;
+        });
 
       if (
         ch?.isTextBased() &&
-        ch.guildId === '1262262852782129183'
+        typeof ch.send === 'function' &&
+        ch.guildId === expectedGuildId
       ) {
         await ch.send({
           embeds: [embed],
           allowedMentions: {
             parse: []
           }
-        }).catch(() => {});
+        }).catch(error => {
+          console.warn('[SC_QUIZ LOG] Falha ao enviar registro:', {
+            channelId,
+            expectedGuildId,
+            code: error?.code,
+            message: error?.message
+          });
+        });
+      } else {
+        console.warn('[SC_QUIZ LOG] Destino inválido:', {
+          channelId,
+          expectedGuildId,
+          actualGuildId: ch?.guildId || null
+        });
       }
     }
     async function scq_clearCreatorsTrackedMessages(channel) {
