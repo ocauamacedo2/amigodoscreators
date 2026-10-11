@@ -344,8 +344,6 @@ participantsByMsg: {},
     }
 
     function scqArchiveSave(next) {
-      scqArchive = next;
-
       const temporary =
         SC_QUIZ_ARCHIVE_PATH + '.tmp';
 
@@ -364,11 +362,16 @@ participantsByMsg: {},
           temporary,
           SC_QUIZ_ARCHIVE_PATH
         );
+
+        scqArchive = next;
+        return true;
       } catch (error) {
         console.error(
           '[QUIZ HISTÓRICO] Índice pendente; eventos preservados no journal:',
           error.message
         );
+
+        return false;
       }
     }
 
@@ -548,10 +551,16 @@ participantsByMsg: {},
 
       scqAppendJournal(additions);
 
-      scqArchiveSave({
+      const saved = scqArchiveSave({
         ...scqArchive,
         history
       });
+
+      if (!saved) {
+        throw new Error(
+          'Não foi possível salvar o avanço da importação. Os eventos foram preservados no journal; a página será retomada sem duplicar pontuações.'
+        );
+      }
 
       if (history.done) {
         console.log(
@@ -3633,11 +3642,100 @@ globalThis.__SC_QUIZ_SITE_API__ = {
     const scqOriginalSiteSnapshot =
       globalThis.__SC_QUIZ_SITE_API__.snapshot;
 
+    let scqSiteRankingCache = null;
+    let scqSiteRankingBuild = null;
+    let scqSiteRankingError = null;
+    let scqSiteRankingRevision = 0;
+
+    for (const name of [
+      'guildMemberAdd',
+      'guildMemberRemove',
+      'guildMemberUpdate'
+    ]) {
+      client.on(name, (...args) => {
+        const member = args[args.length - 1];
+
+        if (member?.guild?.id !== '1262262852782129183') {
+          return;
+        }
+
+        scqSiteRankingRevision++;
+        scqSiteRankingCache = null;
+        scqSiteRankingError = null;
+      });
+    }
+
     globalThis.__SC_QUIZ_SITE_API__.snapshot =
       async options => {
-        return scqRankingsWithHistory(
-          await scqOriginalSiteSnapshot(options)
-        );
+        const base = await scqOriginalSiteSnapshot(options);
+        const signature = JSON.stringify({
+          ranking: base.ranking,
+          totals: [...scqTotals.values()],
+          history: scqArchive.history,
+          revision: scqSiteRankingRevision
+        });
+
+        if (
+          scqSiteRankingCache?.signature === signature &&
+          Date.now() - scqSiteRankingCache.at < 10000
+        ) {
+          return {
+            ...base,
+            ...scqSiteRankingCache.data,
+            rights: base.rights
+          };
+        }
+
+        if (
+          scqSiteRankingError &&
+          Date.now() - scqSiteRankingError.at < 15000
+        ) {
+          throw scqSiteRankingError.error;
+        }
+
+        if (!scqSiteRankingBuild) {
+          const revision = scqSiteRankingRevision;
+
+          scqSiteRankingBuild = scqRankingsWithHistory(base)
+            .then(result => {
+              if (revision !== scqSiteRankingRevision) {
+                return;
+              }
+
+              scqSiteRankingCache = {
+                signature,
+                at: Date.now(),
+                data: {
+                  ranking: result.ranking,
+                  generalRanking: result.generalRanking,
+                  historyImport: result.historyImport
+                }
+              };
+              scqSiteRankingError = null;
+            })
+            .catch(error => {
+              scqSiteRankingError = {
+                at: Date.now(),
+                error
+              };
+
+              console.error(
+                '[QUIZ SITE RANKING] Consulta interrompida:',
+                error
+              );
+            })
+            .finally(() => {
+              scqSiteRankingBuild = null;
+            });
+        }
+
+        return {
+          pending: true,
+          ranking: [],
+          generalRanking: [],
+          historyImport: { ...scqArchive.history },
+          rights: base.rights
+        };
       };
 
     installQuizBridgeServer({
