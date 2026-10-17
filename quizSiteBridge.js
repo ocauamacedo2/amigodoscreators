@@ -91,6 +91,12 @@ export function createQuizWeeklyArchive(directory) {
 
   return {
     save(snapshot) {
+      if (
+        snapshot?.pending === true
+      ) {
+        return Promise.resolve();
+      }
+
       const value = clone(snapshot);
 
       writes = writes
@@ -444,7 +450,10 @@ export function installQuizBridgeServer({
           });
 
         return send(
-          200,
+          result.pending === true
+            ? 202
+            : 200,
+
           {
             ...result,
 
@@ -705,6 +714,12 @@ export function createQuizRemoteClient({
         )
           .then(
             async value => {
+              if (
+                value.pending === true
+              ) {
+                return value;
+              }
+
               await archive.save(
                 value
               );

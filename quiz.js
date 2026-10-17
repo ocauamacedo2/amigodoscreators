@@ -3620,15 +3620,53 @@ globalThis.__SC_QUIZ_SITE_API__ = {
         '1262262852782129183'
       );
 
+    if (!guild) {
+      throw Object.assign(
+        new Error(
+          'Servidor do quiz indisponível.'
+        ),
+        {
+          status: 503
+        }
+      );
+    }
+
+    if (
+      id &&
+      !/^\d{17,20}$/.test(id)
+    ) {
+      throw Object.assign(
+        new Error(
+          'Usuário inválido.'
+        ),
+        {
+          status: 400
+        }
+      );
+    }
+
     const member =
-      guild
-        ? await guild.members
-            .fetch(
-              id
-            )
-            .catch(
-              () => null
-            )
+      id
+        ? await guild.members.fetch({
+            user: id,
+            force: true,
+          }).catch(error => {
+            if (
+              Number(error?.code) === 10007
+            ) {
+              return null;
+            }
+
+            throw Object.assign(
+              new Error(
+                'Não foi possível verificar o membro no Discord.'
+              ),
+              {
+                status: 503,
+                code: error?.code || null
+              }
+            );
+          })
         : null;
 
     const entries =
